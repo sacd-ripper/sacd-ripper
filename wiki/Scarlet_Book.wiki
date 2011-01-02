@@ -1,0 +1,98 @@
+#summary The Scarlet Book is Philips and Sony's 1999 specification document for Super Audio Compact Disc ( SACD ).
+
+= Introduction =
+
+The Scarlet Book is Philips and Sony's 1999 specification document for Super Audio Compact Disc ( SACD ), a high-resolution audio format that features complex six-channel sound. SACD discs can contain three different versions of the same material.
+
+Numbers are stored in big endian format.
+
+= Master Area =
+
+Block size: 2048
+
+|| *Type* || *Start LSN* || *Size* || *Comment* ||
+|| File System || 0 || 510 || Some SACD have UDF data, most don't have any ||
+|| Master TOC || 510 || 30 || - ||
+|| 2 Channel || || || ||
+|| Area TOC-1 || 544 || ? || ||
+|| Track Area || ? || ? || ||
+|| Multi Channel || || || ||
+|| Area TOC-1 || ? || || ||
+
+{{{
+#define FRAME_SIZE                  2048
+#define MAX_AREA_TOC_SIZE_LSN       96
+#define SAMPLES_PER_FRAME           588
+#define START_OF_FILE_SYSTEM_AREA   0
+#define START_OF_MASTER_TOC         510
+#define START_OF_AREA_TOC_1         544
+#define START_OF_TRACK_AREA         640
+}}}
+
+0x0ff000
+  SACDMTOC  (0x5000)
+0x104000
+  SACDMTOC  (0x5000)
+0x109000
+  SACDMTOC  (0x5000)
+0x10e000
+  padding   (0x2000)
+0x110000
+  TWOCHTOC  (0x14000)
+0x140000
+  padding   (0x1C000)
+
+== Master Area TOC ==
+
+{{{
+
+typedef struct
+{
+  uint8_t  category;      // 0x00 Not Used, 0x01 General, 0x02 Japanese
+  uint16_t unknown_01;
+  uint8_t  genre;         // 0x01 Not Defined, 0x02 Adult Contemporary, 0x03 Alternative Rock
+} genre_table_t;
+
+typedef struct
+  uint16_t       language;                  // ISO3166-2 Language code
+  uint8_t        character_set;             // 0x00 Unspecified, 0x01 ISO646, 0x02 ISO8859-1, 0x03 RIS506
+  uint8_t        unknown_01;
+} lang_table_t;
+
+typedef struct
+{ 
+  uint64_t       id;                        // SACDMTOC
+  uint16_t       disc_version;              // 1.20 / 0x0114
+  uint8_t        unknown_01[6];
+  uint16_t       album_set_size;
+  uint16_t       album_sequence_number;
+  uint32_t       unknown_02;
+  char           album_catalog_number[16];  // 0x00 when empty, else padded with spaces for short strings
+  genre_table_t  album_genre[4];
+  uint8_t        unknown_03[10];
+  uint32_t       toc1_area_start;           // 544 / START_OF_AREA_TOC_1
+  //uint32_t       disc_sectors;              // nr of disc sectors
+  //uint8_t        unknown_04[12];
+  
+  
+  char           disc_catalog_number[16];   // 0x00 when empty, else padded with spaces for short strings
+  genre_table_t  disc_genre[4];
+  uint16_t       disc_date_year;
+  uint8_t        disc_date_month;
+  uint8_t        disc_date_day;
+  uint8_t        unknown_05[4];
+  uint8_t        text_channel_count;  
+  uint8_t        unknown_06[7];
+  lang_table_t   languages[8];
+  uint8_t        padding[1880];
+} master_area_t;
+}}}
+
+== Master Area ==
+
+
+
+Add your content here.  Format your content with:
+  * Text in *bold* or _italic_
+  * Headings, paragraphs, and lists
+  * Automatic links to other wiki pages
