@@ -10,7 +10,7 @@ Numbers are stored in big endian format.
 
 == Block Addressing (LSN) ==
 
-A track is broken up into a number of 2048-byte blocks which we call frames. The way Scarlet Book addresses a block is to use its LSN or "logical sector number." Scarlet Book  numbers the blocks from 0 on.
+A Scarlet Book disk is broken up into a number of 2048-byte blocks which we call frames. The way Scarlet Book addresses a block is to use its LSN or "logical sector number." Scarlet Book numbers the blocks from 0 on.
 
 == Master Area ==
 
@@ -20,7 +20,7 @@ A track is broken up into a number of 2048-byte blocks which we call frames. The
 //
 //                  Start LSN    Size     Comment
 //                  -----------  -------  ---------------------------------------------
-// File System      0            510      Some SACD's have UDF data, but most don't..
+// File System      0            510      Only some SACD's have UDF data, so ignore..
 // Master TOC-1     510          10
 // Master TOC-2     520          10
 // Master TOC-3     530          10
@@ -56,7 +56,9 @@ enum
   , CHAR_SET_GB2312           = 5 
   , CHAR_SET_BIG5             = 6 
   , CHAR_SET_ISO8859_1_ESC    = 7 
+
 } character_set_t;
+
 }}}
 
 === Master Area TOC ===
@@ -99,10 +101,25 @@ typedef struct
   uint16_t       disc_date_year;
   uint8_t        disc_date_month;
   uint8_t        disc_date_day;
-  uint8_t        unknown_05[4];						  // time?
+  uint8_t        unknown_05[4];             // time?
   uint8_t        text_channel_count;
   uint8_t        unknown_06[7];
   lang_table_t   languages[8];
   uint8_t        unknown_07[1880];
-} master_area_t;
+} master_toc_t;
+
+typedef struct
+{
+  uint64_t       id;                        // SACDText
+  uint64_t       unknown_01;
+
+} master_text_t;
+
+typedef struct
+{
+  uint64_t       id;                        // SACD_Man
+ 
+} master_man_t;
+
+
 }}}
