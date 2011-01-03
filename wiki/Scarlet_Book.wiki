@@ -6,6 +6,10 @@ The Scarlet Book is Philips and Sony's 1999 specification document for Super Aud
 
 Numbers are stored in big endian format.
 
+= Block Addressing (LSN) =
+
+A track is broken up into a number of 2048-byte blocks which we call frames. The way Sacrlet Book addresses a block is to use its LSN or "logical sector number." Scarlet Book  numbers the blocks from 0 on.
+
 = Master Area =
 
 {{{
@@ -28,11 +32,11 @@ Numbers are stored in big endian format.
 //
 //
 
-#define FRAME_SIZE                  2048
-#define MAX_AREA_TOC_SIZE_LSN       96
-#define SAMPLES_PER_FRAME           588
 #define START_OF_FILE_SYSTEM_AREA   0
 #define START_OF_MASTER_TOC         510
+#define SACD_RAW_FRAME_SIZE         2048
+#define MAX_AREA_TOC_SIZE_LSN       96
+#define SAMPLES_PER_FRAME           588
 
 #define DST_ENCODED                 0
 #define DSD_3_IN_14_ENCODED         2
