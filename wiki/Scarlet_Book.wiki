@@ -20,7 +20,7 @@ A track is broken up into a number of 2048-byte blocks which we call frames. The
 //
 //                  Start LSN    Size     Comment
 //                  -----------  -------  ---------------------------------------------
-// File System      0            510      Some SACD have UDF data, most don't..
+// File System      0            510      Some SACD's have UDF data, but most don't..
 // Master TOC-1     510          10
 // Master TOC-2     520          10
 // Master TOC-3     530          10
