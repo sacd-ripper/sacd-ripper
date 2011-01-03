@@ -10,12 +10,14 @@ Numbers are stored in big endian format.
 
 == Block Addressing (LSN) ==
 
-A track is broken up into a number of 2048-byte blocks which we call frames. The way Sacrlet Book addresses a block is to use its LSN or "logical sector number." Scarlet Book  numbers the blocks from 0 on.
+A track is broken up into a number of 2048-byte blocks which we call frames. The way Scarlet Book addresses a block is to use its LSN or "logical sector number." Scarlet Book  numbers the blocks from 0 on.
 
 == Master Area ==
 
 {{{
 
+// Example of a Scarlet Book SACD:
+//
 //                  Start LSN    Size     Comment
 //                  -----------  -------  ---------------------------------------------
 // File System      0            510      Some SACD have UDF data, most don't..
@@ -31,7 +33,7 @@ A track is broken up into a number of 2048-byte blocks which we call frames. The
 //   Track Area     -            -
 //   Area TOC-2     -            40       master_area_t.mch_toc2_area_start
 // Padding          -            -
-//
+// 
 //
 
 #define START_OF_FILE_SYSTEM_AREA   0
