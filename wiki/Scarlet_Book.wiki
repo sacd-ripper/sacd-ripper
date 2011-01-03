@@ -33,8 +33,6 @@ Numbers are stored in big endian format.
 #define SAMPLES_PER_FRAME           588
 #define START_OF_FILE_SYSTEM_AREA   0
 #define START_OF_MASTER_TOC         510
-#define START_OF_AREA_TOC_1         544
-#define START_OF_TRACK_AREA         640
 
 #define DST_ENCODED                 0
 #define DSD_3_IN_14_ENCODED         2
