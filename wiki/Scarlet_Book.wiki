@@ -4,13 +4,15 @@
 
 The Scarlet Book is Philips and Sony's 1999 specification document for Super Audio Compact Disc ( SACD ), a high-resolution audio format that features complex six-channel sound. SACD discs can contain three different versions of the same material.
 
+= Specification =
+
 Numbers are stored in big endian format.
 
-= Block Addressing (LSN) =
+== Block Addressing (LSN) ==
 
 A track is broken up into a number of 2048-byte blocks which we call frames. The way Sacrlet Book addresses a block is to use its LSN or "logical sector number." Scarlet Book  numbers the blocks from 0 on.
 
-= Master Area =
+== Master Area ==
 
 {{{
 
@@ -43,7 +45,7 @@ A track is broken up into a number of 2048-byte blocks which we call frames. The
 #define DSD_3_IN_16_ENCODED         3
 }}}
 
-== Master Area TOC ==
+=== Master Area TOC ===
 
 {{{
 
