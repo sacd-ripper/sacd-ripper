@@ -50,7 +50,6 @@ A track is broken up into a number of 2048-byte blocks which we call frames. The
 === Master Area TOC ===
 
 {{{
-
 typedef struct
 {
   uint8_t        category;                  // 0x00 Not Used, 0x01 General, 0x02 Japanese
@@ -71,7 +70,7 @@ typedef struct
   uint8_t        unknown_01[6];
   uint16_t       album_set_size;
   uint16_t       album_sequence_number;
-  uint32_t       unknown_02;
+  uint8_t        unknown_02[4];
   char           album_catalog_number[16];  // 0x00 when empty, else padded with spaces for short strings
   genre_table_t  album_genre[4];
   uint8_t        unknown_03[10];
@@ -80,18 +79,18 @@ typedef struct
   uint32_t       mch_toc1_area_start;
   uint32_t       mch_toc2_area_start;
   uint8_t        disc_type;                 // 0x80 hybrid, 0x00 for single, 0x?? for dual?
-  uint8_t        unknown_05[3];             // padding?
-  uint16_t       unknown_06;                // 00 28, PF 00 08
-  uint16_t       unknown_07;                // 00 28
+  uint8_t        unknown_04[3];             // padding?
+  uint16_t       2ch_toc_area_size;
+  uint16_t       mch_toc_area_size;
   char           disc_catalog_number[16];   // 0x00 when empty, else padded with spaces for short strings
   genre_table_t  disc_genre[4];
   uint16_t       disc_date_year;
   uint8_t        disc_date_month;
   uint8_t        disc_date_day;
-  uint8_t        unknown_05[4];				// time?
+  uint8_t        unknown_05[4];						  // time?
   uint8_t        text_channel_count;
   uint8_t        unknown_06[7];
   lang_table_t   languages[8];
-  uint8_t        padding[1880];
+  uint8_t        unknown_07[1880];
 } master_area_t;
 }}}
