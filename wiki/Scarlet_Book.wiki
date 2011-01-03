@@ -28,9 +28,9 @@ Block size: 2048
 #define START_OF_AREA_TOC_1         544
 #define START_OF_TRACK_AREA         640
 
-#define FORMAT_DST_ENCODED          0
-#define FORMAT_3_IN_14              2
-#define FORMAT_3_IN_16              3
+#define DST_ENCODED                 0
+#define DSD_3_IN_14_ENCODED         2
+#define DSD_3_IN_16_ENCODED         3
 }}}
 
 0x0ff000
