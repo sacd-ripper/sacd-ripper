@@ -45,6 +45,18 @@ A track is broken up into a number of 2048-byte blocks which we call frames. The
 #define DST_ENCODED                 0
 #define DSD_3_IN_14_ENCODED         2
 #define DSD_3_IN_16_ENCODED         3
+
+enum 
+{
+    CHAR_SET_UNKNOWN          = 0
+  , CHAR_SET_ISO646           = 1 
+  , CHAR_SET_ISO8859_1        = 2 
+  , CHAR_SET_RIS506           = 3 
+  , CHAR_SET_KSC5601          = 4 
+  , CHAR_SET_GB2312           = 5 
+  , CHAR_SET_BIG5             = 6 
+  , CHAR_SET_ISO8859_1_ESC    = 7 
+} character_set_t;
 }}}
 
 === Master Area TOC ===
@@ -58,8 +70,8 @@ typedef struct
 } genre_table_t;
 
 typedef struct
-  uint16_t       language;                  // ISO3166-2 Language code
-  uint8_t        character_set;             // 0x00 Unspecified, 0x01 ISO646, 0x02 ISO8859-1, 0x03 RIS506
+  uint16_t       language;                  // ISO639-2 Language code
+  uint8_t        character_set;             // char_set_t
   uint8_t        padding;
 } lang_table_t;
 
