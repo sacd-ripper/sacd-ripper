@@ -8,18 +8,26 @@ Numbers are stored in big endian format.
 
 = Master Area =
 
-Block size: 2048
-
-|| *Type* || *Start LSN* || *Size* || *Comment* ||
-|| File System || 0 || 510 || Some SACD have UDF data, most don't have any ||
-|| Master TOC || 510 || 30 || - ||
-|| 2 Channel || || || ||
-|| Area TOC-1 || 544 || ? || ||
-|| Track Area || ? || ? || ||
-|| Multi Channel || || || ||
-|| Area TOC-1 || ? || || ||
-
 {{{
+
+//                  Start LSN    Size     Comment
+//                  -----------  -------  ---------------------------------------------
+// File System      0            510      Some SACD have UDF data, most don't..
+// Master TOC-1     510          10
+// Master TOC-2     520          10
+// Master TOC-3     530          10
+// 2 Channel
+//   Area TOC-1     -            40       master_area_t.2ch_toc1_area_start
+//   Track Area     -            -
+//   Area TOC-2     -            40       master_area_t.2ch_toc2_area_start
+// Multi Channel
+//   Area TOC-1     -            40       master_area_t.mch_toc1_area_start
+//   Track Area     -            -
+//   Area TOC-2     -            40       master_area_t.mch_toc2_area_start
+// Padding          -            -
+//
+//
+
 #define FRAME_SIZE                  2048
 #define MAX_AREA_TOC_SIZE_LSN       96
 #define SAMPLES_PER_FRAME           588
@@ -33,13 +41,6 @@ Block size: 2048
 #define DSD_3_IN_16_ENCODED         3
 }}}
 
-0x0ff000
-  SACDMTOC  (0x5000)
-0x104000
-  SACDMTOC  (0x5000)
-0x109000
-  SACDMTOC  (0x5000)
-
 == Master Area TOC ==
 
 {{{
@@ -47,14 +48,14 @@ Block size: 2048
 typedef struct
 {
   uint8_t  category;      // 0x00 Not Used, 0x01 General, 0x02 Japanese
-  uint16_t unknown_01;
+  uint16_t padding;
   uint8_t  genre;         // 0x01 Not Defined, 0x02 Adult Contemporary, 0x03 Alternative Rock
 } genre_table_t;
 
 typedef struct
   uint16_t       language;                  // ISO3166-2 Language code
   uint8_t        character_set;             // 0x00 Unspecified, 0x01 ISO646, 0x02 ISO8859-1, 0x03 RIS506
-  uint8_t        unknown_01;
+  uint8_t        padding;
 } lang_table_t;
 
 typedef struct
@@ -72,29 +73,19 @@ typedef struct
   uint32_t       2ch_toc2_area_start;
   uint32_t       mch_toc1_area_start;
   uint32_t       mch_toc2_area_start;
-  uint8_t        disc_type;                 // 0x00 hybrid, 0x80 for single
+  uint8_t        disc_type;                 // 0x80 hybrid, 0x00 for single, 0x?? for dual?
   uint8_t        unknown_05[3];             // padding?
   uint16_t       unknown_06;                // 00 28, PF 00 08
   uint16_t       unknown_07;                // 00 28
-  
   char           disc_catalog_number[16];   // 0x00 when empty, else padded with spaces for short strings
   genre_table_t  disc_genre[4];
   uint16_t       disc_date_year;
   uint8_t        disc_date_month;
   uint8_t        disc_date_day;
-  uint8_t        unknown_05[4];
-  uint8_t        text_channel_count;  
+  uint8_t        unknown_05[4];				// time?
+  uint8_t        text_channel_count;
   uint8_t        unknown_06[7];
   lang_table_t   languages[8];
   uint8_t        padding[1880];
 } master_area_t;
 }}}
-
-== Master Area ==
-
-
-
-Add your content here.  Format your content with:
-  * Text in *bold* or _italic_
-  * Headings, paragraphs, and lists
-  * Automatic links to other wiki pages
