@@ -53,9 +53,9 @@ A track is broken up into a number of 2048-byte blocks which we call frames. The
 
 typedef struct
 {
-  uint8_t  category;      // 0x00 Not Used, 0x01 General, 0x02 Japanese
-  uint16_t padding;
-  uint8_t  genre;         // 0x01 Not Defined, 0x02 Adult Contemporary, 0x03 Alternative Rock
+  uint8_t        category;                  // 0x00 Not Used, 0x01 General, 0x02 Japanese
+  uint16_t       padding;
+  uint8_t        genre;                     // 0x01 Not Defined, 0x02 Adult Contemporary, 0x03 Alternative Rock
 } genre_table_t;
 
 typedef struct
