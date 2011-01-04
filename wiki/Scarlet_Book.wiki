@@ -59,6 +59,76 @@ enum
 
 } character_set_t;
 
+static const char *genre[] =
+{
+    "Not used"
+  , "Not defined"
+  , "Adult Contemporary"
+  , "Alternative Rock"
+  , "Children's Music"
+  , "Classical"
+  , "Contemporary Christian"
+  , "Country"
+  , "Dance"
+  , "Easy Listening"
+  , "Erotic"
+  , "Folk"
+  , "Gospel"
+  , "Hip Hop"
+  , "Jazz"
+  , "Latin"
+  , "Musical"
+  , "New Age"
+  , "Opera"
+  , "Operetta"
+  , "Pop Music"
+  , "RAP"
+  , "Reggae"
+  , "Rock Music"
+  , "Rhythm & Blues"
+  , "Sound Effects"
+  , "Sound Track"
+  , "Spoken Word"
+  , "World Music"
+  , "Blues"
+  , 0
+}
+
+enum 
+{
+    GENRE_NOT_USED                      = 0
+  , GENRE_NOT_DEFINED                   = 1
+  , GENRE_ADULT_CONTEMPORARY            = 2
+  , GENRE_ALTERNATIVE_ROCK              = 3
+  , GENRE_CHILDRENS_MUSIC               = 4
+  , GENRE_CLASSICAL                     = 5
+  , GENRE_CONTEMPORARY_CHRISTIAN        = 6
+  , GENRE_COUNTRY                       = 7
+  , GENRE_DANCE                         = 8
+  , GENRE_EASY_LISTENING                = 9
+  , GENRE_EROTIC                        = 10
+  , GENRE_FOLK                          = 11
+  , GENRE_GOSPEL                        = 12
+  , GENRE_HIP_HOP                       = 13
+  , GENRE_JAZZ                          = 14
+  , GENRE_LATIN                         = 15
+  , GENRE_MUSICAL                       = 16
+  , GENRE_NEW_AGE                       = 17
+  , GENRE_OPERA                         = 18
+  , GENRE_OPERETTA                      = 19
+  , GENRE_POP_MUSIC                     = 20
+  , GENRE_RAP                           = 21
+  , GENRE_REGGAE                        = 22
+  , GENRE_ROCK_MUSIC                    = 23
+  , GENRE_RHYTHM_AND_BLUES              = 24
+  , GENRE_SOUND_EFFECTS                 = 25
+  , GENRE_SOUND_TRACK                   = 26
+  , GENRE_SPOKEN_WORD                   = 27
+  , GENRE_WORLD_MUSIC                   = 28
+  , GENRE_BLUES                         = 29
+  
+} genre_t;
+
 }}}
 
 === Master Area TOC ===
@@ -120,6 +190,7 @@ typedef struct
   uint64_t       id;                        // SACD_Man
  
 } master_man_t;
+
 
 
 }}}
