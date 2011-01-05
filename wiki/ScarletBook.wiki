@@ -269,10 +269,9 @@ typedef struct
   uint16_t       version;                   // 1.20, 0x0114
   uint16_t       size;                      // ex. 40 (total size of TOC)
   uint8_t        unknown_01[20];
-  uint8_t        speaker_config_01;
-  uint8_t        speaker_config_02;
-  uint8_t        speaker_config_03;
-  uint8_t        unknown_02[29];
+  uint8_t        loudspeaker_config;
+  uint8_t        channel_count;
+  uint8_t        unknown_02[30];
   uint32_t       unknown_03;
   uint16_t       track_count;
   uint16_t       unknown_04;
