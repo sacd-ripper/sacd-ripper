@@ -2,7 +2,7 @@
 
 = Introduction =
 
-The Scarlet Book is Philips and Sony's 1999 specification document for Super Audio Compact Disc ( SACD ), a high-resolution audio format that features complex six-channel sound. SACD discs can contain three different versions of the same material.
+The Scarlet Book is Philips and Sony's 1999 specification document for Super Audio Compact Disc ( SACD ), a high-resolution audio format that features multi-channel sound. SACD discs can contain three different versions of the same material.
 
 = Pit Signal Processing =
 
@@ -14,9 +14,9 @@ A Scarlet Book disk always contains a Master Table of Contents (TOC). This Maste
 
 Track data is stored in a continuous stream and there is a maximum of two tracks; one for two channel and for multichannel audio.
 
-The Two or Multi Channel TOC referred by the Master TOC, include  track count,  disc and track titles, track artist and ISRC codes, genre data and (optional) Super Audio CD text information which can be displayed during playback. 
+The Two or Multi Channel TOC referred by the Master TOC, include track count, disc and track titles, track artist and ISRC codes, genre data and (optional) Super Audio CD text information which can be displayed during playback. 
 
-There is lot's of speculation about an UDF filesystem for SACDs, but UDF is not part of the specifcation as some SACDs have it but most discs don't have any type of filesystem.
+There is lot's of speculation about an UDF filesystem for SACDs, but UDF is not part of the specification as some SACD's have it but most discs don't.
 
 === Scarlet Book SACD Example ===
 
