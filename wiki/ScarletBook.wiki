@@ -13,11 +13,11 @@ SACD includes various copy protection measures of which the most prominent is Pi
 A ScarletBook disk always contains a Master Table of Contents (TOC). This Master TOC is stored several times to insure there is a backup in case of disc corrupted. The Master (TOC) stores all information related to the disc, this includes position & size to two or multi channel TOCs, album title, album artist and genre data. 
 
 Track data is stored in a continuous stream and consists of 1 or 2 areas. The following combinations of areas on a disc are allowed:
--  2-channel area
--  5-channel area
--  6-channel area
--  2-channel and 5-channel area
--  2-channel and 6-channel area
+*  2-channel area
+*  5-channel area
+*  6-channel area
+*  2-channel and 5-channel area
+*  2-channel and 6-channel area
 
 The Two or Multi Channel TOC referred by the Master TOC, include track count, disc and track titles, track artist and ISRC codes, genre data and (optional) Super Audio CD text information which can be displayed during playback. 
 
