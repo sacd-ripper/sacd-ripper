@@ -4,20 +4,24 @@
 
 The Scarlet Book is Philips and Sony's 1999 specification document for Super Audio Compact Disc ( SACD ), a high-resolution audio format that features complex six-channel sound. SACD discs can contain three different versions of the same material.
 
+= Pit Signal Processing =
+
+SACD includes various copy protection measures of which the most prominent is Pit Signal Processing (PSP), a physical watermarking feature that contains a digital watermark modulated in the width of pits on the disc (data are stored in the pit length). The optical pickup must contain special circuitry to read the PSP watermark, which is then compared to information on the disc to make sure it is legitimate. Because the majority of DVD players and all DVD-ROM drives use an optical pickup that lacks this specialized watermark detection circuitry, although they can read the data on the SACD layer, they cannot decode the audio of a protected SACD disc. With one exception: The first two generations of Sony's PlayStation 3 (PS3) game console are capable of reading SACD Scarlet Book and bypass the copy protection. 
+
 = Specification =
 
-Numbers are stored in big endian format.
+A Scarlet Book disk always contains a Master Table of Contents (TOC). This Master TOC is stored several times after each other to insure there is a backup in case the previous one is corrupted. The Master (TOC) stores all information related to the disc, this includes position & size to Two or Multi Channel TOCs, album title, album artist and genre data. 
 
-== Block Addressing (LSN) ==
+Track data is stored in a continuous stream and there is a maximum of two tracks; one for two channel and for multichannel audio.
 
-A Scarlet Book disk is broken up into a number of 2048-byte blocks which we call frames. The way Scarlet Book addresses a block is to use its LSN or "logical sector number." Scarlet Book numbers the blocks from 0 on.
+The Two or Multi Channel TOC referred by the Master TOC, include  track count,  disc and track titles, track artist and ISRC codes, genre data and (optional) Super Audio CD text information which can be displayed during playback. 
 
-== Master Area ==
+There is lot's of speculation about an UDF filesystem for SACDs, but UDF is not part of the specifcation as some SACDs have it but most discs don't have any type of filesystem.
+
+=== Scarlet Book SACD Example ===
 
 {{{
 
-// Example of a Scarlet Book SACD:
-//
 //                  Start LSN    Size     Comment
 //                  -----------  -------  ---------------------------------------------
 // File System      0            510      Only some SACD's have UDF data, so ignore..
@@ -25,16 +29,29 @@ A Scarlet Book disk is broken up into a number of 2048-byte blocks which we call
 // Master TOC-2     520          10
 // Master TOC-3     530          10
 // 2 Channel
-//   Area TOC-1     -            40       master_area_t.2ch_toc1_area_start
-//   Track Area     -            -
-//   Area TOC-2     -            40       master_area_t.2ch_toc2_area_start
+//   Area TOC-1     -            -        position & size is stored in Master TOC
+//   Track Area     -            -        position, size is stored in Channel Area TOC
+//   Area TOC-2     -            -        position & size is stored in Master TOC
 // Multi Channel
-//   Area TOC-1     -            40       master_area_t.mch_toc1_area_start
-//   Track Area     -            -
-//   Area TOC-2     -            40       master_area_t.mch_toc2_area_start
-// Padding          -            -
+//   Area TOC-1     -            -        position & size is stored in Master TOC
+//   Track Area     -            -        position, size is stored in Channel Area TOC
+//   Area TOC-2     -            -        position & size is stored in Master TOC
 //
 //
+
+}}}
+
+Numbers are stored in big endian format.
+
+=== Block Addressing (LSN) ===
+
+A Scarlet Book disk is broken up into a number of 2048-byte blocks which we call frames. The way Scarlet Book addresses a block is to use its LSN or "logical sector number." Scarlet Book numbers the blocks from 0 on.
+
+== Master TOC ==
+
+When all mixing, editing, mastering and track marker information defining the start and stop time codes for each track is added the finished the audio must be captured and made into an dsdiff (DirectStream Digital Interchange File Format) interleaved file called an Edit Master.
+
+{{{
 
 #define START_OF_FILE_SYSTEM_AREA   0
 #define START_OF_MASTER_TOC         510
@@ -235,12 +252,17 @@ typedef struct
   uint8_t        data[2040];
 } master_man_t;
 
+}}}
+
+== Two or Multi Channel TOC ==
+
+{{{
 
 typedef struct
 {
-  uint64_t       id;                        // TWOCHTOC
+  uint64_t       id;                        // TWOCHTOC or MULCHTOC
   uint16_t       version;                   // 1.20, 0x0114
-  uint16_t       size;                      // ex. 40 (total size of TWOCHTOC)
+  uint16_t       size;                      // ex. 40 (total size of TOC)
   uint8_t        unknown_01[20];
   uint8_t        speaker_config_01;
   uint8_t        speaker_config_02;
@@ -260,7 +282,7 @@ typedef struct
   uint16_t       area_description_phonetic_offset;
   uint16_t       copyright_phonetic_offset;
   uint8_t        data[1896];
-} 2ch_toc_t;
+} channel_toc_t;
 
 typedef struct
 {
