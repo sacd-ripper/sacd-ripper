@@ -33,7 +33,7 @@ A Scarlet Book disk is broken up into a number of 2048-byte blocks which we call
 //   Track Area     -            -
 //   Area TOC-2     -            40       master_area_t.mch_toc2_area_start
 // Padding          -            -
-// 
+//
 //
 
 #define START_OF_FILE_SYSTEM_AREA   0
@@ -46,16 +46,16 @@ A Scarlet Book disk is broken up into a number of 2048-byte blocks which we call
 #define DSD_3_IN_14_ENCODED         2
 #define DSD_3_IN_16_ENCODED         3
 
-enum 
+enum
 {
     CHAR_SET_UNKNOWN          = 0
-  , CHAR_SET_ISO646           = 1 
-  , CHAR_SET_ISO8859_1        = 2 
-  , CHAR_SET_RIS506           = 3 
-  , CHAR_SET_KSC5601          = 4 
-  , CHAR_SET_GB2312           = 5 
-  , CHAR_SET_BIG5             = 6 
-  , CHAR_SET_ISO8859_1_ESC    = 7 
+  , CHAR_SET_ISO646           = 1
+  , CHAR_SET_ISO8859_1        = 2
+  , CHAR_SET_RIS506           = 3
+  , CHAR_SET_KSC5601          = 4
+  , CHAR_SET_GB2312           = 5
+  , CHAR_SET_BIG5             = 6
+  , CHAR_SET_ISO8859_1_ESC    = 7
 
 } character_set_t;
 
@@ -94,7 +94,7 @@ static const char *genre[] =
   , 0
 }
 
-enum 
+enum
 {
     GENRE_NOT_USED                      = 0
   , GENRE_NOT_DEFINED                   = 1
@@ -126,7 +126,7 @@ enum
   , GENRE_SPOKEN_WORD                   = 27
   , GENRE_WORLD_MUSIC                   = 28
   , GENRE_BLUES                         = 29
-  
+
 } genre_t;
 
 enum
@@ -136,6 +136,26 @@ enum
   , CATEGORY_JAPANESE                   = 2
 
 } category_t;
+
+enum
+{
+    TRACK_TYPE_TITLE                    = 0x01
+  , TRACK_TYPE_PERFORMER                = 0x02
+  , TRACK_TYPE_SONGWRITER               = 0x03
+  , TRACK_TYPE_COMPOSER                 = 0x04
+  , TRACK_TYPE_ARRANGER                 = 0x05
+  , TRACK_TYPE_MESSAGE                  = 0x06
+  , TRACK_TYPE_EXTRA_MESSAGE            = 0x07
+
+  , TRACK_TYPE_TITLE_PHONETIC           = 0x81
+  , TRACK_TYPE_PERFORMER_PHONETIC       = 0x82
+  , TRACK_TYPE_SONGWRITER_PHONETIC      = 0x83
+  , TRACK_TYPE_COMPOSER_PHONETIC        = 0x84
+  , TRACK_TYPE_ARRANGER_PHONETIC        = 0x85
+  , TRACK_TYPE_MESSAGE_PHONETIC         = 0x86
+  , TRACK_TYPE_EXTRA_MESSAGE_PHONETIC   = 0x87
+
+} track_type_t;
 
 }}}
 
@@ -150,13 +170,14 @@ typedef struct
 } genre_table_t;
 
 typedef struct
-  uint16_t       language;                  // ISO639-2 Language code
+{
+  char           language_code[2];          // ISO639-2 Language code
   uint8_t        character_set;             // char_set_t
   uint8_t        padding;
 } lang_table_t;
 
 typedef struct
-{ 
+{
   uint64_t       id;                        // SACDMTOC
   uint16_t       disc_version;              // 1.20 / 0x0114
   uint8_t        unknown_01[6];
@@ -165,15 +186,15 @@ typedef struct
   uint8_t        unknown_02[4];
   char           album_catalog_number[16];  // 0x00 when empty, else padded with spaces for short strings
   genre_table_t  album_genre[4];
-  uint8_t        unknown_03[10];
-  uint32_t       2ch_toc1_area_start;
-  uint32_t       2ch_toc2_area_start;
-  uint32_t       mch_toc1_area_start;
-  uint32_t       mch_toc2_area_start;
+  uint8_t        unknown_03[8];
+  uint32_t       ch2_toc1_area_start;
+  uint32_t       ch2_toc2_area_start;
+  uint32_t       chm_toc1_area_start;
+  uint32_t       chm_toc2_area_start;
   uint8_t        disc_type;                 // 0x80 hybrid, 0x00 for single, 0x?? for dual?
   uint8_t        unknown_04[3];             // padding?
-  uint16_t       2ch_toc_area_size;
-  uint16_t       mch_toc_area_size;
+  uint16_t       ch2_toc_area_size;
+  uint16_t       chm_toc_area_size;
   char           disc_catalog_number[16];   // 0x00 when empty, else padded with spaces for short strings
   genre_table_t  disc_genre[4];
   uint16_t       disc_date_year;
@@ -183,22 +204,112 @@ typedef struct
   uint8_t        text_channel_count;
   uint8_t        unknown_06[7];
   lang_table_t   languages[8];
-  uint8_t        unknown_07[1880];
 } master_toc_t;
 
 typedef struct
 {
   uint64_t       id;                        // SACDText
   uint64_t       unknown_01;
-
+  uint16_t       album_title_position;
+  uint16_t       album_title_phonetic_position;
+  uint16_t       album_artist_position;
+  uint16_t       album_artist_phonetic_position;
+  uint16_t       album_publisher_position;
+  uint16_t       album_publisher_phonetic_position;
+  uint16_t       album_copyright_position;
+  uint16_t       album_copyright_phonetic_position;
+  uint16_t       disc_title_position;
+  uint16_t       disc_title_phonetic_position;
+  uint16_t       disc_artist_position;
+  uint16_t       disc_artist_phonetic_position;
+  uint16_t       disc_publisher_position;
+  uint16_t       disc_publisher_phonetic_position;
+  uint16_t       disc_copyright_position;
+  uint16_t       disc_copyright_phonetic_position;
+  uint8_t        data[2000];
 } master_text_t;
 
 typedef struct
 {
   uint64_t       id;                        // SACD_Man
- 
+  uint8_t        data[2040];
 } master_man_t;
 
 
+typedef struct
+{
+  uint64_t       id;                        // TWOCHTOC
+  uint16_t       version;                   // 1.20, 0x0114
+  uint16_t       size;                      // ex. 40 (total size of TWOCHTOC)
+  uint8_t        unknown_01[20];
+  uint8_t        speaker_config_01;
+  uint8_t        speaker_config_02;
+  uint8_t        speaker_config_03;
+  uint8_t        unknown_02[29];
+  uint32_t       unknown_03;
+  uint16_t       track_count;
+  uint16_t       unknown_04;
+  uint32_t       track_position;
+  uint32_t       track_length;
+  uint8_t        text_channel_count;
+  uint8_t        unknown_06[7];
+  lang_table_t   languages[10];
+  uint8_t        unknown_05[16];
+  uint16_t       area_description_offset;
+  uint16_t       copyright_offset;
+  uint16_t       area_description_phonetic_offset;
+  uint16_t       copyright_phonetic_offset;
+  uint8_t        data[1896];
+} 2ch_toc_t;
+
+typedef struct
+{
+  uint8_t        track_text_count;
+  uint16_t       unknown_01;
+  uint8_t        track_type;
+  uint8_t        unknown_02;
+  char           track_text[];
+} track_text_t;
+
+typedef struct
+{
+  uint64_t       id;                        // SACDText
+  uint16_t       track_text_position[255];
+  uint8_t        data[];
+} channel_text_t;
+
+typedef struct
+{
+  char           country_code[2];
+  char           owner_code[3];
+  char           recording_year[2];
+  char           designation_code[5];
+} isrc_t;
+
+typedef struct
+{
+  uint64_t       id;                        // SACD_IGL
+  isrc_t         isrc[255];
+} channel_isrc_t;
+
+typedef struct
+{
+  uint64_t       id;                        // SACD_ACC
+  uint8_t        data[0xfff8];
+} channel_index_t;
+
+typedef struct
+{
+  uint64_t       id;                        // SACDTRL1
+  uint32_t       track_start_lsn[255];
+  uint32_t       track_stop_lsn[255];
+} channel_tracklist_1_t;
+
+typedef struct
+{
+  uint64_t       id;                        // SACDTRL2
+  uint32_t       track_start_time[255];			// time in ms
+  uint32_t       track_stop_time[255];
+} channel_tracklist_2_t;
 
 }}}
