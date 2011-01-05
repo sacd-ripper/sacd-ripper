@@ -1,24 +1,29 @@
-#summary The Scarlet Book is Philips and Sony's 1999 specification document for Super Audio Compact Disc ( SACD ).
+#summary The ScarletBook is Philips and Sony's 1999 specification document for Super Audio Compact Disc ( SACD ).
 
 = Introduction =
 
-The Scarlet Book is Philips and Sony's 1999 specification document for Super Audio Compact Disc ( SACD ), a high-resolution audio format that features multi-channel sound. SACD discs can contain three different versions of the same material.
+The ScarletBook is Philips and Sony's 1999 specification document for Super Audio Compact Disc ( SACD ), a high-resolution audio format that features multi-channel sound. SACD discs can contain two different versions of the same material.
 
 = Pit Signal Processing =
 
-SACD includes various copy protection measures of which the most prominent is Pit Signal Processing (PSP), a physical watermarking feature that contains a digital watermark modulated in the width of pits on the disc (data are stored in the pit length). The optical pickup must contain special circuitry to read the PSP watermark, which is then compared to information on the disc to make sure it is legitimate. Because the majority of DVD players and all DVD-ROM drives use an optical pickup that lacks this specialized watermark detection circuitry, although they can read the data on the SACD layer, they cannot decode the audio of a protected SACD disc. With one exception: The first two generations of Sony's PlayStation 3 (PS3) game console are capable of reading SACD Scarlet Book and bypass the copy protection. 
+SACD includes various copy protection measures of which the most prominent is Pit Signal Processing (PSP), a physical watermarking feature that contains a digital watermark modulated in the width of pits on the disc (data are stored in the pit length). The optical pickup must contain special circuitry to read the PSP watermark, which is then compared to information on the disc to make sure it is legitimate. Because the majority of DVD players and all DVD-ROM drives use an optical pickup that lacks this specialized watermark detection circuitry, although they can read the data on the SACD layer, they cannot decode the audio of a protected SACD disc. With one exception: The first two generations of Sony's PlayStation 3 (PS3) game console are capable of reading SACD ScarletBook and bypass the copy protection. 
 
 = Specification =
 
-A Scarlet Book disk always contains a Master Table of Contents (TOC). This Master TOC is stored several times after each other to insure there is a backup in case the previous one is corrupted. The Master (TOC) stores all information related to the disc, this includes position & size to Two or Multi Channel TOCs, album title, album artist and genre data. 
+A ScarletBook disk always contains a Master Table of Contents (TOC). This Master TOC is stored several times after each other to insure there is a backup in case the previous one is corrupted. The Master (TOC) stores all information related to the disc, this includes position & size to Two or Multi Channel TOCs, album title, album artist and genre data. 
 
-Track data is stored in a continuous stream and there is a maximum of two tracks; one for two channel and for multichannel audio.
+Track data is stored in a continuous stream and consists of 1 or 2 areas. The following combinations of areas on a disc are allowed:
+-  2-channel area
+-  5-channel area
+-  6-channel area
+-  2-channel and 5-channel area
+-  2-channel and 6-channel area
 
 The Two or Multi Channel TOC referred by the Master TOC, include track count, disc and track titles, track artist and ISRC codes, genre data and (optional) Super Audio CD text information which can be displayed during playback. 
 
 There is lot's of speculation about an UDF filesystem for SACDs, but UDF is not part of the specification as some SACD's have it but most discs don't.
 
-=== Scarlet Book SACD Example ===
+=== ScarletBook SACD Example ===
 
 {{{
 
@@ -45,7 +50,7 @@ Numbers are stored in big endian format.
 
 === Block Addressing (LSN) ===
 
-A Scarlet Book disk is broken up into a number of 2048-byte blocks which we call frames. The way Scarlet Book addresses a block is to use its LSN or "logical sector number." Scarlet Book numbers the blocks from 0 on.
+A ScarletBook disk is broken up into a number of 2048-byte blocks which we call frames. The way ScarletBook addresses a block is to use its LSN or "logical sector number." ScarletBook numbers the blocks from 0 on.
 
 == Master TOC ==
 
