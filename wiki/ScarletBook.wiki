@@ -54,8 +54,6 @@ A ScarletBook disk is broken up into a number of 2048-byte blocks which we call 
 
 == Master TOC ==
 
-When all mixing, editing, mastering and track marker information defining the start and stop time codes for each track is added the finished the audio must be captured and made into an dsdiff (DirectStream Digital Interchange File Format) interleaved file called an Edit Master.
-
 {{{
 
 #define START_OF_FILE_SYSTEM_AREA   0
