@@ -281,18 +281,17 @@ static int scarletbook_read_channel_toc(scarletbook_handle_t *handle, int channe
 			}
 			p += SACD_LSN_SIZE;
 		} else if (strncmp(p, "SACDTRL2", 8) == 0) {
-			handle->channel_tracklist_time[channel_nr] = (channel_tracklist_time_t*) p;
+			channel_tracklist_time_t *tracklist;
+			tracklist = handle->channel_tracklist_time[channel_nr] = (channel_tracklist_time_t*) p;
+			for (i = 0; i < channel_toc->track_count; i++) {
+				ntoh32(tracklist->track_start_time[i]);
+				ntoh32(tracklist->track_stop_time[i]);
+			}
 			p += SACD_LSN_SIZE;
 		} else {
 			break;
 		}
 	}
-
-	for (i = 0; i < channel_toc->text_channel_count; i++) {
-		//channel_toc->languages
-	}
-
-	// tracks
 
 	return 1;
 }

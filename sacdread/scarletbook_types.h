@@ -299,8 +299,8 @@ typedef struct
     uint16_t       version;                   // 1.20, 0x0114
     uint16_t       size;                      // ex. 40 (total size of TOC)
     uint8_t        unknown_01[20];
-    uint8_t        loudspeaker_config;
     uint8_t        channel_count;
+	uint8_t        loudspeaker_config;
     uint8_t        unknown_02[30];
     uint32_t       unknown_03;
     uint16_t       track_count;
@@ -374,8 +374,8 @@ typedef struct {
 typedef struct
 {
     char           id[8];                     // SACDTRL2
-    sacd_time_t    track_start_time[255];
-    sacd_time_t    track_stop_time[255];
+    uint32_t       track_start_time[255];
+    uint32_t       track_stop_time[255];
 } ATTRIBUTE_PACKED channel_tracklist_time_t;
 
 #if PRAGMA_PACK
