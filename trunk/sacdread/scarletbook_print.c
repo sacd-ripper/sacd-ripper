@@ -137,7 +137,38 @@ void scarletbook_print_master_toc(scarletbook_handle_t *handle) {
 	scarletbook_print_album_text(handle);
 }
 
-void scarletbook_print_channel_toc(channel_toc_t *channel) {
+void scarletbook_print_channel_toc(scarletbook_handle_t *handle, int channel_nr) {
+	channel_isrc_t *channel_isrc;
+	channel_tracklist_offset_t *channel_offset;
+	channel_tracklist_time_t *channel_time;
+	channel_toc_t *channel = handle->channel_toc[channel_nr];
+	channel_isrc = handle->channel_isrc[channel_nr];
+	channel_offset = handle->channel_tracklist_offset[channel_nr];
+	channel_time = handle->channel_tracklist_time[channel_nr];
+
+	printf("Channel Information [%i]:\n\n", channel_nr);
+	printf("\tVersion: %2i.%2i\n", (channel->version >> 8) & 0xff, channel->version & 0xff);
+
+	if (channel->copyright_offset)
+		printf("\tCopyright: %s\n", substr((char*) channel + channel->copyright_offset, 0, 60));
+	if (channel->copyright_phonetic_offset)
+		printf("\tCopyright Phonetic: %s\n", substr((char*) channel + channel->copyright_phonetic_offset, 0, 60));
+	if (channel->area_description_offset)
+		printf("\tArea Description: %s\n", substr((char*) channel + channel->area_description_offset, 0, 60));
+	if (channel->area_description_phonetic_offset)
+		printf("\tArea Description Phonetic: %s\n", substr((char*) channel + channel->area_description_phonetic_offset, 0, 50));
+	
+	printf("\tTrack Count: %i\n", channel->track_count);
+	printf("\tSpeaker config: ");
+	if (channel->channel_count == 2 && channel->loudspeaker_config == 0) {
+		printf("2 Channel\n");
+	} else if (channel->channel_count == 5 && channel->loudspeaker_config == 3) {
+		printf("5 Channel\n");
+	} else if (channel->channel_count == 6 && channel->loudspeaker_config == 4) {
+		printf("6 Channel\n");
+	} else {
+		printf("Unknown\n");
+	}
 
 }
 
@@ -156,7 +187,7 @@ void scarletbook_print(scarletbook_handle_t *handle) {
 	printf("\nChannel count: %i\n", handle->channel_count);
 	if (handle->channel_count > 0) {
 		for (i = 0; i < handle->channel_count; i++) {
-			scarletbook_print_channel_toc(handle->channel_toc[i]);
+			scarletbook_print_channel_toc(handle, i);
 		}
 	}
 
