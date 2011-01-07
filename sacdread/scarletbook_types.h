@@ -345,7 +345,7 @@ typedef struct
 typedef struct
 {
     char           id[8];                     // SACD_IGL
-    isrc_t         isrc[255];
+    isrc_t         isrc[170];
 } ATTRIBUTE_PACKED channel_isrc_t;
 
 typedef struct
@@ -359,15 +359,7 @@ typedef struct
     char           id[8];                     // SACDTRL1
     uint32_t       track_start_lsn[255];
     uint32_t       track_stop_lsn[255];
-} ATTRIBUTE_PACKED channel_tracklist_1_t;
-
-typedef struct
-{
-    char           id[8];                     // SACDTRL2
-    uint32_t       track_start_time[255];     // hours::minutes::seconds::ms
-    uint32_t       track_stop_time[255];
-} ATTRIBUTE_PACKED channel_tracklist_2_t;
-
+} ATTRIBUTE_PACKED channel_tracklist_offset_t;
 
 /**
  * SACD Time Information.
@@ -379,6 +371,13 @@ typedef struct {
   uint8_t frame_u; /* The two high bits are the frame rate. */
 } ATTRIBUTE_PACKED sacd_time_t;
 
+typedef struct
+{
+    char           id[8];                     // SACDTRL2
+    sacd_time_t    track_start_time[255];
+    sacd_time_t    track_stop_time[255];
+} ATTRIBUTE_PACKED channel_tracklist_time_t;
+
 #if PRAGMA_PACK
 #pragma pack()
 #endif
@@ -387,10 +386,18 @@ typedef struct {
 
   sacd_reader_t  *sacd;
 
+  uint8_t        *master_data;
   master_toc_t   *master_toc;
   master_text_t  *master_text[8];
   master_man_t   *master_man;
-  uint8_t        *master_data;
+
+  uint8_t        *channel_data[2];
+  int			  channel_count;
+  channel_toc_t  *channel_toc[2];
+  channel_tracklist_offset_t *channel_tracklist_offset[2];
+  channel_tracklist_time_t *channel_tracklist_time[2];
+  channel_text_t  *channel_text[2][8];
+  channel_isrc_t  *channel_isrc[2];
 
 } scarletbook_handle_t;
 
