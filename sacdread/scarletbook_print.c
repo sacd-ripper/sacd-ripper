@@ -138,6 +138,7 @@ void scarletbook_print_master_toc(scarletbook_handle_t *handle) {
 }
 
 void scarletbook_print_channel_toc(scarletbook_handle_t *handle, int channel_nr) {
+	int i;
 	channel_isrc_t *channel_isrc;
 	channel_tracklist_offset_t *channel_offset;
 	channel_tracklist_time_t *channel_time;
@@ -146,7 +147,7 @@ void scarletbook_print_channel_toc(scarletbook_handle_t *handle, int channel_nr)
 	channel_offset = handle->channel_tracklist_offset[channel_nr];
 	channel_time = handle->channel_tracklist_time[channel_nr];
 
-	printf("Channel Information [%i]:\n\n", channel_nr);
+	printf("\nChannel Information [%i]:\n\n", channel_nr);
 	printf("\tVersion: %2i.%2i\n", (channel->version >> 8) & 0xff, channel->version & 0xff);
 
 	if (channel->copyright_offset)
@@ -169,6 +170,17 @@ void scarletbook_print_channel_toc(scarletbook_handle_t *handle, int channel_nr)
 	} else {
 		printf("Unknown\n");
 	}
+
+	for (i = 0; i < channel->track_count; i++) {
+		isrc_t *isrc = &channel_isrc->isrc[i];
+		printf("\tISRC Track [%d]:\n\t  ", i);
+		printf("Country: %s, ", substr(isrc->country_code, 0, 2));
+		printf("Owner: %s, ", substr(isrc->owner_code, 0, 3));
+		printf("Year: %s, ", substr(isrc->recording_year, 0, 2));
+		printf("Designation: %s\n", substr(isrc->designation_code, 0, 5));
+	}
+
+	//printf("Track %i, %02:%02i:%02i\n", i, channel_time->track_start_time[i], channel_time->track_stop_time[i], i);
 
 }
 
