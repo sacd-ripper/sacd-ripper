@@ -1,9 +1,9 @@
 in order of importance:
 
-- read & print channel tocs
 - add philips dsdiff 1.5 export support
 	- add dst decoding
 - add sony dsf export support
+- add ID3v2 support for DSDIFF & DSF
 - add Makefile
 - compile on PS3
 - add libspe2 support for multi SPU DST decoding
