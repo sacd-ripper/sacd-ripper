@@ -6,7 +6,7 @@ The ScarletBook is Philips and Sony's 1999 specification document for Super Audi
 
 = Pit Signal Processing =
 
-SACD includes various copy protection measures of which the most prominent is Pit Signal Processing (PSP), a physical watermarking feature that contains a digital watermark modulated in the width of pits on the disc (data are stored in the pit length). The optical pickup must contain special circuitry to read the PSP watermark, which is then compared to information on the disc to make sure it is legitimate. Because the majority of DVD players and all DVD-ROM drives use an optical pickup that lacks this specialized watermark detection circuitry, although they can read the data on the SACD layer, they cannot decode the audio of a protected SACD disc. With one exception: The first two generations of Sony's PlayStation 3 (PS3) game console are capable of reading SACD ScarletBook and bypass the copy protection. 
+SACD includes various copy protection measures of which the most prominent is Pit Signal Processing (PSP), a physical watermarking feature that contains a digital watermark modulated in the width of pits on the disc (data are stored in the pit length). The optical pickup must contain special circuitry to read the PSP watermark, which is then compared to information on the disc to make sure it is legitimate. Because the majority of DVD players and all DVD-ROM drives use an optical pickup that lacks this specialized watermark detection circuitry, although they can read the data on the SACD layer, they cannot decode the audio of a protected SACD disc. With one exception: The first two generations of Sony's Playstation 3 (PS3) game console are capable of reading SACD ScarletBook and bypass the copy protection. 
 
 = Specification =
 
