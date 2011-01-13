@@ -70,6 +70,7 @@ scarletbook_handle_t *scarletbook_open(sacd_reader_t *sacd, int title) {
   if (!scarletbook_read_master_toc(sb)) {
     fprintf(stderr, "libsacdread: Can't read Master TOC.\n");
     scarletbook_close(sb);
+	return NULL;
   }
 
   if (sb->master_toc->channel_1_toc_area_1_start) {
@@ -157,8 +158,8 @@ static int scarletbook_read_master_toc(scarletbook_handle_t *handle) {
   ntoh16(master_toc->channel_2_toc_area_size);
   ntoh16(master_toc->disc_date_year);
 
-  if (master_toc->disc_version != SUPPORT_SCARLETBOOK_VERSION) {
-	  fprintf(stderr, "libsacdread: Unsupported version: %2i.%2i\n", (master_toc->disc_version >> 8) & 0xff, master_toc->disc_version & 0xff);
+  if (master_toc->disc_version > SUPPORT_SCARLETBOOK_VERSION) {
+	  fprintf(stderr, "libsacdread: Unsupported version: %i.%02i\n", (master_toc->disc_version >> 8) & 0xff, master_toc->disc_version & 0xff);
 	  return 0;
   }
 
@@ -246,7 +247,7 @@ static int scarletbook_read_channel_toc(scarletbook_handle_t *handle, int channe
 	ntoh16(channel_toc->area_description_phonetic_offset);
 	ntoh16(channel_toc->copyright_phonetic_offset);
 
-	if (channel_toc->version != SUPPORT_SCARLETBOOK_VERSION) {
+	if (channel_toc->version > SUPPORT_SCARLETBOOK_VERSION) {
 		fprintf(stderr, "libsacdread: Unsupported version: %2i.%2i\n", (channel_toc->version >> 8) & 0xff, channel_toc->version & 0xff);
 		return 0;
 	}

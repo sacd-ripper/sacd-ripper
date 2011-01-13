@@ -24,6 +24,10 @@
 #include "scarletbook_read.h"
 #include "scarletbook_print.h"
 
+#include "scarletbook_id3v2.h"
+
+#include "dsdiff.h"
+
 int main(int argc, char* argv[])
 {
 	sacd_reader_t *sacd_reader;

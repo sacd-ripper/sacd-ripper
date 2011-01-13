@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories=".\win32;..\sacdread"
+				AdditionalIncludeDirectories=".\win32;..\sacdread;.\sacdread\id3"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -61,6 +61,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				LinkLibraryDependencies="true"
 				LinkIncremental="2"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -114,8 +115,8 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="2"
-				AdditionalIncludeDirectories=".\win32;..\sacdread"
 				EnableIntrinsicFunctions="true"
+				AdditionalIncludeDirectories=".\win32;..\sacdread"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
@@ -173,6 +174,10 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
+				RelativePath="..\sacdread\dsdiff_writer.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\main.c"
 				>
 			</File>
@@ -185,6 +190,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\sacdread\scarletbook_id3v2.c"
+				>
+			</File>
+			<File
 				RelativePath="..\sacdread\scarletbook_print.c"
 				>
 			</File>
@@ -192,12 +201,28 @@
 				RelativePath="..\sacdread\scarletbook_read.c"
 				>
 			</File>
+			<Filter
+				Name="id3"
+				>
+				<File
+					RelativePath="..\sacdread\id3\md5.c"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
+			<File
+				RelativePath="..\sacdread\dsdiff.h"
+				>
+			</File>
+			<File
+				RelativePath="..\sacdread\dsdiff_writer.h"
+				>
+			</File>
 			<File
 				RelativePath="..\sacdread\endianess.h"
 				>
@@ -207,7 +232,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\sacdread\sacd_read_internal.h"
+				>
+			</File>
+			<File
 				RelativePath="..\sacdread\sacd_reader.h"
+				>
+			</File>
+			<File
+				RelativePath="..\sacdread\scarletbook_id3v2.h"
 				>
 			</File>
 			<File
@@ -222,6 +255,18 @@
 				RelativePath="..\sacdread\scarletbook_types.h"
 				>
 			</File>
+			<Filter
+				Name="id3"
+				>
+				<File
+					RelativePath="..\sacdread\id3\id3.h"
+					>
+				</File>
+				<File
+					RelativePath="..\sacdread\id3\md5.h"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="Resource Files"

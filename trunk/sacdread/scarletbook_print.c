@@ -97,7 +97,7 @@ void scarletbook_print_master_toc(scarletbook_handle_t *handle) {
 	master_toc_t *mtoc = handle->master_toc;
 
 	printf("Disc Information:\n\n");
-	printf("\tVersion: %2i.%2i\n", (mtoc->disc_version >> 8) & 0xff, mtoc->disc_version & 0xff);
+	printf("\tVersion: %2i.%02i\n", (mtoc->disc_version >> 8) & 0xff, mtoc->disc_version & 0xff);
 	printf("\tCreation date: %4i-%02i-%02i\n"
 		, mtoc->disc_date_year, mtoc->disc_date_month, mtoc->disc_date_day);
 
@@ -146,7 +146,7 @@ void scarletbook_print_channel_toc(scarletbook_handle_t *handle, int channel_nr)
 	channel_time = handle->channel_tracklist_time[channel_nr];
 
 	printf("\nChannel Information [%i]:\n\n", channel_nr);
-	printf("\tVersion: %2i.%2i\n", (channel->version >> 8) & 0xff, channel->version & 0xff);
+	printf("\tVersion: %2i.%02i\n", (channel->version >> 8) & 0xff, channel->version & 0xff);
 
 	if (channel->copyright_offset)
 		printf("\tCopyright: %s\n", substr((char*) channel + channel->copyright_offset, 0, 60));
