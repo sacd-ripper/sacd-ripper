@@ -54,4 +54,4 @@ A ScarletBook disk is broken up into a number of 2048-byte blocks which we call 
 
 == Master TOC ==
 
-For the lastest detailed scarletbook specifications check the [http://code.google.com/p/sacd-ripper/source/browse/trunk/sacdread/scarletbook_types.h following page].
+For the lastest detailed scarletbook specifications check the [http://code.google.com/p/sacd-ripper/source/browse/trunk/sacdread/scarletbook_types.h c header file].
