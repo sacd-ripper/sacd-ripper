@@ -270,7 +270,7 @@ static int id_2_2(ID3 *info, unsigned char *blob)
 {
   unsigned char *ptr= blob;
 
-  while (info->tag_length > (ptr - blob)) 
+  while (info->tag_length > (size_t) (ptr - blob)) 
   {
     size_t size= id3_size2(ptr+3);
     char *compare_ptr= (char *)ptr;
@@ -344,7 +344,7 @@ static int id_2_3(ID3 *info, unsigned char *blob)
 {
   unsigned char *ptr= blob;
 
-  while (info->tag_length > (ptr - blob)) 
+  while (info->tag_length > (size_t) (ptr - blob)) 
   {
     size_t size= get_framesize(ptr);
     char *compare_ptr= (char *)ptr;
@@ -488,6 +488,7 @@ static int get_id3v2_tag (ID3 *info, unsigned char *blob, size_t blob_length)
   return 1;
 }
 
+#if 0
 int ID3_to_file(char *filename, char *newfile) 
 {
   int rc= ID3_OK;
@@ -561,7 +562,9 @@ int ID3_to_file(char *filename, char *newfile)
 
   return rc;
 }
+#endif
 
+#if 0
 int parse_file_ID3(ID3 *info, char *filename) 
 {
   int rc= ID3_OK;
@@ -625,6 +628,7 @@ int parse_file_ID3(ID3 *info, char *filename)
 
   return rc;
 }
+#endif
 
 int parse_blob_ID3(ID3 *info, unsigned char *blob, size_t blob_length) 
 {
@@ -650,8 +654,10 @@ int destroy_ID3(ID3 *info)
   DEBUG_ENTER("destroy_ID3");
   if (info && !info->user_memory)
     free(info->buffer);
+#if 0
   if (info->mask & KEEP_BLOB)
     munmap(info->data, info->data_size);
+#endif
   if (info->allocated)
     free(info);
 
