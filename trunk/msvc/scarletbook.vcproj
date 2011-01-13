@@ -205,6 +205,10 @@
 				Name="id3"
 				>
 				<File
+					RelativePath="..\sacdread\id3\id3.c"
+					>
+				</File>
+				<File
 					RelativePath="..\sacdread\id3\md5.c"
 					>
 				</File>
