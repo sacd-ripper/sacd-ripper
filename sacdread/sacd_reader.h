@@ -80,6 +80,9 @@ void sacd_close( sacd_reader_t * );
  */
 ssize_t sacd_read_block_raw( sacd_reader_t *, uint32_t, size_t, unsigned char * );
 
+ssize_t sacd_read_block( sacd_reader_t *, size_t, unsigned char * );
+ssize_t sacd_seek_block( sacd_reader_t *, uint32_t );
+
 #ifdef __cplusplus
 };
 #endif
