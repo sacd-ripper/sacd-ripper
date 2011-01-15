@@ -205,7 +205,7 @@
 					>
 				</File>
 				<File
-					RelativePath="..\sacdread\scarletbook_id3v2.c"
+					RelativePath="..\sacdread\scarletbook_id3.c"
 					>
 				</File>
 				<File
@@ -251,7 +251,7 @@
 					>
 				</File>
 				<File
-					RelativePath="..\sacdread\scarletbook_id3v2.h"
+					RelativePath="..\sacdread\scarletbook_id3.h"
 					>
 				</File>
 				<File

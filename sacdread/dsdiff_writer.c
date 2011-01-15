@@ -30,7 +30,7 @@
 #include <io.h>
 #include <time.h>
 
-#include "scarletbook_id3v2.h"
+#include "scarletbook_id3.h"
 #include "endianess.h"
 #include "dsdiff_writer.h"
 #include "dsdiff.h"
