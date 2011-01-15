@@ -93,23 +93,6 @@
  */
 
 #elif defined(__FreeBSD__) || defined(__sun) || defined(__bsdi__) || defined(WIN32) || defined(__CYGWIN__) || defined(__BEOS__)
-#define SWAP16(x) \
- x = ((((x) & 0xff00) >> 8) | \
-      (((x) & 0x00ff) << 8))
-#define SWAP32(x) \
- x = ((((x) & 0xff000000) >> 24) | \
-      (((x) & 0x00ff0000) >>  8) | \
-      (((x) & 0x0000ff00) <<  8) | \
-      (((x) & 0x000000ff) << 24))
-#define SWAP64(x) \
- x = ((((x) & 0xff00000000000000ULL) >> 56) | \
-      (((x) & 0x00ff000000000000ULL) >> 40) | \
-      (((x) & 0x0000ff0000000000ULL) >> 24) | \
-      (((x) & 0x000000ff00000000ULL) >>  8) | \
-      (((x) & 0x00000000ff000000ULL) <<  8) | \
-      (((x) & 0x0000000000ff0000ULL) << 24) | \
-      (((x) & 0x000000000000ff00ULL) << 40) | \
-      (((x) & 0x00000000000000ffULL) << 56))
 #define hton16(x) \
 	((((x) & 0xff00) >> 8) | \
 	(((x) & 0x00ff) << 8))
@@ -128,6 +111,9 @@
 	(((x) & 0x000000000000ff00ULL) << 40) | \
 	(((x) & 0x00000000000000ffULL) << 56))
 
+#define SWAP16(x) x = (hton16(x))
+#define SWAP32(x) x = (hton32(x))
+#define SWAP64(x) x = (hton64(x))
 
 #else
 
