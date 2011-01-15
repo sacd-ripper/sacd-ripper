@@ -274,8 +274,11 @@ dsdiff_handle_t	*dsdiff_open(scarletbook_handle_t *sb_handle, char *filename, in
 
 void dsdiff_close(dsdiff_handle_t *handle) {
 
-	close(handle->fd);
-	free(handle->header);
-	free(handle->footer);
+	if (handle->fd)
+		close(handle->fd);
+	if (handle->header)
+		free(handle->header);
+	if (handle->footer)
+		free(handle->footer);
 	free(handle);
 }

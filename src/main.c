@@ -45,7 +45,7 @@ static struct opts_s
 	int            convert_dst;
 	int            print_only;
 	char          *input_device; /* Access method driver should use for control */
-	char          *output_file;
+	char           output_file[512];
 } opts;
 
 /* Parse all options. */
@@ -130,7 +130,7 @@ static int parse_options(int argc, char *argv[]) {
 
 	if (optind < argc) {
 		const char *remaining_arg = argv[optind++];
-		opts.output_file = strdup(remaining_arg);
+		strcpy(opts.output_file, remaining_arg);
 	}
 
 	return 1;
