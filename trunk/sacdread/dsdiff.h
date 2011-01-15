@@ -23,6 +23,7 @@
 #define DSDIFF_H_INCLUDED
 
 #include <inttypes.h>
+#include "endianess.h"
 
 #undef ATTRIBUTE_PACKED
 #undef PRAGMA_PACK_BEGIN
@@ -39,8 +40,6 @@
 #define ATTRIBUTE_PACKED
 #define PRAGMA_PACK 1
 #endif
-
-#define MAKE_MARKER(x)       (uint32_t)(x)
 
 #define FRM8_MARKER		(MAKE_MARKER ('FRM8'))		// Format Version Chunk
 
@@ -77,6 +76,9 @@
 
 #define DSDIFF_VERSION 0x01050000
 #define DSDIFF_VERSION_STRING "version 1.5.0.0"
+
+#define CEIL_ODD_NUMBER(x) ((x) % 2 ? (x)+1 : (x))
+#define CALC_CHUNK_SIZE(x) (hton64(CEIL_ODD_NUMBER(x)))
 
 enum {
 	LS_CONFIG_2_CHNL					= 0,	// 2-channel stereo set-up
@@ -149,10 +151,11 @@ struct chunk_header_t
     // chunk_data[] is the data stored in the chunk. The format of this data is determined by chunk_id. If
     // the data is an odd number of bytes in length, a pad byte must be added at the end. The pad
     // byte is not included in chunk_data_size.
-	//uint8_t		chunk_data[1];
+	uint8_t		chunk_data[0xffff];
 
 } ATTRIBUTE_PACKED;
 typedef struct chunk_header_t              chunk_header_t;
+#define CHUNK_HEADER_SIZE 12U
 
 
 // The FORM chunk of form_type 'DSD ' is called a Form DSD Chunk.
@@ -178,10 +181,11 @@ struct form_dsd_chunk_t
 	// frm8_chunks[] are the chunks within the Form DSD Chunk. These chunks are called local
 	// chunks since their own chunk_id's are local to (i.e. specific for) the Form DSD chunk. A Form
 	// DSD Chunk together with its local chunks make up a DSDIFF file.
-	//chunk_header_t	frm8_chunks[1];
+	chunk_header_t	*frm8_chunks[];
 
 } ATTRIBUTE_PACKED;
 typedef struct form_dsd_chunk_t              form_dsd_chunk_t;
+#define FORM_DSD_CHUNK_SIZE 16U
 
 
 // The Format Version Chunk contains a field indicating the format specification version for
@@ -215,7 +219,7 @@ struct format_version_chunk_t
 	uint32_t	version; // 0x01050000 version 1.5.0.0 DSDIFF
 } ATTRIBUTE_PACKED;
 typedef struct format_version_chunk_t              format_version_chunk_t;
-
+#define FORMAT_VERSION_CHUNK_SIZE 16U
 
 // The Property Chunk is a container chunk, which consists of "local property chunks". These
 // "local property chunks" define fundamental parameters of the defined property type.      
@@ -244,9 +248,10 @@ struct property_chunk_t
 	// - Compression Type Chunk
 	// - Absolute Start Time Chunk
 	// - Loudspeaker Configuration Chunk
-	//chunk_header_t*	property_chunks[5]; // local chunks
+	chunk_header_t	property_chunks[]; // local chunks
 } ATTRIBUTE_PACKED;
 typedef struct property_chunk_t              property_chunk_t;
+#define PROPERTY_CHUNK_SIZE 16U
 
 
 // The Sample Rate Chunk defines the sample rate at which the sound data has been sampled.
@@ -266,6 +271,7 @@ struct sample_rate_chunk_t
 	uint32_t		sample_rate; // sample rate in [Hz]
 } ATTRIBUTE_PACKED;
 typedef struct sample_rate_chunk_t              sample_rate_chunk_t;
+#define SAMPLE_RATE_CHUNK_SIZE 16U
 
 
 // The Channels Chunk defines the total number of channels and the channel ID's used in the
@@ -308,9 +314,10 @@ struct channels_chunk_t
 	// -  	If the file contains 6 channels with channel ID's 'MLFT' and 'MRGT' and 'C ' and
 	// 		'LFE ' and 'LS ' and 'RS ' the order must be:
 	// 		'MLFT', 'MRGT', 'C ', 'LFE ', 'LS ', 'RS '.
-	uint32_t		channel_ids[40]; // channels ID's
+	uint32_t		channel_ids[255]; // channels ID's
 } ATTRIBUTE_PACKED;
 typedef struct channels_chunk_t              channels_chunk_t;
+#define CHANNELS_CHUNK_SIZE 14U
 
 
 // The Compression Type Chunk defines the compression/decompression algorithm which is
@@ -340,9 +347,10 @@ struct compression_type_chunk_t
 	// 'DSD ' "not compressed" Uncompressed, plain DSD audio data
 	// 'DST ' "DST Encoded" DST Encoded audio data
 	// Other types may be defined in later versions.
-	char			compression_name[0xff]; // human readable type name
+	char			compression_name[255]; // human readable type name
 } ATTRIBUTE_PACKED;
 typedef struct compression_type_chunk_t              compression_type_chunk_t;
+#define COMPRESSION_TYPE_CHUNK_SIZE 17U
 
 
 // The Absolute Start Time Chunk defines the point on the time axis at which the sound data
@@ -375,6 +383,7 @@ struct absolute_start_time_chunk_t
 	uint32_t	samples; // samples
 } ATTRIBUTE_PACKED;
 typedef struct absolute_start_time_chunk_t              absolute_start_time_chunk_t;
+#define ABSOLUTE_START_TIME_CHUNK_SIZE 20U
 
 
 // The Loudspeaker Configuration Chunk defines the set-up of the loudspeakers.
@@ -402,6 +411,7 @@ struct loudspeaker_config_chunk_t
 	uint16_t		loudspeaker_config; // loudspeaker configuration
 } ATTRIBUTE_PACKED;
 typedef struct loudspeaker_config_chunk_t              loudspeaker_config_chunk_t;
+#define LOADSPEAKER_CONFIG_CHUNK_SIZE 14U
 
 
 // The DSD Sound Data Chunk contains the non-compressed sound data. 
@@ -431,9 +441,10 @@ struct dsd_sound_data_chunk_t
 	// is a multiple of 8 bits. Furthermore there is a restriction that all clustered frames are
 	// channel_count bytes in length preserving the total number of bits per channel is equal for all
 	// channels.
-	//uint8_t			sound_data[1]; // (interleaved) DSD data
+	uint8_t			sound_data[]; // (interleaved) DSD data
 } ATTRIBUTE_PACKED;
 typedef struct dsd_sound_data_chunk_t              dsd_sound_data_chunk_t;
+#define DSD_SOUND_DATA_CHUNK_SIZE 12U
 
 
 // The DST Sound Data Chunk contains the DST compressed sampled sound data. The DST
@@ -466,9 +477,10 @@ struct dst_sound_data_chunk_t
 	// The CRC, stored in a DST Frame CRC Chunk, must be calculated over the original (noncompressed)
 	// DSD data corresponding to the audio of the preceding DST Frame Data
 	// Chunk.
-	//chunk_header_t		dstChunks[1]; // container
+	chunk_header_t		dst_chunks[]; // container
 } ATTRIBUTE_PACKED;
 typedef struct dst_sound_data_chunk_t              dst_sound_data_chunk_t;
+#define DST_SOUND_DATA_CHUNK_SIZE 12U
 
 
 // The DST Frame Information Chunk contains the actual number of DST frames and the
@@ -567,7 +579,7 @@ struct dst_sound_index_chunk
 	
 	// indexData[] contains the file positions of the DST Frame Data Chunks and their lengths. It
 	// is an array of dst_frame_index_t structs.
-	//dst_frame_index_t	indexData[1]; // array of index structs
+	dst_frame_index_t	index_data[255]; // array of index structs
 } ATTRIBUTE_PACKED;
 typedef struct dst_sound_index_chunk              dst_sound_index_chunk;
 
@@ -650,9 +662,10 @@ struct comment_t
 	// comment_text[] is the description of the comment. This text must be padded with a byte at
 	// the end, if needed, to make it an even number of bytes long. This pad byte, if present, is not
 	// included in count.
-	//char			comment_text[512]; // text
+	char			comment_text[512]; // text
 } ATTRIBUTE_PACKED;
 typedef struct comment_t              comment_t;
+#define COMMENT_SIZE 14U
 
 
 // The comments Chunk is used to store comments in DSDIFF.
@@ -681,9 +694,10 @@ struct comments_chunk_t
 	
 	// comments[] are the comments themselves. Each Comment consists of an even number of
 	// bytes, so no pad bytes are needed within the comment chunks.
-	//comment_t*		comments[255]; // the concatenated comments
+	comment_t		comments[255]; // the concatenated comments
 } ATTRIBUTE_PACKED;
 typedef struct comments_chunk_t              comments_chunk_t;
+#define COMMENTS_CHUNK_SIZE 14U
 
 
 // The Edited Master Information Chunk is a container chunk for storing edited master
@@ -694,7 +708,7 @@ typedef struct comments_chunk_t              comments_chunk_t;
 struct edited_master_information_chunk_t 
 {
 	// chunk_id is always 'DIIN'.
-	uint32_t					chunk_id; // 'DIIN'
+	uint32_t			chunk_id; // 'DIIN'
 	
 	// chunk_data_size is the size of the data portion of the chunk, in bytes. It does not include the 12
 	// bytes used by chunk_id and chunk_data_size. It is the total length of the local chunks.
@@ -718,7 +732,7 @@ typedef struct edited_master_information_chunk_t              edited_master_info
 struct edited_master_id_chunk_t 
 {
 	// chunk_id is always 'EMID'.
-	uint32_t					chunk_id; // 'EMID'
+	uint32_t			chunk_id; // 'EMID'
 	// chunk_data_size is the size of the data portion of the chunk, in bytes. It does not include the 12
 	// bytes used by chunk_id and chunk_data_size.
 	uint64_t			chunk_data_size;
@@ -726,7 +740,7 @@ struct edited_master_id_chunk_t
 	// not specified, they are application specific . It is recommended that the emid[] is unique for
 	// each Edited Master file. Therefore it is recommended to use date, time, machine name,
 	// serial number, and so on, for an emid[].
-	//char				emid[1]; // unique sequence of bytes
+	char				emid[255]; // unique sequence of bytes
 } ATTRIBUTE_PACKED;
 typedef struct edited_master_id_chunk_t              edited_master_id_chunk_t;
 
@@ -776,7 +790,7 @@ struct marker_chunk_t
 	// 4 Index - Entry point of an Index
 	// 5..65535 Reserved for future use
 	// TrackStop of the last Track is also called ProgramEnd.
-	uint16_t	markType; // type of marker
+	uint16_t	mark_type; // type of marker
 
 	// markChannel defines the channel to which this marker belongs.
 	// 0 All channels
@@ -785,7 +799,7 @@ struct marker_chunk_t
 	// .. ..
 	// channel_count Last channel of the file
 	// The value of markChannel is limited to [0...channel_count].
-	uint16_t	markChannel; // channel reference
+	uint16_t	mark_channel; // channel reference
 
 	// TrackFlags define a series of flags to be used with a marker. The behaviour of the
 	// TrackFlags is determined by the number and order of the channels defined in the file. Bit 0
@@ -839,7 +853,7 @@ struct marker_chunk_t
 	// loudspeaker).
 	// Note: The previously defined LFE_mute flag is still compatible, because the LFE channel
 	// is the 4th channel of a 5.1 multi-channel file.
-	uint16_t	trackFlags; // special purpose flags
+	uint16_t	track_flags; // special purpose flags
 
 	// count is the length of the markerText that makes up the description of the marker.
 	uint32_t	count; // string length
@@ -847,7 +861,7 @@ struct marker_chunk_t
 	// markerText[] is the description of the marker. This text must be padded with a byte at the
 	// end, if needed, to make it an even number of bytes long. This pad byte, if present, is not
 	// included in count.
-	//char		markerText[1]; // description
+	char		marker_text[65535]; // description
 } ATTRIBUTE_PACKED;
 typedef struct marker_chunk_t              marker_chunk_t;
 
@@ -871,7 +885,7 @@ struct artist_chunk_t
 	// artistText[] is the name of the Artist. This text must be padded with a byte at the end, if
 	// needed, to make it an even number of bytes long. This pad byte, if present, is not included
 	// in count.
-	char		artistText[1]; // description
+	char		artist_text[65535]; // description
 } ATTRIBUTE_PACKED;
 typedef struct artist_chunk_t              artist_chunk_t;
 
@@ -895,7 +909,7 @@ struct title_chunk_t
 	// titleText[] is the name of the project in the file. This text must be padded with a byte at the
 	// end, if needed, to make it an even number of bytes long. This pad byte, if present, is not
 	// included in count.
-	//char		titleText[1]; // description
+	char		title_text[65535]; // description
 } ATTRIBUTE_PACKED;
 typedef struct title_chunk_t              title_chunk_t;
 
@@ -919,11 +933,11 @@ struct manufacturer_specific_chunk_t
 	// manID contains the manufacturer identifier which must contain a unique ID.
 	// A manufacturer who wants to use this chunk must request a unique manID from the
 	// administrator of DSDIFF.
-	uint32_t	manID; // unique manufacturer ID [4 characters]
+	uint32_t	manufacturer_id; // unique manufacturer ID [4 characters]
 	
 	// manData[] contains the manufacturer specific data. If manData[] contains an odd number
 	// of bytes, a pad byte must be added at the end. The pad byte is not included in chunk_data_size.
-	//uint8_t		manData[1]; // manufacturer specific data
+	uint8_t		manufacturer_data[1]; // manufacturer specific data
 } ATTRIBUTE_PACKED;
 typedef struct manufacturer_specific_chunk_t              manufacturer_specific_chunk_t;
 

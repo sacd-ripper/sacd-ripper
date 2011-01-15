@@ -26,9 +26,13 @@
 
 #if defined(WORDS_BIGENDIAN)
 /* All bigendian systems are fine, just ignore the swaps. */
-#define ntoh16(x) (void)(x)
-#define ntoh32(x) (void)(x)
-#define ntoh64(x) (void)(x)
+#define SWAP16(x) (void)(x)
+#define SWAP32(x) (void)(x)
+#define SWAP64(x) (void)(x)
+
+#define hton16(x) (void)(x)
+#define hton32(x) (void)(x)
+#define hton64(x) (void)(x)
 
 #else
 
@@ -39,33 +43,48 @@
 
 #if defined(__linux__) || defined(__GLIBC__)
 #include <byteswap.h>
-#define ntoh16(x) x = bswap_16(x)
-#define ntoh32(x) x = bswap_32(x)
-#define ntoh64(x) x = bswap_64(x)
+#define SWAP16(x) x = bswap_16(x)
+#define SWAP32(x) x = bswap_32(x)
+#define SWAP64(x) x = bswap_64(x)
+#define hton16(x) bswap_16(x)
+#define hton32(x) bswap_32(x)
+#define hton64(x) bswap_64(x)
 
 #elif defined(__APPLE__)
 #include <libkern/OSByteOrder.h>
-#define ntoh16(x) x = OSSwapBigToHostInt16(x)
-#define ntoh32(x) x = OSSwapBigToHostInt32(x)
-#define ntoh64(x) x = OSSwapBigToHostInt64(x)
+#define SWAP16(x) x = OSSwapBigToHostInt16(x)
+#define SWAP32(x) x = OSSwapBigToHostInt32(x)
+#define SWAP64(x) x = OSSwapBigToHostInt64(x)
+#define hton16(x) OSSwapBigToHostInt16(x)
+#define hton32(x) OSSwapBigToHostInt32(x)
+#define hton64(x) OSSwapBigToHostInt64(x)
 
 #elif defined(__NetBSD__)
 #include <sys/endian.h>
-#define ntoh16(x) BE16TOH(x)
-#define ntoh32(x) BE32TOH(x)
-#define ntoh64(x) BE64TOH(x)
+#define SWAP16(x) BE16TOH(x)
+#define SWAP32(x) BE32TOH(x)
+#define SWAP64(x) BE64TOH(x)
+#define hton16(x) BE16TOH(x)
+#define hton32(x) BE32TOH(x)
+#define hton64(x) BE64TOH(x)
 
 #elif defined(__OpenBSD__)
 #include <sys/endian.h>
-#define ntoh16(x) x = swap16(x)
-#define ntoh32(x) x = swap32(x)
-#define ntoh64(x) x = swap64(x)
+#define SWAP16(x) x = swap16(x)
+#define SWAP32(x) x = swap32(x)
+#define SWAP64(x) x = swap64(x)
+#define hton16(x) swap16(x)
+#define hton32(x) swap32(x)
+#define hton64(x) swap64(x)
 
 #elif defined(__FreeBSD__) && __FreeBSD_version >= 470000
 #include <sys/endian.h>
-#define ntoh16(x) x = be16toh(x)
-#define ntoh32(x) x = be32toh(x)
-#define ntoh64(x) x = be64toh(x)
+#define SWAP16(x) x = be16toh(x)
+#define SWAP32(x) x = be32toh(x)
+#define SWAP64(x) x = be64toh(x)
+#define hton16(x) be16toh(x)
+#define hton32(x) be32toh(x)
+#define hton64(x) be64toh(x)
 
 /* This is a slow but portable implementation, it has multiple evaluation
  * problems so beware.
@@ -74,15 +93,15 @@
  */
 
 #elif defined(__FreeBSD__) || defined(__sun) || defined(__bsdi__) || defined(WIN32) || defined(__CYGWIN__) || defined(__BEOS__)
-#define ntoh16(x) \
+#define SWAP16(x) \
  x = ((((x) & 0xff00) >> 8) | \
       (((x) & 0x00ff) << 8))
-#define ntoh32(x) \
+#define SWAP32(x) \
  x = ((((x) & 0xff000000) >> 24) | \
       (((x) & 0x00ff0000) >>  8) | \
       (((x) & 0x0000ff00) <<  8) | \
       (((x) & 0x000000ff) << 24))
-#define ntoh64(x) \
+#define SWAP64(x) \
  x = ((((x) & 0xff00000000000000ULL) >> 56) | \
       (((x) & 0x00ff000000000000ULL) >> 40) | \
       (((x) & 0x0000ff0000000000ULL) >> 24) | \
@@ -91,6 +110,24 @@
       (((x) & 0x0000000000ff0000ULL) << 24) | \
       (((x) & 0x000000000000ff00ULL) << 40) | \
       (((x) & 0x00000000000000ffULL) << 56))
+#define hton16(x) \
+	((((x) & 0xff00) >> 8) | \
+	(((x) & 0x00ff) << 8))
+#define hton32(x) \
+	((((x) & 0xff000000) >> 24) | \
+	(((x) & 0x00ff0000) >>  8) | \
+	(((x) & 0x0000ff00) <<  8) | \
+	(((x) & 0x000000ff) << 24))
+#define hton64(x) \
+	((((x) & 0xff00000000000000ULL) >> 56) | \
+	(((x) & 0x00ff000000000000ULL) >> 40) | \
+	(((x) & 0x0000ff0000000000ULL) >> 24) | \
+	(((x) & 0x000000ff00000000ULL) >>  8) | \
+	(((x) & 0x00000000ff000000ULL) <<  8) | \
+	(((x) & 0x0000000000ff0000ULL) << 24) | \
+	(((x) & 0x000000000000ff00ULL) << 40) | \
+	(((x) & 0x00000000000000ffULL) << 56))
+
 
 #else
 
@@ -102,5 +139,12 @@
 #endif
 
 #endif /* WORDS_BIGENDIAN */
+
+
+#if defined(WORDS_BIGENDIAN)
+#define MAKE_MARKER(x)       (uint32_t)(x)
+#else
+#define MAKE_MARKER(x)       hton32((uint32_t)(x))
+#endif
 
 #endif /* ENDIANESS_H_INCLUDED */

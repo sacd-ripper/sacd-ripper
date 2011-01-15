@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <io.h>
 
 #include "sacd_reader.h"
 #include "scarletbook_types.h"
@@ -98,7 +99,7 @@ ssize_t sacd_input_read(sacd_input_t dev, void *buffer, int blocks)
 
   while(len > 0) {
 
-    ret = read(dev->fd, buffer, len);
+    ret = read(dev->fd, buffer, (unsigned int) len);
 
     if(ret < 0) {
       /* One of the reads failed, too bad.  We won't even bother

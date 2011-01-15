@@ -147,16 +147,16 @@ static int scarletbook_read_master_toc(scarletbook_handle_t *handle) {
     return 0;
   }
 
-  ntoh16(master_toc->disc_version);
-  ntoh16(master_toc->album_set_size);
-  ntoh16(master_toc->album_sequence_number);
-  ntoh32(master_toc->channel_1_toc_area_1_start);
-  ntoh32(master_toc->channel_1_toc_area_2_start);
-  ntoh16(master_toc->channel_1_toc_area_size);
-  ntoh32(master_toc->channel_2_toc_area_1_start);
-  ntoh32(master_toc->channel_2_toc_area_2_start);
-  ntoh16(master_toc->channel_2_toc_area_size);
-  ntoh16(master_toc->disc_date_year);
+  SWAP16(master_toc->disc_version);
+  SWAP16(master_toc->album_set_size);
+  SWAP16(master_toc->album_sequence_number);
+  SWAP32(master_toc->channel_1_toc_area_1_start);
+  SWAP32(master_toc->channel_1_toc_area_2_start);
+  SWAP16(master_toc->channel_1_toc_area_size);
+  SWAP32(master_toc->channel_2_toc_area_1_start);
+  SWAP32(master_toc->channel_2_toc_area_2_start);
+  SWAP16(master_toc->channel_2_toc_area_size);
+  SWAP16(master_toc->disc_date_year);
 
   if (master_toc->disc_version > SUPPORT_SCARLETBOOK_VERSION) {
 	  fprintf(stderr, "libsacdread: Unsupported version: %i.%02i\n", (master_toc->disc_version >> 8) & 0xff, master_toc->disc_version & 0xff);
@@ -194,22 +194,22 @@ static int scarletbook_read_master_toc(scarletbook_handle_t *handle) {
 
 	 CHECK_ZERO(master_text->zero_01);
 
-     ntoh16(master_text->album_title_position);
-     ntoh16(master_text->album_title_phonetic_position);
-     ntoh16(master_text->album_artist_position);
-     ntoh16(master_text->album_artist_phonetic_position);
-     ntoh16(master_text->album_publisher_position);
-     ntoh16(master_text->album_publisher_phonetic_position);
-     ntoh16(master_text->album_copyright_position);
-     ntoh16(master_text->album_copyright_phonetic_position);
-     ntoh16(master_text->disc_title_position);
-     ntoh16(master_text->disc_title_phonetic_position);
-     ntoh16(master_text->disc_artist_position);
-     ntoh16(master_text->disc_artist_phonetic_position);
-     ntoh16(master_text->disc_publisher_position);
-     ntoh16(master_text->disc_publisher_phonetic_position);
-     ntoh16(master_text->disc_copyright_position);
-	 ntoh16(master_text->disc_copyright_phonetic_position);
+     SWAP16(master_text->album_title_position);
+     SWAP16(master_text->album_title_phonetic_position);
+     SWAP16(master_text->album_artist_position);
+     SWAP16(master_text->album_artist_phonetic_position);
+     SWAP16(master_text->album_publisher_position);
+     SWAP16(master_text->album_publisher_phonetic_position);
+     SWAP16(master_text->album_copyright_position);
+     SWAP16(master_text->album_copyright_phonetic_position);
+     SWAP16(master_text->disc_title_position);
+     SWAP16(master_text->disc_title_phonetic_position);
+     SWAP16(master_text->disc_artist_position);
+     SWAP16(master_text->disc_artist_phonetic_position);
+     SWAP16(master_text->disc_publisher_position);
+     SWAP16(master_text->disc_publisher_phonetic_position);
+     SWAP16(master_text->disc_copyright_position);
+	 SWAP16(master_text->disc_copyright_phonetic_position);
 
 	 p += SACD_LSN_SIZE;
 
@@ -237,15 +237,15 @@ static int scarletbook_read_channel_toc(scarletbook_handle_t *handle, int channe
 		return 0;
 	}
 
-	ntoh16(channel_toc->version);
-	ntoh16(channel_toc->size);
-	ntoh16(channel_toc->track_count);
-	ntoh32(channel_toc->track_position);
-	ntoh32(channel_toc->track_length);
-	ntoh16(channel_toc->area_description_offset);
-	ntoh16(channel_toc->copyright_offset);
-	ntoh16(channel_toc->area_description_phonetic_offset);
-	ntoh16(channel_toc->copyright_phonetic_offset);
+	SWAP16(channel_toc->version);
+	SWAP16(channel_toc->size);
+	SWAP16(channel_toc->track_count);
+	SWAP32(channel_toc->track_position);
+	SWAP32(channel_toc->track_length);
+	SWAP16(channel_toc->area_description_offset);
+	SWAP16(channel_toc->copyright_offset);
+	SWAP16(channel_toc->area_description_phonetic_offset);
+	SWAP16(channel_toc->copyright_phonetic_offset);
 
 	if (channel_toc->version > SUPPORT_SCARLETBOOK_VERSION) {
 		fprintf(stderr, "libsacdread: Unsupported version: %2i.%2i\n", (channel_toc->version >> 8) & 0xff, channel_toc->version & 0xff);
@@ -261,7 +261,7 @@ static int scarletbook_read_channel_toc(scarletbook_handle_t *handle, int channe
 			channel_text_t *channel_text;
 			channel_text = handle->channel_text[channel_nr][text_channel_counter] = (channel_text_t*) p;
 			for (i = 0; i < channel_toc->track_count; i++) {
-				ntoh16(channel_text->track_text_position[i]);
+				SWAP16(channel_text->track_text_position[i]);
 			}
 			++text_channel_counter;
 			p += SACD_LSN_SIZE;
@@ -275,16 +275,16 @@ static int scarletbook_read_channel_toc(scarletbook_handle_t *handle, int channe
 			channel_tracklist_offset_t *tracklist;
 			tracklist = handle->channel_tracklist_offset[channel_nr] = (channel_tracklist_offset_t*) p;
 			for (i = 0; i < channel_toc->track_count; i++) {
-				ntoh32(tracklist->track_start_lsn[i]);
-				ntoh32(tracklist->track_stop_lsn[i]);
+				SWAP32(tracklist->track_start_lsn[i]);
+				SWAP32(tracklist->track_stop_lsn[i]);
 			}
 			p += SACD_LSN_SIZE;
 		} else if (strncmp(p, "SACDTRL2", 8) == 0) {
 			channel_tracklist_time_t *tracklist;
 			tracklist = handle->channel_tracklist_time[channel_nr] = (channel_tracklist_time_t*) p;
 			for (i = 0; i < channel_toc->track_count; i++) {
-				ntoh32(tracklist->track_start_time[i]);
-				ntoh32(tracklist->track_stop_time[i]);
+				SWAP32(tracklist->track_start_time[i]);
+				SWAP32(tracklist->track_stop_time[i]);
 			}
 			p += SACD_LSN_SIZE;
 		} else {
