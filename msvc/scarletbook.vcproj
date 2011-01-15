@@ -41,11 +41,11 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories=".\win32;..\sacdread;.\sacdread\id3"
-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
+				AdditionalIncludeDirectories=".\win32;..\sacdread;&quot;..\libs\libid3tag-0.15.1b&quot;"
+				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;HAVE_CONFIG_H"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
-				RuntimeLibrary="3"
+				RuntimeLibrary="1"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				DebugInformationFormat="4"
@@ -116,9 +116,9 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories=".\win32;..\sacdread"
-				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
-				RuntimeLibrary="2"
+				AdditionalIncludeDirectories=".\win32;..\sacdread;&quot;..\libs\libid3tag-0.15.1b&quot;"
+				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;HAVE_CONFIG_H"
+				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
@@ -173,43 +173,47 @@
 			Filter="cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx"
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
-			<File
-				RelativePath="..\sacdread\dsdiff_writer.c"
-				>
-			</File>
-			<File
-				RelativePath="..\src\main.c"
-				>
-			</File>
-			<File
-				RelativePath="..\sacdread\sacd_input.c"
-				>
-			</File>
-			<File
-				RelativePath="..\sacdread\sacd_reader.c"
-				>
-			</File>
-			<File
-				RelativePath="..\sacdread\scarletbook_id3v2.c"
-				>
-			</File>
-			<File
-				RelativePath="..\sacdread\scarletbook_print.c"
-				>
-			</File>
-			<File
-				RelativePath="..\sacdread\scarletbook_read.c"
-				>
-			</File>
 			<Filter
-				Name="id3"
+				Name="main"
 				>
 				<File
-					RelativePath="..\sacdread\id3\id3.c"
+					RelativePath="..\src\getopt.c"
 					>
 				</File>
 				<File
-					RelativePath="..\sacdread\id3\md5.c"
+					RelativePath="..\src\getopt1.c"
+					>
+				</File>
+				<File
+					RelativePath="..\src\main.c"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="sacdread"
+				>
+				<File
+					RelativePath="..\sacdread\dsdiff_writer.c"
+					>
+				</File>
+				<File
+					RelativePath="..\sacdread\sacd_input.c"
+					>
+				</File>
+				<File
+					RelativePath="..\sacdread\sacd_reader.c"
+					>
+				</File>
+				<File
+					RelativePath="..\sacdread\scarletbook_id3v2.c"
+					>
+				</File>
+				<File
+					RelativePath="..\sacdread\scarletbook_print.c"
+					>
+				</File>
+				<File
+					RelativePath="..\sacdread\scarletbook_read.c"
 					>
 				</File>
 			</Filter>
@@ -219,55 +223,51 @@
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
-			<File
-				RelativePath="..\sacdread\dsdiff.h"
-				>
-			</File>
-			<File
-				RelativePath="..\sacdread\dsdiff_writer.h"
-				>
-			</File>
-			<File
-				RelativePath="..\sacdread\endianess.h"
-				>
-			</File>
-			<File
-				RelativePath="..\sacdread\sacd_input.h"
-				>
-			</File>
-			<File
-				RelativePath="..\sacdread\sacd_read_internal.h"
-				>
-			</File>
-			<File
-				RelativePath="..\sacdread\sacd_reader.h"
-				>
-			</File>
-			<File
-				RelativePath="..\sacdread\scarletbook_id3v2.h"
-				>
-			</File>
-			<File
-				RelativePath="..\sacdread\scarletbook_print.h"
-				>
-			</File>
-			<File
-				RelativePath="..\sacdread\scarletbook_read.h"
-				>
-			</File>
-			<File
-				RelativePath="..\sacdread\scarletbook_types.h"
-				>
-			</File>
 			<Filter
-				Name="id3"
+				Name="sacdread"
 				>
 				<File
-					RelativePath="..\sacdread\id3\id3.h"
+					RelativePath="..\sacdread\dsdiff.h"
 					>
 				</File>
 				<File
-					RelativePath="..\sacdread\id3\md5.h"
+					RelativePath="..\sacdread\dsdiff_writer.h"
+					>
+				</File>
+				<File
+					RelativePath="..\sacdread\endianess.h"
+					>
+				</File>
+				<File
+					RelativePath="..\sacdread\sacd_input.h"
+					>
+				</File>
+				<File
+					RelativePath="..\sacdread\sacd_read_internal.h"
+					>
+				</File>
+				<File
+					RelativePath="..\sacdread\sacd_reader.h"
+					>
+				</File>
+				<File
+					RelativePath="..\sacdread\scarletbook_id3v2.h"
+					>
+				</File>
+				<File
+					RelativePath="..\sacdread\scarletbook_print.h"
+					>
+				</File>
+				<File
+					RelativePath="..\sacdread\scarletbook_read.h"
+					>
+				</File>
+				<File
+					RelativePath="..\sacdread\scarletbook_types.h"
+					>
+				</File>
+				<File
+					RelativePath="..\sacdread\version.h"
 					>
 				</File>
 			</Filter>

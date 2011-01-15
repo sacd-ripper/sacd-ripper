@@ -45,6 +45,8 @@
  */
 #define SACD_LSN_SIZE               2048
 
+#define SACD_SAMPLING_FREQUENCY     2822400
+
 #define START_OF_FILE_SYSTEM_AREA   0
 #define START_OF_MASTER_TOC         510
 #define MASTER_TOC_LEN              10
@@ -296,19 +298,23 @@ typedef struct
     char           id[8];                     // TWOCHTOC or MULCHTOC
     uint16_t       version;                   // 1.20, 0x0114
     uint16_t       size;                      // ex. 40 (total size of TOC)
-    uint8_t        unknown_01[20];
+    uint8_t        zero_01[4];
+	uint32_t       unknown_01;
+	uint8_t        unknown_02;
+	uint8_t        encoding;
+	uint8_t        unknown_03[10];
     uint8_t        channel_count;
 	uint8_t        loudspeaker_config;
-    uint8_t        unknown_02[30];
-    uint32_t       unknown_03;
+    uint8_t        unknown_04[30];
+    uint32_t       unknown_05;
     uint16_t       track_count;
-    uint16_t       unknown_04;
+    uint16_t       unknown_06;
     uint32_t       track_position;
     uint32_t       track_length;
     uint8_t        text_channel_count;
-    uint8_t        unknown_06[7];
+    uint8_t        unknown_07[7];
     locale_table_t languages[10];
-    uint8_t        unknown_05[16];
+    uint8_t        unknown_08[16];
     uint16_t       area_description_offset;
     uint16_t       copyright_offset;
     uint16_t       area_description_phonetic_offset;

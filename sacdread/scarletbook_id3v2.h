@@ -22,10 +22,13 @@
 #ifndef SCARLETBOOK_ID3V2_H_INCLUDED
 #define SCARLETBOOK_ID3V2_H_INCLUDED
 
+#include "scarletbook_types.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+int scarletbook_id3_tag_render(scarletbook_handle_t *, uint8_t *, int, int);
 
 #ifdef __cplusplus
 };
