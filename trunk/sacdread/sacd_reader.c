@@ -352,3 +352,32 @@ ssize_t sacd_read_block_raw( sacd_reader_t *sacd, uint32_t lb_number,
 			 (int) block_count );
    return ret;
 }
+
+ssize_t sacd_read_block( sacd_reader_t *sacd, size_t block_count, unsigned char *data) {
+	ssize_t ret;
+	if( !sacd->dev ) {
+		fprintf( stderr, "libsacdread: Fatal error in block read.\n" );
+		return 0;
+	}
+
+	ret = sacd_input_read( sacd->dev, (char *) data,
+		(int) block_count );
+	return ret;
+}
+
+ssize_t sacd_seek_block( sacd_reader_t *sacd, uint32_t lb_number) {
+	ssize_t ret;
+	if( !sacd->dev ) {
+		fprintf( stderr, "libsacdread: Fatal error in block seek.\n" );
+		return 0;
+	}
+
+	ret = sacd_input_seek( sacd->dev, (int) lb_number );
+	if( ret != (int) lb_number ) {
+		fprintf( stderr, "libsacdread: Can't seek to block %u\n", lb_number );
+		return 0;
+	}
+
+	return ret;
+}
+

@@ -275,16 +275,16 @@ static int scarletbook_read_channel_toc(scarletbook_handle_t *handle, int channe
 			channel_tracklist_offset_t *tracklist;
 			tracklist = handle->channel_tracklist_offset[channel_nr] = (channel_tracklist_offset_t*) p;
 			for (i = 0; i < channel_toc->track_count; i++) {
-				SWAP32(tracklist->track_start_lsn[i]);
-				SWAP32(tracklist->track_stop_lsn[i]);
+				SWAP32(tracklist->track_pos_lsn[i]);
+				SWAP32(tracklist->track_length_lsn[i]);
 			}
 			p += SACD_LSN_SIZE;
 		} else if (strncmp(p, "SACDTRL2", 8) == 0) {
-			channel_tracklist_time_t *tracklist;
-			tracklist = handle->channel_tracklist_time[channel_nr] = (channel_tracklist_time_t*) p;
+			channel_tracklist_abs_t *tracklist;
+			tracklist = handle->channel_tracklist_time[channel_nr] = (channel_tracklist_abs_t*) p;
 			for (i = 0; i < channel_toc->track_count; i++) {
-				SWAP32(tracklist->track_start_time[i]);
-				SWAP32(tracklist->track_stop_time[i]);
+				SWAP32(tracklist->track_pos_abs[i]);
+				SWAP32(tracklist->track_length_abs[i]);
 			}
 			p += SACD_LSN_SIZE;
 		} else {

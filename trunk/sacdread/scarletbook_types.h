@@ -361,8 +361,8 @@ typedef struct
 typedef struct
 {
     char           id[8];                     // SACDTRL1
-    uint32_t       track_start_lsn[255];
-    uint32_t       track_stop_lsn[255];
+    uint32_t       track_pos_lsn[255];
+    uint32_t       track_length_lsn[255];
 } ATTRIBUTE_PACKED channel_tracklist_offset_t;
 
 /**
@@ -378,9 +378,9 @@ typedef struct {
 typedef struct
 {
     char           id[8];                     // SACDTRL2
-    uint32_t       track_start_time[255];
-    uint32_t       track_stop_time[255];
-} ATTRIBUTE_PACKED channel_tracklist_time_t;
+    uint32_t       track_pos_abs[255];
+    uint32_t       track_length_abs[255];
+} ATTRIBUTE_PACKED channel_tracklist_abs_t;
 
 #if PRAGMA_PACK
 #pragma pack()
@@ -399,7 +399,7 @@ typedef struct {
   int							channel_count;
   channel_toc_t *				channel_toc[2];
   channel_tracklist_offset_t *	channel_tracklist_offset[2];
-  channel_tracklist_time_t *	channel_tracklist_time[2];
+  channel_tracklist_abs_t *	channel_tracklist_time[2];
   channel_text_t *				channel_text[2][8];
   channel_isrc_t *				channel_isrc[2];
 

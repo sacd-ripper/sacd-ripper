@@ -58,6 +58,7 @@ dsdiff_handle_t	*dsdiff_open(scarletbook_handle_t *sb_handle, char *filename, in
 	form_dsd_chunk_t *form_dsd_chunk;
 	property_chunk_t *property_chunk;
 	uint8_t *write_ptr, *prop_ptr;
+	ssize_t track_size;
 
 	handle = (dsdiff_handle_t *) malloc(sizeof(dsdiff_handle_t));
 	memset(handle, 0, sizeof(dsdiff_handle_t));
@@ -155,11 +156,11 @@ dsdiff_handle_t	*dsdiff_open(scarletbook_handle_t *sb_handle, char *filename, in
 		compression_type_chunk->chunk_id = CMPR_MARKER;
 		compression_type_chunk->compression_type = DSD_MARKER;
 		if (dst_decoding) {
-			compression_type_chunk->count = 14;
-			memcpy(compression_type_chunk->compression_name, "not compressed", 14);
-		} else {
 			compression_type_chunk->count = 11;
 			memcpy(compression_type_chunk->compression_name, "DST Encoded", 11);
+		} else {
+			compression_type_chunk->count = 14;
+			memcpy(compression_type_chunk->compression_name, "not compressed", 14);
 		}
 
 		compression_type_chunk->chunk_data_size = CALC_CHUNK_SIZE(COMPRESSION_TYPE_CHUNK_SIZE - CHUNK_HEADER_SIZE + compression_type_chunk->count);
@@ -204,6 +205,7 @@ dsdiff_handle_t	*dsdiff_open(scarletbook_handle_t *sb_handle, char *filename, in
 	}
 
 	// we add a custom (unsupported) ID3 chunk to the PROP chunk to maintain all track information
+	// within one file
 	{
 		chunk_header_t *id3_chunk;
 		int id3_chunk_size;
@@ -216,7 +218,30 @@ dsdiff_handle_t	*dsdiff_open(scarletbook_handle_t *sb_handle, char *filename, in
 	}
 
 	// all properties have been written, now set the property chunk size
-	property_chunk->chunk_data_size = CALC_CHUNK_SIZE(write_ptr - prop_ptr - PROPERTY_CHUNK_SIZE - CHUNK_HEADER_SIZE);
+	property_chunk->chunk_data_size = CALC_CHUNK_SIZE(write_ptr - prop_ptr - CHUNK_HEADER_SIZE);
+
+	track_size = sb_handle->channel_tracklist_offset[channel]->track_length_lsn[track] - 1;
+	switch (sb_handle->channel_toc[0]->encoding) {
+		case ENCODING_DSD_3_IN_14:
+			track_size *= (SACD_LSN_SIZE - 32);
+			break;
+		case ENCODING_DSD_3_IN_16:
+			track_size *= (SACD_LSN_SIZE - 284);
+			break;
+		case ENCODING_DST:
+			break;
+	}
+
+	// Either the DSD or DST Sound Data (described below) chunk is required and may appear
+	// only once in the Form DSD Chunk. The chunk must be placed after the Property Chunk.
+	{
+		dsd_sound_data_chunk_t * dsd_sound_data_chunk;
+		dsd_sound_data_chunk = (dsd_sound_data_chunk_t *) write_ptr;
+		dsd_sound_data_chunk->chunk_id = DSD_MARKER;
+		dsd_sound_data_chunk->chunk_data_size = CALC_CHUNK_SIZE(track_size);
+	
+		write_ptr += CHUNK_HEADER_SIZE;
+	}
 
 	// Now we write the COMT comment chunk to the footer buffer
 	{
@@ -256,7 +281,7 @@ dsdiff_handle_t	*dsdiff_open(scarletbook_handle_t *sb_handle, char *filename, in
 		comment->timestamp_minutes = timeinfo->tm_min;
 		comment->comment_type = hton16(COMT_TYPE_FILE_HISTORY);
 		comment->comment_reference = hton16(COMT_TYPE_CHANNEL_FILE_HISTORY_GENERAL);
-		sprintf(data, "Material ripped from SACD: %s", (char*) get_mtoc_title_text(sb_handle));
+		sprintf(data, "Material ripped from SACD: %s", (char*) get_mtoc_title_text(sb_handle));
 		comment->count = hton32(strlen(data));
 		memcpy(comment->comment_text, data, strlen(data));
 
@@ -267,12 +292,19 @@ dsdiff_handle_t	*dsdiff_open(scarletbook_handle_t *sb_handle, char *filename, in
 	}
 
 	handle->header_size = CEIL_ODD_NUMBER(write_ptr - handle->header);
-	form_dsd_chunk->chunk_data_size = CALC_CHUNK_SIZE(handle->header_size + handle->footer_size - COMMENTS_CHUNK_SIZE);
+	form_dsd_chunk->chunk_data_size = CALC_CHUNK_SIZE(handle->header_size + handle->footer_size - COMMENTS_CHUNK_SIZE + CEIL_ODD_NUMBER(track_size));
+
+	write(handle->fd, handle->header, handle->header_size);
 
 	return handle;
 }
 
 void dsdiff_close(dsdiff_handle_t *handle) {
+
+	if (!handle)
+		return;
+
+	write(handle->fd, handle->footer, handle->footer_size);
 
 	if (handle->fd)
 		close(handle->fd);

@@ -1,9 +1,8 @@
 in order of importance:
 
-- add philips dsdiff 1.5 export support
-	- add dst decoding
+- add dst decoding
+- fill ID3 tag with SACDText
 - add sony dsf export support
-- add ID3 support for DSDIFF & DSF
 - add Makefile
 - compile on PS3
 - add libspe2 support for multi SPU DST decoding

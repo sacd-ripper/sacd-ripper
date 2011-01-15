@@ -31,9 +31,7 @@
 #include "scarletbook_types.h"
 #include "scarletbook_read.h"
 #include "scarletbook_print.h"
-
 #include "scarletbook_id3.h"
-
 #include "dsdiff_writer.h"
 
 static struct opts_s
@@ -189,13 +187,31 @@ int main(int argc, char* argv[]) {
 				scarletbook_print(handle);
 			}
 			if (opts.output_dsdiff) {
-
+				uint32_t block_count;
+				uint8_t buffer[2048];
 				dsdiff_handle_t *dsdiff_handle;
 				for (i = 0; i < handle->channel_toc[0]->track_count; i++) {
 					dsdiff_handle = dsdiff_open(handle, generate_trackname(i + 1), 0, i, opts.convert_dst);
 					if (!dsdiff_handle) {
 						break;
 					}
+
+					sacd_seek_block(sacd_reader, handle->channel_tracklist_offset[0]->track_pos_lsn[i]);
+					block_count = handle->channel_tracklist_offset[0]->track_length_lsn[i];
+					while (--block_count) {
+						sacd_read_block(sacd_reader, 1, buffer);
+						switch (handle->channel_toc[0]->encoding) {
+							case ENCODING_DSD_3_IN_14:
+								write(dsdiff_handle->fd, buffer + 32, SACD_LSN_SIZE - 32);
+								break;
+							case ENCODING_DSD_3_IN_16:
+								write(dsdiff_handle->fd, buffer + 284, SACD_LSN_SIZE - 284);
+								break;
+							case ENCODING_DST:
+								break;
+						}
+					}
+
 					dsdiff_close(dsdiff_handle);
 				}
 

@@ -139,7 +139,7 @@ void scarletbook_print_channel_toc(scarletbook_handle_t *handle, int channel_nr)
 	int i;
 	channel_isrc_t *channel_isrc;
 	channel_tracklist_offset_t *channel_offset;
-	channel_tracklist_time_t *channel_time;
+	channel_tracklist_abs_t *channel_time;
 	channel_toc_t *channel = handle->channel_toc[channel_nr];
 	channel_isrc = handle->channel_isrc[channel_nr];
 	channel_offset = handle->channel_tracklist_offset[channel_nr];
