@@ -32,7 +32,7 @@
 #include "scarletbook_read.h"
 #include "scarletbook_print.h"
 
-#include "scarletbook_id3v2.h"
+#include "scarletbook_id3.h"
 
 #include "dsdiff_writer.h"
 

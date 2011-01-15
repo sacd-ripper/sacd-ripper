@@ -19,8 +19,8 @@
  *
  */ 
  
-#ifndef SCARLETBOOK_ID3V2_H_INCLUDED
-#define SCARLETBOOK_ID3V2_H_INCLUDED
+#ifndef SCARLETBOOK_ID3_H_INCLUDED
+#define SCARLETBOOK_ID3_H_INCLUDED
 
 #include "scarletbook_types.h"
 
@@ -33,4 +33,4 @@ int scarletbook_id3_tag_render(scarletbook_handle_t *, uint8_t *, int, int);
 #ifdef __cplusplus
 };
 #endif
-#endif /* SCARLETBOOK_ID3V2_H_INCLUDED */
+#endif /* SCARLETBOOK_ID3_H_INCLUDED */
