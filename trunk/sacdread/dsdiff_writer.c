@@ -113,13 +113,14 @@ dsdiff_handle_t	*dsdiff_open(scarletbook_handle_t *sb_handle, char *filename, in
 
 	// The Channels Chunk is required and may appear only once in the Property Chunk.
 	{
-		int i, channels = 2;
+		int i;
+		uint8_t channel_count = sb_handle->channel_toc[channel]->channel_count;
 		channels_chunk_t * channels_chunk = (channels_chunk_t *) write_ptr;
 		channels_chunk->chunk_id = CHNL_MARKER;
-		channels_chunk->chunk_data_size = CALC_CHUNK_SIZE(CHANNELS_CHUNK_SIZE - CHUNK_HEADER_SIZE + channels * sizeof(uint32_t));
-		channels_chunk->channel_count = hton16(channels);
+		channels_chunk->chunk_data_size = CALC_CHUNK_SIZE(CHANNELS_CHUNK_SIZE - CHUNK_HEADER_SIZE + channel_count * sizeof(uint32_t));
+		channels_chunk->channel_count = hton16(channel_count);
 
-		switch(channels) {
+		switch(channel_count) {
 		case 2:
 			channels_chunk->channel_ids[0] = SLFT_MARKER;
 			channels_chunk->channel_ids[1] = SRGT_MARKER;
@@ -140,13 +141,13 @@ dsdiff_handle_t	*dsdiff_open(scarletbook_handle_t *sb_handle, char *filename, in
 			channels_chunk->channel_ids[5] = RS_MARKER;
 			break;
 		default:
-			for (i = 0; i < channels; i++) {
+			for (i = 0; i < channel_count; i++) {
 				sprintf((char*) &channels_chunk->channel_ids[i], "C%03i", i);
 			}
 			break;
 		}
 
-		write_ptr += CHANNELS_CHUNK_SIZE + sizeof(uint32_t) * channels;
+		write_ptr += CHANNELS_CHUNK_SIZE + sizeof(uint32_t) * channel_count;
 	}
 
 	// The Compression Type Chunk is required and may appear only once in the Property
@@ -180,13 +181,12 @@ dsdiff_handle_t	*dsdiff_open(scarletbook_handle_t *sb_handle, char *filename, in
 	// The Loudspeaker Configuration Chunk is optional but if used it may appear only once in
 	// the Property Chunk.
 	{
-		int channels;
+		uint8_t channel_count = sb_handle->channel_toc[channel]->channel_count;
 		loudspeaker_config_chunk_t *loudspeaker_config_chunk = (loudspeaker_config_chunk_t *) write_ptr;
 		loudspeaker_config_chunk->chunk_id = LSCO_MARKER;
 		loudspeaker_config_chunk->chunk_data_size = CALC_CHUNK_SIZE(LOADSPEAKER_CONFIG_CHUNK_SIZE - CHUNK_HEADER_SIZE);
 
-		channels = 2;
-		switch (channels) {
+		switch (channel_count) {
 			case 2:
 				loudspeaker_config_chunk->loudspeaker_config = hton16(LS_CONFIG_2_CHNL);
 				break;

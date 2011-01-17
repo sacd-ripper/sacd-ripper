@@ -34,6 +34,8 @@
 #include "scarletbook_id3.h"
 #include "dsdiff_writer.h"
 
+#include "dstdecode/dst_decoder.h"
+
 static struct opts_s
 {
 	int            two_channel;
@@ -190,17 +192,22 @@ int main(int argc, char* argv[]) {
 				uint32_t block_count;
 				uint8_t buffer[2048];
 				dsdiff_handle_t *dsdiff_handle;
-				for (i = 0; i < handle->channel_toc[0]->track_count; i++) {
-					dsdiff_handle = dsdiff_open(handle, generate_trackname(i + 1), 0, i, opts.convert_dst);
+				int channel = 0;
+				ebunch_t *dst_decoder = 0;
+
+				for (i = 0; i < handle->channel_toc[channel]->track_count; i++) {
+					dsdiff_handle = dsdiff_open(handle, generate_trackname(i + 1), channel, i, opts.convert_dst);
 					if (!dsdiff_handle) {
 						break;
 					}
 
-					sacd_seek_block(sacd_reader, handle->channel_tracklist_offset[0]->track_pos_lsn[i]);
-					block_count = handle->channel_tracklist_offset[0]->track_length_lsn[i];
+					dst_decoder = open_dst_decoder(handle->channel_toc[channel]->channel_count);
+
+					sacd_seek_block(sacd_reader, handle->channel_tracklist_offset[channel]->track_pos_lsn[i]);
+					block_count = handle->channel_tracklist_offset[channel]->track_length_lsn[i];
 					while (--block_count) {
 						sacd_read_block(sacd_reader, 1, buffer);
-						switch (handle->channel_toc[0]->encoding) {
+						switch (handle->channel_toc[channel]->encoding) {
 							case ENCODING_DSD_3_IN_14:
 								write(dsdiff_handle->fd, buffer + 32, SACD_LSN_SIZE - 32);
 								break;
@@ -212,6 +219,7 @@ int main(int argc, char* argv[]) {
 						}
 					}
 
+					close_dst_decoder(dst_decoder);
 					dsdiff_close(dsdiff_handle);
 				}
 
