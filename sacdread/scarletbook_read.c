@@ -247,6 +247,18 @@ static int scarletbook_read_channel_toc(scarletbook_handle_t *handle, int channe
 	SWAP16(channel_toc->area_description_phonetic_offset);
 	SWAP16(channel_toc->copyright_phonetic_offset);
 
+	SWAP32(channel_toc->unknown_01);
+	SWAP32(channel_toc->unknown_04);
+	SWAP32(channel_toc->unknown_05);
+	SWAP16(channel_toc->unknown_06);
+
+	CHECK_ZERO(channel_toc->zero_01);
+	CHECK_ZERO(channel_toc->zero_02);
+	CHECK_ZERO(channel_toc->zero_03);
+	CHECK_ZERO(channel_toc->zero_04);
+	CHECK_ZERO(channel_toc->zero_05);
+	CHECK_ZERO(channel_toc->zero_06);
+
 	if (channel_toc->version > SUPPORT_SCARLETBOOK_VERSION) {
 		fprintf(stderr, "libsacdread: Unsupported version: %2i.%2i\n", (channel_toc->version >> 8) & 0xff, channel_toc->version & 0xff);
 		return 0;

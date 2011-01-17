@@ -217,6 +217,34 @@
 					>
 				</File>
 			</Filter>
+			<Filter
+				Name="dstdecode"
+				>
+				<File
+					RelativePath="..\sacdread\dstdecode\ccp_calc.c"
+					>
+				</File>
+				<File
+					RelativePath="..\sacdread\dstdecode\dst_ac.c"
+					>
+				</File>
+				<File
+					RelativePath="..\sacdread\dstdecode\dst_data.c"
+					>
+				</File>
+				<File
+					RelativePath="..\sacdread\dstdecode\dst_decoder.c"
+					>
+				</File>
+				<File
+					RelativePath="..\sacdread\dstdecode\dst_init.c"
+					>
+				</File>
+				<File
+					RelativePath="..\sacdread\dstdecode\unpack_dst.c"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -268,6 +296,38 @@
 				</File>
 				<File
 					RelativePath="..\sacdread\version.h"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="dstdecode"
+				>
+				<File
+					RelativePath="..\sacdread\dstdecode\ccp_calc.h"
+					>
+				</File>
+				<File
+					RelativePath="..\sacdread\dstdecode\conststr.h"
+					>
+				</File>
+				<File
+					RelativePath="..\sacdread\dstdecode\dst_ac.h"
+					>
+				</File>
+				<File
+					RelativePath="..\sacdread\dstdecode\dst_decoder.h"
+					>
+				</File>
+				<File
+					RelativePath="..\sacdread\dstdecode\dst_init.h"
+					>
+				</File>
+				<File
+					RelativePath="..\sacdread\dstdecode\types.h"
+					>
+				</File>
+				<File
+					RelativePath="..\sacdread\dstdecode\unpack_dst.h"
 					>
 				</File>
 			</Filter>
