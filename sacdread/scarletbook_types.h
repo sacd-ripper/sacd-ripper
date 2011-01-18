@@ -292,6 +292,7 @@ typedef struct
  * Channel TOC
  *
  * The following structures are needed for Channel TOC information.
+ * 
  */
 typedef struct
 {
@@ -299,15 +300,15 @@ typedef struct
     uint16_t       version;                   // 1.20, 0x0114
     uint16_t       size;                      // ex. 40 (total size of TOC)
     uint8_t        zero_01[4];
-	uint32_t       unknown_01;
-	uint8_t        unknown_02;
+	uint32_t       max_byte_rate;
+	uint8_t        sample_frequency;		  // 0x04 = 2822400 (physically there can be no others values, or..? :)
 	uint8_t        encoding;
 	uint8_t        zero_02[10];
     uint8_t        channel_count;
 	uint8_t        loudspeaker_config;
-	uint8_t        unknown_03;
+	uint8_t        unknown_01;
     uint8_t        zero_03[29];
-    uint32_t       unknown_04;
+    uint32_t       unknown_02;
     uint16_t       track_count;
     uint16_t       zero_04;
     uint32_t       track_position;
@@ -315,8 +316,8 @@ typedef struct
     uint8_t        text_channel_count;
     uint8_t        zero_05[7];
     locale_table_t languages[10];
-	uint32_t       unknown_05;
-	uint16_t       unknown_06;
+	uint32_t       unknown_03;
+	uint16_t       unknown_04;
 	uint8_t        zero_06[10];
     uint16_t       area_description_offset;
     uint16_t       copyright_offset;
@@ -328,7 +329,7 @@ typedef struct
 typedef struct
 {
     uint8_t        track_text_count;
-    uint16_t       unknown_01;
+    uint16_t       max_byte_rate;
     uint8_t        track_type;
     uint8_t        unknown_02;
     char           track_text[];
