@@ -246,11 +246,11 @@ static int scarletbook_read_channel_toc(scarletbook_handle_t *handle, int channe
 	SWAP16(channel_toc->copyright_offset);
 	SWAP16(channel_toc->area_description_phonetic_offset);
 	SWAP16(channel_toc->copyright_phonetic_offset);
+	SWAP32(channel_toc->max_byte_rate);
 
-	SWAP32(channel_toc->unknown_01);
-	SWAP32(channel_toc->unknown_04);
-	SWAP32(channel_toc->unknown_05);
-	SWAP16(channel_toc->unknown_06);
+	SWAP32(channel_toc->unknown_02);
+	SWAP32(channel_toc->unknown_03);
+	SWAP16(channel_toc->unknown_04);
 
 	CHECK_ZERO(channel_toc->zero_01);
 	CHECK_ZERO(channel_toc->zero_02);
