@@ -150,11 +150,11 @@ static inline int sys_io_buffer_free(int io_buffer, int block) {
 	return_to_user_prog(int);
 }
 
-static inline int sys_storage_reset_bd(void) {
+static inline void sys_storage_reset_bd(void) {
   system_call_2(864, 0x5004, 0x29);
 }   
 
-static inline int sys_storage_authenticate_bd(void) {
+static inline void sys_storage_authenticate_bd(void) {
   int func = 0x43;
   system_call_2(864, 0x5007, (uint32_t) &func);
 }
