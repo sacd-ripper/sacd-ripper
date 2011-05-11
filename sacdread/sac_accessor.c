@@ -10,8 +10,16 @@
 #include "debug.h"
 #include "utils.h"
 
-void handle_interrupt(uint64_t);
+#ifdef USE_ISOSELF
 int file_alloc_load(const char *, uint8_t **, unsigned int *);
+#endif
+
+void handle_interrupt(uint64_t);
+int sac_exec_generate_key_1(uint8_t *, uint32_t, uint32_t *);
+int sac_exec_validate_key_1(uint8_t *, uint32_t);
+int sac_exec_generate_key_2(uint8_t *, uint32_t, uint32_t *);
+int sac_exec_validate_key_2(uint8_t *, uint32_t);
+int sac_exec_validate_key_3(uint8_t *, uint32_t);
 int exchange_data(int, uint8_t *, int, uint8_t *, int, usecond_t);
 
 sac_accessor_t *sa = NULL;
@@ -38,9 +46,7 @@ int create_sac_accessor(void) {
     sa->buffer = (uint8_t *) memalign(128, DMA_BUFFER_SIZE);
     memset(sa->buffer, 0, DMA_BUFFER_SIZE);
 
-    /*E
-     * Initialize SPUs
-     */
+    // Initialize SPUs
     LOG_INFO("Initializing SPUs\n");
     ret = sys_spu_initialize(MAX_PHYSICAL_SPU, MAX_RAW_SPU);
     if (ret != CELL_OK) {
@@ -61,9 +67,6 @@ int create_sac_accessor(void) {
         return 0;
     }
 #else
-    /*E
-     * Execute a series of system calls to load a program to a Raw SPU.
-     */
     LOG_INFO("syscall sys_raw_spu_create...");
     ret = sys_raw_spu_create(&sa->id, NULL);
     if (ret) {
@@ -72,11 +75,7 @@ int create_sac_accessor(void) {
     }
     LOG_INFO("succeeded. raw_spu number is %d\n", sa->id);
 
-    /*E
-     * Reset all pending interrupts before starting.
-     * XXX: This is a workaround for SDK0.5.0. Interrupt Status Registers
-     * should be reset when a new Raw SPU is created.
-     */
+    // Reset all pending interrupts before starting.
     sys_raw_spu_set_int_stat(sa->id, 2, 0xfUL);
     sys_raw_spu_set_int_stat(sa->id, 0, 0xfUL);
 
@@ -116,11 +115,9 @@ int create_sac_accessor(void) {
         return -1;
     }
 
-    /**
-     * Create an interrupt PPU thread. (flag = SYS_PPU_THREAD_CREATE_INTERRUPT)
-     */
+    // Create an interrupt PPU thread. (flag = SYS_PPU_THREAD_CREATE_INTERRUPT)
     LOG_INFO("Creating a PPU thread.\n");
-    if ((ret = sys_ppu_thread_create(&sa->handler, handle_interrupt, 0, PRIMARY_PPU_THREAD_PRIO,
+    if ((ret = sys_ppu_thread_create(&sa->handler, handle_interrupt, 0xdeadbeef, PRIMARY_PPU_THREAD_PRIO,
             PRIMARY_PPU_STACK_SIZE,
             SYS_PPU_THREAD_CREATE_INTERRUPT, (char *) "SEL Interrupt PPU Thread"))
             != CELL_OK) {
@@ -142,9 +139,7 @@ int create_sac_accessor(void) {
     }
 #endif
 
-    /**
-     * Establishing the interrupt tag on the interrupt PPU thread.
-     */
+    // Establishing the interrupt tag on the interrupt PPU thread.
     LOG_INFO("Establishing the interrupt tag on the interrupt PPU thread.\n");
     if ((ret = sys_interrupt_thread_establish(&sa->ih, sa->intrtag, sa->handler,
             sa->id)) != CELL_OK) {
@@ -171,9 +166,7 @@ int create_sac_accessor(void) {
         return ret;
     }
 
-    /*E
-     * Run the Raw SPU
-     */
+    // Run the Raw SPU
     sys_raw_spu_mmio_write(sa->id, SPU_NPC, entry);
     sys_raw_spu_mmio_write(sa->id, SPU_RunCntl, 0x1);
     EIEIO;
@@ -267,12 +260,10 @@ void handle_interrupt(uint64_t arg) {
     uint64_t stat;
     int ret;
 
-    LOG_INFO("handle_interrupt [%x]\n", (uintptr_t) arg);
+    LOG_INFO("huh: %llx", arg);
 
-    /**
-     * Create a tag to handle class 2 interrupt, because PPU Interrupt MB is
-     * handled by class 2.
-     */
+    // Create a tag to handle class 2 interrupt, because PPU Interrupt MB is
+    // handled by class 2.
 #ifdef USE_ISOSELF
     ret = sys_isoself_spu_get_int_stat(sa->id, SPU_INTR_CLASS_2, &stat);
     if (ret != CELL_OK) {
@@ -280,19 +271,14 @@ void handle_interrupt(uint64_t arg) {
         sys_interrupt_thread_eoi();
     }
 #else
-    LOG_INFO("sys_raw_spu_get_int_stat\n");
     ret = sys_raw_spu_get_int_stat(sa->id, SPU_INTR_CLASS_2, &stat);
     if (ret != CELL_OK) {
         LOG_ERROR("sys_raw_spu_get_int_stat failed %d\n", ret);
         sys_interrupt_thread_eoi();
     }
-
-    LOG_INFO("sys_raw_spu_get_int_stat returned [%016llX]\n", stat);
 #endif
 
-    /**
-     * If the caught class 2 interrupt includes mailbox interrupt, handle it.
-     */
+    // If the caught class 2 interrupt includes mailbox interrupt, handle it.
     if ((stat & INTR_PPU_MB_MASK) == INTR_PPU_MB_MASK) {
 
 #ifdef USE_ISOSELF
@@ -303,9 +289,7 @@ void handle_interrupt(uint64_t arg) {
             sys_interrupt_thread_eoi();
         }
 
-        /**
-         * Reset the PPU_INTR_MB interrupt status bit.
-         */
+        // Reset the PPU_INTR_MB interrupt status bit.
         ret = sys_isoself_spu_set_int_stat(sa->id, SPU_INTR_CLASS_2, INTR_PPU_MB_MASK);
         if (ret != CELL_OK) {
             LOG_ERROR("sys_isoself_spu_set_int_stat failed %d\n", ret);
@@ -313,19 +297,14 @@ void handle_interrupt(uint64_t arg) {
             sys_interrupt_thread_eoi();
         }        
 #else 
-        LOG_INFO("sys_raw_spu_read_puint_mb\n");
         ret = sys_raw_spu_read_puint_mb(sa->id, &sa->error_code);
         if (ret != CELL_OK) {
             LOG_ERROR("sys_raw_spu_read_puint_mb failed %d\n", ret);
             sys_mutex_unlock(sa->mmio_mutex);
             sys_interrupt_thread_eoi();
         }
-        LOG_INFO("sys_raw_spu_read_puint_mb returned [%x]\n", sa->error_code);
 
-        /**
-         * Reset the PPU_INTR_MB interrupt status bit.
-         */
-        LOG_INFO("sys_raw_spu_set_int_stat\n");
+        // Reset the PPU_INTR_MB interrupt status bit.
         ret = sys_raw_spu_set_int_stat(sa->id, SPU_INTR_CLASS_2, INTR_PPU_MB_MASK);
         if (ret != CELL_OK) {
             LOG_ERROR("sys_raw_spu_set_int_stat failed %d\n", ret);
@@ -334,27 +313,23 @@ void handle_interrupt(uint64_t arg) {
         }
 #endif
 
-        LOG_INFO("sys_mutex_lock\n");
         ret = sys_mutex_lock(sa->mmio_mutex, 0);
         if (ret != CELL_OK) {
             LOG_ERROR("sys_mutex_lock() failed. (%d)\n", ret);
             sys_interrupt_thread_eoi();
         }
 
-        LOG_INFO("sys_cond_signal\n");
         ret = sys_cond_signal(sa->mmio_cond);
         if (ret != CELL_OK) {
             sys_mutex_unlock(sa->mmio_mutex);
             sys_interrupt_thread_eoi();
         }
 
-        LOG_INFO("sys_mutex_unlock\n");
         ret = sys_mutex_unlock(sa->mmio_mutex);
         if (ret != CELL_OK) {
             sys_interrupt_thread_eoi();
         }
     }
-    LOG_INFO("sys_interrupt_thread_eoi\n");
     sys_interrupt_thread_eoi();
 }
 
@@ -407,16 +382,16 @@ int exchange_data(int func_nr
     return sa->error_code;
 }
 
-int sac_initialize(void) {
+int sac_exec_initialize(void) {
  		uint8_t buffer[1] = {0};
 		return exchange_data(0, buffer, 1, 0, 0, 5000000);
 }
 
-int sac_exit(void) {
+int sac_exec_exit(void) {
 		return exchange_data(1, 0, 0, 0, 0, 5000000);
 }
 
-int sac_generate_key_1(uint8_t *key, uint32_t expected_size, uint32_t *key_size) {
+int sac_exec_generate_key_1(uint8_t *key, uint32_t expected_size, uint32_t *key_size) {
   uint32_t new_key_size;
   uint8_t buffer[0xd0];
   int ret;
@@ -436,7 +411,7 @@ int sac_generate_key_1(uint8_t *key, uint32_t expected_size, uint32_t *key_size)
   return -1;
 }
 
-int sac_validate_key_1(uint8_t *key, uint32_t expected_size) {
+int sac_exec_validate_key_1(uint8_t *key, uint32_t expected_size) {
   int ret;
   uint8_t buffer[0xd8];
 
@@ -461,7 +436,7 @@ int sac_validate_key_1(uint8_t *key, uint32_t expected_size) {
   return ret;
 }
 
-int sac_generate_key_2(uint8_t *key, uint32_t expected_size, uint32_t *key_size) {
+int sac_exec_generate_key_2(uint8_t *key, uint32_t expected_size, uint32_t *key_size) {
   uint32_t new_key_size;
   uint8_t buffer[0xb4];
   int ret;
@@ -481,7 +456,7 @@ int sac_generate_key_2(uint8_t *key, uint32_t expected_size, uint32_t *key_size)
   return -1;
 }
 
-int sac_validate_key_2(uint8_t *key, uint32_t expected_size) {
+int sac_exec_validate_key_2(uint8_t *key, uint32_t expected_size) {
   int ret;
   uint8_t buffer[0xb4];
 
@@ -494,7 +469,7 @@ int sac_validate_key_2(uint8_t *key, uint32_t expected_size) {
   return ret;
 }
 
-int sac_validate_key_3(uint8_t *key, uint32_t expected_size) {
+int sac_exec_validate_key_3(uint8_t *key, uint32_t expected_size) {
   int ret;
   uint8_t buffer[0x34];
 
@@ -507,16 +482,18 @@ int sac_validate_key_3(uint8_t *key, uint32_t expected_size) {
   return ret;
 }
 
-int sac_decrypt_data(uint8_t *buffer1, uint32_t expected_size, uint8_t *buffer2) {
+int sac_exec_decrypt_data(uint8_t *encrypted_buffer, uint32_t expected_size, uint8_t *decrypted_buffer) {
   int ret;
   uint8_t read_buffer[0x1810];
   uint8_t write_buffer[0x1804];
+
   memset(read_buffer, 0, 0x1810);
   memcpy(read_buffer, &expected_size, 4);
-  memcpy(read_buffer + 0x10, buffer1, 0x1800);
+  memcpy(read_buffer + 0x10, encrypted_buffer, 0x1800);
+
 	ret = exchange_data(SAC_CMD_DECRYPT, read_buffer, 0x1810, write_buffer, 0x1804, 5000000);
 
-  memcpy(buffer2, write_buffer + 4, 0x1800);
+  memcpy(decrypted_buffer, write_buffer + 4, 0x1800);
 
   return ret;
 }
@@ -536,8 +513,8 @@ int sac_exec_key_exchange(int fd) {
 		
 		agid = buffer[7];
 		
-    ret = sac_generate_key_1(buffer, 0xcc, &buffer_size);
-		LOG_INFO("sac_generate_key 0 %x %x\n", buffer_size, ret);
+    ret = sac_exec_generate_key_1(buffer, 0xcc, &buffer_size);
+		LOG_INFO("sac_exec_generate_key 0 %x %x\n", buffer_size, ret);
 		//LOG_DATA(key, 256);
 		if (ret != 0) {
 		  return ret;
@@ -556,8 +533,8 @@ int sac_exec_key_exchange(int fd) {
 		  return ret;
 		}
 
-    ret = sac_validate_key_1(buffer, 0xc5);
-		LOG_INFO("sac_validate_key_1[%x]\n", ret);
+    ret = sac_exec_validate_key_1(buffer, 0xc5);
+		LOG_INFO("sac_exec_validate_key_1[%x]\n", ret);
 		if (ret != 0) {
 		  return ret;
 		}
@@ -565,8 +542,8 @@ int sac_exec_key_exchange(int fd) {
     // start from scratch
     memset(buffer, 0, 256);
 
-    ret = sac_generate_key_2(buffer, 0xb0, &buffer_size);
-		LOG_INFO("sac_generate_key_2[%x] %x\n", buffer_size, ret);
+    ret = sac_exec_generate_key_2(buffer, 0xb0, &buffer_size);
+		LOG_INFO("sac_exec_generate_key_2[%x] %x\n", buffer_size, ret);
 		if (ret != 0) {
 		  return ret;
 		}
@@ -583,8 +560,8 @@ int sac_exec_key_exchange(int fd) {
 		  return ret;
 		}
 
-    ret = sac_validate_key_2(buffer, 0xae);
-		LOG_INFO("sac_validate_key_2[%x]\n", ret);
+    ret = sac_exec_validate_key_2(buffer, 0xae);
+		LOG_INFO("sac_exec_validate_key_2[%x]\n", ret);
 		if (ret != 0) {
 		  return ret;
 		}
@@ -599,8 +576,8 @@ int sac_exec_key_exchange(int fd) {
 		  return ret;
 		}
 
-    ret = sac_validate_key_3(buffer, 0x30);
-		LOG_INFO("sac_validate_key_3[%x]\n", ret);
+    ret = sac_exec_validate_key_3(buffer, 0x30);
+		LOG_INFO("sac_exec_validate_key_3[%x]\n", ret);
 		if (ret != 0) {
 		  return ret;
 		}
@@ -610,6 +587,8 @@ int sac_exec_key_exchange(int fd) {
 
     return ret;
 }
+
+#ifdef USE_ISOSELF
 
 int file_alloc_load(const char *file_path, uint8_t **buf, unsigned int *size) {
     int ret, fd;
@@ -657,3 +636,4 @@ int file_alloc_load(const char *file_path, uint8_t **buf, unsigned int *size) {
     return 0;
 }
 
+#endif
