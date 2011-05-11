@@ -513,7 +513,7 @@ int sac_decrypt_data(uint8_t *buffer1, uint32_t expected_size, uint8_t *buffer2)
   uint8_t write_buffer[0x1804];
   memset(read_buffer, 0, 0x1810);
   memcpy(read_buffer, &expected_size, 4);
-  memcpy(read_buffer + 0x10, buffer1, 4);
+  memcpy(read_buffer + 0x10, buffer1, 0x1800);
 	ret = exchange_data(SAC_CMD_DECRYPT, read_buffer, 0x1810, write_buffer, 0x1804, 5000000);
 
   memcpy(buffer2, write_buffer + 4, 0x1800);
