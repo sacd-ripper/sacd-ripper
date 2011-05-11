@@ -78,6 +78,7 @@ int ps3rom_lv2_enable_encryption(int fd, uint8_t *buffer, uint32_t lba) {
     
     atapi_cmnd.pkt[9] = 0x0a;
 
+    LOG_DATA(&atapi_cmnd, 0x38);		
     res = sys_storage_send_atapi_command(fd, &atapi_cmnd, buffer);
 
     return res;
@@ -115,7 +116,9 @@ int ps3rom_lv2_report_key_start(int fd, uint8_t *buffer) {
     atapi_cmnd.pkt[6] = 0;
     atapi_cmnd.pkt[7] = 0x10;
 
+    //LOG_DATA(&atapi_cmnd, 0x38);		
     res = sys_storage_send_atapi_command(fd, &atapi_cmnd, buffer);
+    //LOG_DATA(buffer, 16);
 
     return res;
 }
@@ -153,9 +156,16 @@ int ps3rom_lv2_send_key(int fd, uint8_t agid, uint32_t key_size, uint8_t *key, u
 		buffer[3] = key_size & 0xff;
     memcpy(buffer + 4, key, key_size);
 
-		if (buffer_align != 0) {
-  		memset(buffer + key_size + 4, 0, buffer_align);
-  	}
+		//if (buffer_align != 0) {
+  	//	memset(buffer + key_size + 4, 0, buffer_align);
+  	//}
+    //
+		//buffer[0xfc] = buffer_size >> 24; 
+		//buffer[0xfd] = buffer_size >> 16;
+		//buffer[0xfe] = buffer_size >> 8;
+		//buffer[0xff] = buffer_size & 0xff;
+    //LOG_DATA(&atapi_cmnd, 0x38);		
+    LOG_DATA(buffer, 256);		
 
     res = sys_storage_send_atapi_command(fd, &atapi_cmnd, buffer);
 
@@ -170,7 +180,7 @@ int ps3rom_lv2_report_key(int fd, uint8_t agid, uint32_t *key_size, uint8_t *key
     uint8_t buffer_align = 0;
     uint32_t new_key_size, old_key_size = *key_size;
 
-    memset(buffer, 0xff, sizeof(buffer));
+    memset(buffer, 0, sizeof(buffer));
     
     if ((old_key_size & 3) != 0) {
       buffer_align = ~(old_key_size & 3) + 4 + 1;
@@ -189,6 +199,8 @@ int ps3rom_lv2_report_key(int fd, uint8_t agid, uint32_t *key_size, uint8_t *key
     atapi_cmnd.pkt[6] = sequence;
     atapi_cmnd.pkt[7] = 0x10;
     atapi_cmnd.pkt[10] = agid;
+
+    //LOG_DATA(&atapi_cmnd, 0x38);		
     
     res = sys_storage_send_atapi_command(fd, &atapi_cmnd, buffer);
 
@@ -196,6 +208,8 @@ int ps3rom_lv2_report_key(int fd, uint8_t agid, uint32_t *key_size, uint8_t *key
     *key_size = new_key_size;
 
     memcpy(key, buffer + 4, (old_key_size > new_key_size ? new_key_size : old_key_size));
+
+    LOG_DATA(buffer, 256);		
 
     return res;
 }
@@ -212,6 +226,7 @@ int ps3rom_lv2_report_key_finish(int fd, uint8_t agid) {
     atapi_cmnd.pkt[7] = 0x10;
     atapi_cmnd.pkt[10] = agid;
 
+    LOG_DATA(&atapi_cmnd, 0x38);		
     res = sys_storage_send_atapi_command(fd, &atapi_cmnd, 0);
 
     return res;
@@ -272,6 +287,7 @@ int get_device_info(uint64_t device_id) {
   //is_writeable = device_info[56];
   return (ret != CELL_OK || total_sectors == 0 || sector_size != 2048 ? -1 : 0);
 }
+
 
 /*
 void open_storage(void) {

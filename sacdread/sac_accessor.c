@@ -6,6 +6,7 @@
 #include <sys/synchronization.h>
 
 #include "sac_accessor.h"
+#include "sacd_lv2_storage.h"
 #include "debug.h"
 #include "utils.h"
 
@@ -435,7 +436,7 @@ int sac_generate_key_1(uint8_t *key, uint32_t expected_size, uint32_t *key_size)
   return -1;
 }
 
-int sac_validate_key_1(uint8_t *key, uint32_t expected_size, uint8_t *key2) {
+int sac_validate_key_1(uint8_t *key, uint32_t expected_size) {
   int ret;
   uint8_t buffer[0xd8];
 
@@ -448,7 +449,6 @@ int sac_validate_key_1(uint8_t *key, uint32_t expected_size, uint8_t *key2) {
   buffer[10] = 0;
   buffer[11] = 0;
 
-  memcpy(buffer + 12, key2, 4);
   buffer[12] = 0;
   buffer[13] = 0;
   buffer[14] = 0;
@@ -521,6 +521,96 @@ int sac_decrypt_data(uint8_t *buffer1, uint32_t expected_size, uint8_t *buffer2)
   return ret;
 }
 
+int sac_exec_key_exchange(int fd) {
+    int ret;
+    uint8_t agid;
+    uint32_t buffer_size;
+    uint8_t buffer[256];
+    memset(buffer, 0, 256);
+  
+    ret = ps3rom_lv2_report_key_start(fd, buffer);
+		LOG_INFO("ps3rom_lv2_report_key1[%x] %x\n", fd, ret);
+		if (ret != 0) {
+		  return ret;
+		}
+		
+		agid = buffer[7];
+		
+    ret = sac_generate_key_1(buffer, 0xcc, &buffer_size);
+		LOG_INFO("sac_generate_key 0 %x %x\n", buffer_size, ret);
+		//LOG_DATA(key, 256);
+		if (ret != 0) {
+		  return ret;
+		}
+
+    ret = ps3rom_lv2_send_key(fd, agid, buffer_size, buffer, 2);
+		LOG_INFO("ps3rom_lv2_send_key[2] %x %x\n", buffer_size, ret);
+		if (ret != 0) {
+		  return ret;
+		}
+
+    buffer_size = 0xcc;
+    ret = ps3rom_lv2_report_key(fd, agid, &buffer_size, buffer, 2);
+		LOG_INFO("ps3rom_lv2_report_key[2] %x %x\n", buffer_size, ret);
+		if (ret != 0) {
+		  return ret;
+		}
+
+    ret = sac_validate_key_1(buffer, 0xc5);
+		LOG_INFO("sac_validate_key_1[%x]\n", ret);
+		if (ret != 0) {
+		  return ret;
+		}
+
+    // start from scratch
+    memset(buffer, 0, 256);
+
+    ret = sac_generate_key_2(buffer, 0xb0, &buffer_size);
+		LOG_INFO("sac_generate_key_2[%x] %x\n", buffer_size, ret);
+		if (ret != 0) {
+		  return ret;
+		}
+
+    ret = ps3rom_lv2_send_key(fd, agid, buffer_size, buffer, 3);
+		LOG_INFO("ps3rom_lv2_send_key[3] %x %x\n", buffer_size, ret);
+		if (ret != 0) {
+		  return ret;
+		}
+
+    ret = ps3rom_lv2_report_key(fd, agid, &buffer_size, buffer, 3);
+		LOG_INFO("ps3rom_lv2_report_key[3] %x %x\n", buffer_size, ret);
+		if (ret != 0) {
+		  return ret;
+		}
+
+    ret = sac_validate_key_2(buffer, 0xae);
+		LOG_INFO("sac_validate_key_2[%x]\n", ret);
+		if (ret != 0) {
+		  return ret;
+		}
+
+    // start from scratch
+    memset(buffer, 0, 256);
+
+    buffer_size = 0x30;
+    ret = ps3rom_lv2_report_key(fd, agid, &buffer_size, buffer, 4);
+		LOG_INFO("ps3rom_lv2_report_key[4] %x %x\n", buffer_size, ret);
+		if (ret != 0) {
+		  return ret;
+		}
+
+    ret = sac_validate_key_3(buffer, 0x30);
+		LOG_INFO("sac_validate_key_3[%x]\n", ret);
+		if (ret != 0) {
+		  return ret;
+		}
+
+    ret = ps3rom_lv2_report_key_finish(fd, agid);
+		LOG_INFO("ps3rom_lv2_report_finish [0xff] %x\n", ret);
+
+    return ret;
+}
+
 int file_alloc_load(const char *file_path, uint8_t **buf, unsigned int *size) {
     int ret, fd;
     CellFsStat status;
@@ -566,3 +656,4 @@ int file_alloc_load(const char *file_path, uint8_t **buf, unsigned int *size) {
     *size = status.st_size;
     return 0;
 }
+
