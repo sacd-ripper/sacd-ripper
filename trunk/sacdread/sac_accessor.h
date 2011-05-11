@@ -16,11 +16,6 @@ CDECL_BEGIN
 
 //#define USE_ISOSELF 1
 
-/**
- * Refer to "Class 2 Interrupt Status Register (INT_Stat_class2)" in 
- * Cell Broadband Engine Architecture for the meaning of each bit in the
- * register.
- */
 #define INTR_PPU_MB_SHIFT   0
 #define INTR_STOP_SHIFT     1
 #define INTR_HALT_SHIFT     2
@@ -32,15 +27,19 @@ CDECL_BEGIN
 #define INTR_DMA_MASK       (0x1 << INTR_DMA_SHIFT)
 #define INTR_SPU_MB_MASK    (0x1 << INTR_SPU_MB_SHIFT)
 
+#define SPU_INTR_CLASS_2      ( 2 )
+
+#define MAX_PHYSICAL_SPU       6 
+#define MAX_RAW_SPU            1
+
+#define EIEIO __asm__ volatile("eieio")
+
 /** configuration of sac accessor thread */
 #define PRIMARY_PPU_THREAD_PRIO ( 1001 )
 #define PRIMARY_PPU_STACK_SIZE  ( 0x2000 )
+
 #define DMA_BUFFER_SIZE  ( 0x2000 )
-#define EIEIO __asm__ volatile("eieio")
-#define SPU_INTR_CLASS_2      ( 2 )
 #define EXIT_SAC_CMD ( 0xFEFEFEFF )
-#define MAX_PHYSICAL_SPU       6 
-#define MAX_RAW_SPU            1
 
 #ifdef USE_ISOSELF
 	
@@ -108,6 +107,7 @@ enum {
     , SAC_CMD_GENERATE_KEY_2 = 4
     , SAC_CMD_VALIDATE_KEY_2 = 5
     , SAC_CMD_VALIDATE_KEY_3 = 6
+    , SAC_CMD_ENCRYPT = 7
     , SAC_CMD_DECRYPT = 8
 } sac_command_t;
 
@@ -132,16 +132,10 @@ typedef struct {
 extern sac_accessor_t *sa;
 extern int create_sac_accessor(void);
 extern int destroy_sac_accessor(void);
-extern int sac_initialize(void);
-extern int sac_generate_key_1(uint8_t *key, uint32_t expected_size, uint32_t *ret_size);
-extern int sac_validate_key_1(uint8_t *key, uint32_t expected_size);
-extern int sac_generate_key_2(uint8_t *key, uint32_t expected_size, uint32_t *key_size);
-extern int sac_validate_key_2(uint8_t *key, uint32_t expected_size);
-extern int sac_validate_key_3(uint8_t *key, uint32_t expected_size);
-extern int sac_decrypt_data(uint8_t *buffer1, uint32_t expected_size, uint8_t *buffer2);
-
-extern int sac_exit(void);
+extern int sac_exec_initialize(void);
 extern int sac_exec_key_exchange(int);
+extern int sac_exec_decrypt_data(uint8_t *, uint32_t, uint8_t *);
+extern int sac_exec_exit(void);
 
 CDECL_END
 
