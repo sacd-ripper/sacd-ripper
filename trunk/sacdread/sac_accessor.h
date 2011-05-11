@@ -14,7 +14,7 @@
 
 CDECL_BEGIN
 
-#define USE_ISOSELF 1
+//#define USE_ISOSELF 1
 
 /**
  * Refer to "Class 2 Interrupt Status Register (INT_Stat_class2)" in 
@@ -134,13 +134,14 @@ extern int create_sac_accessor(void);
 extern int destroy_sac_accessor(void);
 extern int sac_initialize(void);
 extern int sac_generate_key_1(uint8_t *key, uint32_t expected_size, uint32_t *ret_size);
-extern int sac_validate_key_1(uint8_t *key, uint32_t expected_size, uint8_t *key2);
+extern int sac_validate_key_1(uint8_t *key, uint32_t expected_size);
 extern int sac_generate_key_2(uint8_t *key, uint32_t expected_size, uint32_t *key_size);
 extern int sac_validate_key_2(uint8_t *key, uint32_t expected_size);
 extern int sac_validate_key_3(uint8_t *key, uint32_t expected_size);
 extern int sac_decrypt_data(uint8_t *buffer1, uint32_t expected_size, uint8_t *buffer2);
 
 extern int sac_exit(void);
+extern int sac_exec_key_exchange(int);
 
 CDECL_END
 
