@@ -1,0 +1,10 @@
+in order of importance:
+
+- add dst decoding
+- fill ID3 tag with SACDText
+- add sony dsf export support
+- add Makefile
+- compile on PS3
+- add libspe2 support for multi SPU DST decoding
+- write readme for audiophile computer noobs
+
