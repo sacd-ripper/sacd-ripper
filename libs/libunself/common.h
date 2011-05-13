@@ -34,11 +34,4 @@
        ((uint64_t)((x) & 0x00000000000000ffull) << 56))
 #endif
 
-
-#define ERROR(err, msg) do {                    \
-    perror (msg);                               \
-    exit (err);                                 \
-  } while(0);
-
-
 #endif /* __COMMON_H__ */

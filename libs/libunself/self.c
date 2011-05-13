@@ -15,7 +15,7 @@ static struct keylist_t *load_keys(app_info_t *app_info);
 static int decrypt_metadata(uint8_t *metadata, uint32_t metadata_size,
         struct keylist_t *klist);
 
-void
+int
 self_read_headers(FILE *in, self_ehdr_t *self, app_info_t *app_info, elf_ehdr_t *elf,
         elf_phdr_t **phdr, elf_shdr_t **shdr, section_info_t **section_info,
         sceversion_info_t *sceversion_info, control_info_t **control_info) {
@@ -23,7 +23,7 @@ self_read_headers(FILE *in, self_ehdr_t *self, app_info_t *app_info, elf_ehdr_t 
 
     // SELF
     if (fread(self, sizeof (self_ehdr_t), 1, in) != 1) {
-        ERROR(-3, "Couldn't read SELF header");
+        return -1;
     }
 
     self->magic = swap32(self->magic);
@@ -43,14 +43,14 @@ self_read_headers(FILE *in, self_ehdr_t *self, app_info_t *app_info, elf_ehdr_t 
     self->controlinfo_size = swap64(self->controlinfo_size);
 
     if (self->magic != SCE_MAGIC) {
-        ERROR(-3, "not a SELF\n");
+        return -1;
     }
 
     // APP INFO
     if (app_info) {
         fseek(in, (long) self->appinfo_offset, SEEK_SET);
         if (fread(app_info, sizeof (app_info_t), 1, in) != 1) {
-            ERROR(-3, "Couldn't read APP INFO header");
+            return -1;
         }
         app_info->authid = swap64(app_info->authid);
         app_info->vendor_id = swap32(app_info->vendor_id);
@@ -62,7 +62,7 @@ self_read_headers(FILE *in, self_ehdr_t *self, app_info_t *app_info, elf_ehdr_t 
     if (elf) {
         fseek(in, (long) self->elf_offset, SEEK_SET);
         if (fread(elf, sizeof (elf_ehdr_t), 1, in) != 1) {
-            ERROR(-3, "Couldn't read ELF header");
+            return -1;
         }
         arch64 = elf->e_ident[4] == 2;
         if (arch64) {
@@ -83,7 +83,7 @@ self_read_headers(FILE *in, self_ehdr_t *self, app_info_t *app_info, elf_ehdr_t 
             elf32_ehdr_t elf32;
             fseek(in, (long) self->elf_offset, SEEK_SET);
             if (fread(&elf32, sizeof (elf32_ehdr_t), 1, in) != 1) {
-                ERROR(-3, "Couldn't read ELF32 header");
+                return -1;
             }
             elf->e_type = swap16(elf32.e_type);
             elf->e_machine = swap16(elf32.e_machine);
@@ -121,7 +121,7 @@ self_read_headers(FILE *in, self_ehdr_t *self, app_info_t *app_info, elf_ehdr_t 
             if (arch64) {
                 fseek(in, (long) self->phdr_offset, SEEK_SET);
                 if (fread(elf_phdr, sizeof (elf_phdr_t), phnum, in) != phnum) {
-                    ERROR(-3, "Couldn't read ELF PHDR header");
+                    return -1;
                 }
 
                 for (i = 0; i < phnum; i++) {
@@ -138,7 +138,7 @@ self_read_headers(FILE *in, self_ehdr_t *self, app_info_t *app_info, elf_ehdr_t 
                 elf32_phdr_t *elf32_phdr = malloc(sizeof (elf32_phdr_t) * phnum);
                 fseek(in, (long) self->phdr_offset, SEEK_SET);
                 if (fread(elf32_phdr, sizeof (elf32_phdr_t), phnum, in) != phnum) {
-                    ERROR(-3, "Couldn't read ELF32 PHDR header");
+                    return -1;
                 }
 
                 for (i = 0; i < phnum; i++) {
@@ -165,7 +165,7 @@ self_read_headers(FILE *in, self_ehdr_t *self, app_info_t *app_info, elf_ehdr_t 
 
             fseek(in, (long) self->section_info_offset, SEEK_SET);
             if (fread(sections, sizeof (section_info_t), phnum, in) != phnum) {
-                ERROR(-3, "Couldn't read SECTION INFO header");
+                return -1;
             }
 
             for (i = 0; i < phnum; i++) {
@@ -183,7 +183,7 @@ self_read_headers(FILE *in, self_ehdr_t *self, app_info_t *app_info, elf_ehdr_t 
     if (sceversion_info) {
         fseek(in, (long) self->sceversion_offset, SEEK_SET);
         if (fread(sceversion_info, sizeof (sceversion_info_t), 1, in) != 1) {
-            ERROR(-3, "Couldn't read SCE VERSION INFO header");
+            return -1;
         }
     }
 
@@ -200,7 +200,7 @@ self_read_headers(FILE *in, self_ehdr_t *self, app_info_t *app_info, elf_ehdr_t 
             fseek(in, (long) self->controlinfo_offset + offset, SEEK_SET);
 
             if (fread(info + index, sizeof (control_info_t), 1, in) != 1) {
-                ERROR(-3, "Couldn't read CONTROL INFO header");
+                return -1;
             }
 
             info[index].type = swap32(info[index].type);
@@ -235,7 +235,7 @@ self_read_headers(FILE *in, self_ehdr_t *self, app_info_t *app_info, elf_ehdr_t 
             if (arch64) {
                 fseek(in, (long) self->shdr_offset, SEEK_SET);
                 if (fread(elf_shdr, sizeof (elf_shdr_t), shnum, in) != shnum) {
-                    ERROR(-3, "Couldn't read ELF SHDR header");
+                    return -1;
                 }
 
                 for (i = 0; i < shnum; i++) {
@@ -255,7 +255,7 @@ self_read_headers(FILE *in, self_ehdr_t *self, app_info_t *app_info, elf_ehdr_t 
 
                 fseek(in, (long) self->shdr_offset, SEEK_SET);
                 if (fread(elf32_shdr, sizeof (elf32_shdr_t), shnum, in) != shnum) {
-                    ERROR(-3, "Couldn't read ELF SHDR header");
+                    return -1;
                 }
 
                 for (i = 0; i < shnum; i++) {
@@ -277,9 +277,10 @@ self_read_headers(FILE *in, self_ehdr_t *self, app_info_t *app_info, elf_ehdr_t 
         }
     }
 
+	return 0;
 }
 
-void
+int
 self_read_metadata(FILE *in, self_ehdr_t *self, app_info_t *app_info,
         metadata_info_t *metadata_info, metadata_header_t *metadata_header,
         metadata_section_header_t **section_headers, uint8_t **keys,
@@ -293,7 +294,7 @@ self_read_metadata(FILE *in, self_ehdr_t *self, app_info_t *app_info,
     fseek(in, self->metadata_offset + 0x20, SEEK_SET);
 
     if (fread(metadata, 1, metadata_size, in) != metadata_size) {
-        ERROR(-3, "Couldn't read METADATA");
+        return -1;
     }
 
     if (self->flags != 0x800) {
@@ -301,10 +302,10 @@ self_read_metadata(FILE *in, self_ehdr_t *self, app_info_t *app_info,
 
         klist = load_keys(app_info);
         if (klist == NULL)
-            ERROR(-5, "no key found");
+            return -1;
 
         if (decrypt_metadata(metadata, metadata_size, klist) < 0)
-            ERROR(-5, "Error decrypting metadata");
+            return -1;
     }
 
     ptr = metadata;
@@ -352,13 +353,15 @@ self_read_metadata(FILE *in, self_ehdr_t *self, app_info_t *app_info,
     }
     ptr += sizeof (signature_t);
     free(metadata);
+    
+    return 0;
 }
 
 int
 self_load_sections(FILE *in, self_ehdr_t *self, elf_ehdr_t *elf, elf_phdr_t **phdr,
         metadata_header_t *metadata_header, metadata_section_header_t **section_headers,
         uint8_t **keys, self_section_t **sections) {
-    uint32_t num_sections = 0;
+    int num_sections = 0;
     uint32_t i;
 
     num_sections = metadata_header->section_count + 1;
@@ -383,12 +386,12 @@ self_load_sections(FILE *in, self_ehdr_t *self, elf_ehdr_t *elf, elf_phdr_t **ph
 
             fseek(in, (long) self->header_len, SEEK_SET);
             if (fread((*sections)[0].data, 1, size, in) != size) {
-                ERROR(-6, "Couldn't read section");
+                return -1;
             }
 
             fseek(in, (long) self->elf_offset, SEEK_SET);
             if (fread((*sections)[0].data, 1, size, in) != size) {
-                ERROR(-6, "Couldn't read section");
+                return -1;
             }
         } else {
             uint8_t *temp_data = NULL;
@@ -412,7 +415,7 @@ self_load_sections(FILE *in, self_ehdr_t *self, elf_ehdr_t *elf, elf_phdr_t **ph
             temp_data = malloc((size_t) hdr->data_size);
             fseek(in, (long) hdr->data_offset, SEEK_SET);
             if (fread(temp_data, 1, (size_t) hdr->data_size, in) != hdr->data_size) {
-                ERROR(-6, "Couldn't read section");
+                return -1;
             }
 
             if (hdr->encrypted == 3)

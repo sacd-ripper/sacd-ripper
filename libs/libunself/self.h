@@ -252,11 +252,11 @@ typedef struct {
 #pragma pack()
 #endif
 
-void self_read_headers(FILE *in, self_ehdr_t *self, app_info_t *app_info, elf_ehdr_t *elf,
+int self_read_headers(FILE *in, self_ehdr_t *self, app_info_t *app_info, elf_ehdr_t *elf,
         elf_phdr_t **phdr, elf_shdr_t **shdr, section_info_t **section_info,
         sceversion_info_t *sceversion_info, control_info_t **control_info);
 
-void self_read_metadata(FILE *in, self_ehdr_t *self, app_info_t *app_info,
+int self_read_metadata(FILE *in, self_ehdr_t *self, app_info_t *app_info,
         metadata_info_t *metadata_info, metadata_header_t *metadata_header,
         metadata_section_header_t **section_headers, uint8_t **keys,
         signature_info_t *signature_info, signature_t *signature);
