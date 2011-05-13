@@ -4,8 +4,6 @@
 #ifndef TYPES_H__
 #define TYPES_H__
 
-#include "config.h"
-
 #include <stdint.h>
 
 static inline uint8_t be8(uint8_t *p) {

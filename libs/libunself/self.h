@@ -186,7 +186,7 @@ typedef struct {
             uint8_t digest2[20];
             uint8_t padding[8];
         } file_digest;
-    };
+    } info;
 } ATTRIBUTE_PACKED control_info_t;
 
 typedef struct {
