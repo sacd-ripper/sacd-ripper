@@ -1,10 +1,15 @@
 in order of importance:
 
+- asynchronous read
+- add logging to file, serve log with webserver
+- add web interface
+- add dialogs
+- patching geohot 3.55
 - add dst decoding
+
+- compile with psl1ght
+
+- add unpacking SacModule and decoder.spu
+
 - fill ID3 tag with SACDText
 - add sony dsf export support
-- add Makefile
-- compile on PS3
-- add libspe2 support for multi SPU DST decoding
-- write readme for audiophile computer noobs
-
