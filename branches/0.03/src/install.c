@@ -4,6 +4,7 @@
 #include <self.h>
 
 #include "rsxutil.h"
+#include "exit_handler.h"
 
 static const char FILE_SACD_PLUGIN_SOURCE[]	= "/dev_flash/vsh/module/sacd_plugin.sprx";
 static const char FILE_SAC_MODULE_SOURCE[] 	= "/dev_flash/vsh/module/SacModule.spu.isoself";
@@ -207,13 +208,16 @@ int install_modules(void) {
 		do {
 	
 			dialogType = (MSG_DIALOG_NORMAL | MSG_DIALOG_BTN_TYPE_OK);
-			msgDialogOpen2(dialogType, "The SACD authentication and DST decoder modules need to be extracted,\nmake sure you have the PS3 keys (app-pub-355, iso-iv-355, etc..) in the root of an external USB/flash disc.", dialog_handler, NULL, NULL);
+			msgDialogOpen2(dialogType, "The SACD authentication and DST decoder modules need to be extracted.\nMake sure you have the PS3 keys (app-pub-355, iso-iv-355, etc..) in the root of an external USB/flash disc.", dialog_handler, NULL, NULL);
 			dialog_action = 0;
-			while (!dialog_action) {
+			while (!dialog_action && !user_requested_exit()) {
 				sysUtilCheckCallback();
 				flip();
 			}
 			msgDialogAbort();
+			
+			if (user_requested_exit())
+				return 1;
 
 			if (dialog_action != 1)
 				return -1;
@@ -223,9 +227,9 @@ int install_modules(void) {
 			if (installed) {
 
 				dialogType = (MSG_DIALOG_NORMAL | MSG_DIALOG_BTN_TYPE_OK | MSG_DIALOG_DISABLE_CANCEL_ON);
-				msgDialogOpen2(dialogType, "The modules were succesfully extracted.", dialog_handler, NULL, NULL);
+				msgDialogOpen2(dialogType, "The modules were successfully extracted.", dialog_handler, NULL, NULL);
 				dialog_action = 0;
-				while (!dialog_action) {
+				while (!dialog_action && !user_requested_exit()) {
 					sysUtilCheckCallback();
 					flip();
 				}
@@ -234,9 +238,9 @@ int install_modules(void) {
 			} else {
 
 				dialogType = (MSG_DIALOG_NORMAL | MSG_DIALOG_BTN_TYPE_OK);
-				msgDialogOpen2(dialogType, "ERROR: The keys were not found or the modules could not be extracted or written.\nPlease try again.", dialog_handler, NULL, NULL);
+				msgDialogOpen2(dialogType, "ERROR: The keys were not found or the modules could not be extracted.\nPlease try again.", dialog_handler, NULL, NULL);
 				dialog_action = 0;
-				while (!dialog_action) {
+				while (!dialog_action && !user_requested_exit()) {
 					sysUtilCheckCallback();
 					flip();
 				}
@@ -247,7 +251,7 @@ int install_modules(void) {
 
 			}
 			
-		} while (!installed);
+		} while (!installed && !user_requested_exit());
 	}
 	
 	return 0;
