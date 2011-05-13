@@ -206,8 +206,8 @@ self_read_headers(FILE *in, self_ehdr_t *self, app_info_t *app_info, elf_ehdr_t 
             info[index].type = swap32(info[index].type);
             info[index].size = swap32(info[index].size);
             if (info[index].type == 1)
-                info[index].control_flags.control_flags =
-                    swap64(info[index].control_flags.control_flags);
+                info[index].info.control_flags.control_flags =
+                    swap64(info[index].info.control_flags.control_flags);
 
             offset += info[index].size;
             index++;
@@ -471,7 +471,7 @@ find_isoself(self_section_t *sections, int num_sections, const char *spuname, ui
                     // get a pointer to the string table
                     elf32_shdr_t *elf32_shdr_ptr = (elf32_shdr_t *) (data_ptr + elf32_ehdr.e_shoff +
                             elf32_ehdr.e_shentsize * elf32_ehdr.e_shstrndx);
-                    const char *section_str_tab = data_ptr + swap32(elf32_shdr_ptr->sh_offset);
+                    const char *section_str_tab = (char*) data_ptr + swap32(elf32_shdr_ptr->sh_offset);
 
                     // go through all sections
                     for (j = 0; j < elf32_ehdr.e_shnum; j++) {
