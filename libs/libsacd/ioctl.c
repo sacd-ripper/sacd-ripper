@@ -1,15 +1,32 @@
-#include <sys/timer.h>
-#include <sys/event.h>
-#include <sys/ppu_thread.h>
+/**
+ * SACD Ripper - http://code.google.com/p/sacd-ripper/
+ *
+ * Copyright (c) 2010-2011 by respective authors. 
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ */ 
 
-#include "sacd_lv2_storage.h"
-#include "debug.h"
+#include <sys/storage.h>
+#include "ioctl.h"
 
 int ps3rom_lv2_get_configuration(int fd, uint8_t *buffer) {
 	int res;
 	struct lv2_atapi_cmnd_block atapi_cmnd;
 
-	init_atapi_cmnd_block(&atapi_cmnd, 0x10, PIO_DATA_IN_PROTO, DIR_READ);
+	sys_storage_init_atapi_cmnd(&atapi_cmnd, 0x10, ATAPI_PIO_DATA_IN_PROTO, ATAPI_DIR_READ);
 	atapi_cmnd.pkt[0] = GPCMD_GET_CONFIGURATION;
 	atapi_cmnd.pkt[1] = 0;
 	atapi_cmnd.pkt[2] = 0xff;
@@ -26,7 +43,7 @@ int ps3rom_lv2_mode_sense(int fd, uint8_t *buffer) {
 	int res;
 	struct lv2_atapi_cmnd_block atapi_cmnd;
 
-	init_atapi_cmnd_block(&atapi_cmnd, 0x10, PIO_DATA_IN_PROTO, DIR_READ);
+	sys_storage_init_atapi_cmnd(&atapi_cmnd, 0x10, ATAPI_PIO_DATA_IN_PROTO, ATAPI_DIR_READ);
 
 	atapi_cmnd.pkt[0] = GPCMD_MODE_SENSE_10;
 	atapi_cmnd.pkt[1] = 0x08;
@@ -51,7 +68,7 @@ int ps3rom_lv2_mode_select(int fd) {
 	buffer[11] = 3; // ? 3 == SACD
 	buffer[255] = 0x10;
 
-	init_atapi_cmnd_block(&atapi_cmnd, 0x10, PIO_DATA_OUT_PROTO, DIR_WRITE);
+	sys_storage_init_atapi_cmnd(&atapi_cmnd, 0x10, ATAPI_PIO_DATA_OUT_PROTO, ATAPI_DIR_WRITE);
 
 	atapi_cmnd.pkt[0] = GPCMD_MODE_SELECT_10;
 	atapi_cmnd.pkt[1] = 0x10; /* PF */
@@ -66,7 +83,7 @@ int ps3rom_lv2_enable_encryption(int fd, uint8_t *buffer, uint32_t lba) {
 	int res;
 	struct lv2_atapi_cmnd_block atapi_cmnd;
 
-	init_atapi_cmnd_block(&atapi_cmnd, 0x0a, PIO_DATA_IN_PROTO, DIR_READ);
+	sys_storage_init_atapi_cmnd(&atapi_cmnd, 0x0a, ATAPI_PIO_DATA_IN_PROTO, ATAPI_DIR_READ);
 
 	atapi_cmnd.pkt[0] = GPCMD_READ_DVD_STRUCTURE;
 	atapi_cmnd.pkt[1] = 2;
@@ -88,7 +105,7 @@ int ps3rom_lv2_get_event_status_notification(int fd, uint8_t *buffer) {
 	int res;
 	struct lv2_atapi_cmnd_block atapi_cmnd;
 
-	init_atapi_cmnd_block(&atapi_cmnd, 0x08, PIO_DATA_IN_PROTO, DIR_READ);
+	sys_storage_init_atapi_cmnd(&atapi_cmnd, 0x08, ATAPI_PIO_DATA_IN_PROTO, ATAPI_DIR_READ);
 
 	atapi_cmnd.pkt[0] = GPCMD_GET_EVENT_STATUS_NOTIFICATION;
 	atapi_cmnd.pkt[1] = 1; /* IMMED */
@@ -104,7 +121,7 @@ int ps3rom_lv2_report_key_start(int fd, uint8_t *buffer) {
 	int res;
 	struct lv2_atapi_cmnd_block atapi_cmnd;
 
-	init_atapi_cmnd_block(&atapi_cmnd, 0x08, PIO_DATA_IN_PROTO, DIR_READ);
+	sys_storage_init_atapi_cmnd(&atapi_cmnd, 0x08, ATAPI_PIO_DATA_IN_PROTO, ATAPI_DIR_READ);
 
 	atapi_cmnd.pkt[0] = GPCMD_REPORT_KEY;
 
@@ -135,7 +152,7 @@ int ps3rom_lv2_send_key(int fd, uint8_t agid, uint32_t key_size, uint8_t *key, u
 	}
 	buffer_size = key_size + 4 + buffer_align;
 
-	init_atapi_cmnd_block(&atapi_cmnd, buffer_size, PIO_DATA_OUT_PROTO, DIR_WRITE);
+	sys_storage_init_atapi_cmnd(&atapi_cmnd, buffer_size, ATAPI_PIO_DATA_OUT_PROTO, ATAPI_DIR_WRITE);
 
 	atapi_cmnd.pkt[0] = GPCMD_SEND_KEY;
 
@@ -187,7 +204,7 @@ int ps3rom_lv2_report_key(int fd, uint8_t agid, uint32_t *key_size, uint8_t *key
 	}
 	buffer_size = old_key_size + 4 + buffer_align;
 
-	init_atapi_cmnd_block(&atapi_cmnd, buffer_size, PIO_DATA_IN_PROTO, DIR_READ);
+	sys_storage_init_atapi_cmnd(&atapi_cmnd, buffer_size, ATAPI_PIO_DATA_IN_PROTO, ATAPI_DIR_READ);
 
 	atapi_cmnd.pkt[0] = GPCMD_REPORT_KEY;
 
@@ -218,7 +235,7 @@ int ps3rom_lv2_report_key_finish(int fd, uint8_t agid) {
 	int res;
 	struct lv2_atapi_cmnd_block atapi_cmnd;
 
-	init_atapi_cmnd_block(&atapi_cmnd, 0, NON_DATA_PROTO, DIR_READ);
+	sys_storage_init_atapi_cmnd(&atapi_cmnd, 0, ATAPI_NON_DATA_PROTO, ATAPI_DIR_READ);
 
 	atapi_cmnd.pkt[0] = GPCMD_REPORT_KEY;
 
@@ -237,7 +254,7 @@ int ps3rom_lv2_read_toc_header(int fd, uint8_t *buffer) {
 	int res;
 	struct lv2_atapi_cmnd_block atapi_cmnd;
 
-	init_atapi_cmnd_block(&atapi_cmnd, 12, PIO_DATA_IN_PROTO, DIR_READ);
+	sys_storage_init_atapi_cmnd(&atapi_cmnd, 12, ATAPI_PIO_DATA_IN_PROTO, ATAPI_DIR_READ);
 
 	atapi_cmnd.pkt[0] = GPCMD_READ_TOC_PMA_ATIP;
 	atapi_cmnd.pkt[6] = 0;
@@ -252,7 +269,7 @@ int ps3rom_lv2_read_toc_entry(int fd, uint8_t *buffer) {
 	int res;
 	struct lv2_atapi_cmnd_block atapi_cmnd;
 
-	init_atapi_cmnd_block(&atapi_cmnd, 12, PIO_DATA_IN_PROTO, DIR_READ);
+	sys_storage_init_atapi_cmnd(&atapi_cmnd, 12, ATAPI_PIO_DATA_IN_PROTO, ATAPI_DIR_READ);
 
 	atapi_cmnd.pkt[0] = GPCMD_READ_TOC_PMA_ATIP;
 	atapi_cmnd.pkt[6] = 0x01;
@@ -267,7 +284,7 @@ int ps3rom_lv2_read_track(int fd, uint8_t *buffer, uint8_t track) {
 	int res;
 	struct lv2_atapi_cmnd_block atapi_cmnd;
 
-	init_atapi_cmnd_block(&atapi_cmnd, 48, PIO_DATA_IN_PROTO, DIR_READ);
+	sys_storage_init_atapi_cmnd(&atapi_cmnd, 48, ATAPI_PIO_DATA_IN_PROTO, ATAPI_DIR_READ);
 
 	atapi_cmnd.pkt[0] = GPCMD_READ_TRACK_RZONE_INFO;
 	atapi_cmnd.pkt[1] = 1;
@@ -278,6 +295,8 @@ int ps3rom_lv2_read_track(int fd, uint8_t *buffer, uint8_t track) {
 
 	return res;
 }
+
+#if 0
 
 int get_device_info(uint64_t device_id) {
 	uint8_t device_info[64];
@@ -463,3 +482,4 @@ static void accessor_driver_event_receive(uint64_t arg) {
 	LOG_INFO("accessor_driver_event_receive: Exit\n");
 	sys_ppu_thread_exit(0);
 }
+#endif

@@ -1,4 +1,4 @@
-TARGETS := libunself libpatchutils
+TARGETS := libunself libpatchutils libsacd
 
 all:
 	@for TARGET in $(TARGETS); do $(MAKE) --no-print-directory -C $$TARGET; done

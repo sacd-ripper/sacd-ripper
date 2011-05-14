@@ -1,3 +1,4 @@
+#if 0
 /**
  * SACD Ripper - http://code.google.com/p/sacd-ripper/
  *
@@ -107,3 +108,4 @@ int scarletbook_id3_tag_render(scarletbook_handle_t *handle, uint8_t *buffer, in
 
 	return len;
 }
+#endif

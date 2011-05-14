@@ -139,7 +139,7 @@ sacd_reader_t *sacd_open( const char *ppath )
     if( ppath == NULL )
       return 0;
 
-	path = _strdup(ppath);
+	path = strdup(ppath);
     if( path == NULL )
       return 0;
 
@@ -199,12 +199,12 @@ sacd_reader_t *sacd_open( const char *ppath )
 #endif
 
 	/* XXX: We should scream real loud here. */
-	if( !(path_copy = _strdup( path ) ) ) {
+	if( !(path_copy = strdup( path ) ) ) {
 		free(path);
 		return NULL;
 	}
 
-#ifndef WIN32 /* don't have fchdir, and getcwd( NULL, ... ) is strange */
+#if !defined(WIN32) && !defined(__lv2ppu__) /* don't have fchdir, and getcwd( NULL, ... ) is strange */
               /* Also WIN32 does not have symlinks, so we don't need this bit of code. */
 
 	/* Resolve any symlinks and get the absolut dir name. */

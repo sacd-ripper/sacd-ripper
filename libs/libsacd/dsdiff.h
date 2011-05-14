@@ -41,38 +41,38 @@
 #define PRAGMA_PACK 1
 #endif
 
-#define FRM8_MARKER		(MAKE_MARKER ('FRM8'))		// Format Version Chunk
+#define FRM8_MARKER		(MAKE_MARKER ('F','R','M','8'))		// Format Version Chunk
 
 // local chunks
-#define FVER_MARKER		(MAKE_MARKER('FVER'))		// Format Version Chunk (required)
-#define PROP_MARKER		(MAKE_MARKER('PROP'))		// Property Chunk (required)
-	#define SND_MARKER		(MAKE_MARKER('SND '))		// Sound properties
-		#define FS_MARKER		(MAKE_MARKER('FS  '))		// Sample Rate Chunk
-		#define CHNL_MARKER		(MAKE_MARKER('CHNL'))		// Channels Chunk
-			#define SLFT_MARKER		(MAKE_MARKER('SLFT'))		// stereo left
-			#define SRGT_MARKER		(MAKE_MARKER('SRGT'))		// stereo right
-			#define MLFT_MARKER		(MAKE_MARKER('MLFT'))		// multi-channel left
-			#define MRGT_MARKER		(MAKE_MARKER('MRGT'))		// multi-channel right
-			#define LS_MARKER		(MAKE_MARKER('LS  '))		// multi-channel left surround
-			#define RS_MARKER		(MAKE_MARKER('RS  '))		// multi-channel right surround
-			#define C_MARKER		(MAKE_MARKER('C   '))		// multi-channel center
-			#define LFE_MARKER		(MAKE_MARKER('LFE '))		// multi-channel low frequency enhancement
-		#define CMPR_MARKER		(MAKE_MARKER('CMPR'))		// Compression Type Chunk
-		#define ABSS_MARKER		(MAKE_MARKER('ABSS'))		// Absolute Start Time Chunk
-		#define LSCO_MARKER		(MAKE_MARKER('LSCO'))		// Loudspeaker Configuration Chunk
-#define DSD_MARKER		(MAKE_MARKER('DSD '))		// DSD Sound Data Chunk (required or DST)
-#define DST_MARKER		(MAKE_MARKER('DST '))		// DST Sound Data Chunk (required or DSD)
-	#define FRTE_MARKER		(MAKE_MARKER('FRTE'))	// DST Frame Information Chunk
-	#define DSTF_MARKER		(MAKE_MARKER('DSTF'))	// DST Frame Data Chunk
-	#define DSTC_MARKER		(MAKE_MARKER('DSTC'))	// DST Frame CRC Chunk
-#define DSTI_MARKER		(MAKE_MARKER('DSTI'))		// DST Sound Index Chunk (optional)
-#define COMT_MARKER		(MAKE_MARKER('COMT'))		// comments Chunk (optional)
-#define DIIN_MARKER		(MAKE_MARKER('DIIN'))		// Edited Master Information Chunk (optional)
-	#define EMID_MARKER		(MAKE_MARKER('EMID'))		// Edited Master ID Chunk (optional)
-	#define MARK_MARKER		(MAKE_MARKER('MARK'))		// Edited Master ID Chunk (optional)
-	#define DIAR_MARKER		(MAKE_MARKER('DIAR'))		// Artist Chunk (optional)
-	#define DITI_MARKER		(MAKE_MARKER('DITI'))		// Title Chunk (optional)
-#define MANF_MARKER		(MAKE_MARKER('MANF'))		// Manufacturer Specific Chunk (optional)
+#define FVER_MARKER		(MAKE_MARKER('F','V','E','R'))		// Format Version Chunk (required)
+#define PROP_MARKER		(MAKE_MARKER('P','R','O','P'))		// Property Chunk (required)
+	#define SND_MARKER		(MAKE_MARKER('S','N','D',' '))		// Sound properties
+		#define FS_MARKER		(MAKE_MARKER('F','S',' ',' '))		// Sample Rate Chunk
+		#define CHNL_MARKER		(MAKE_MARKER('C','H','N','L'))		// Channels Chunk
+			#define SLFT_MARKER		(MAKE_MARKER('S','L','F','T'))		// stereo left
+			#define SRGT_MARKER		(MAKE_MARKER('S','R','G','T'))		// stereo right
+			#define MLFT_MARKER		(MAKE_MARKER('M','L','F','T'))		// multi-channel left
+			#define MRGT_MARKER		(MAKE_MARKER('M','R','G','T'))		// multi-channel right
+			#define LS_MARKER		(MAKE_MARKER('L','S',' ',' '))		// multi-channel left surround
+			#define RS_MARKER		(MAKE_MARKER('R','S',' ',' '))		// multi-channel right surround
+			#define C_MARKER		(MAKE_MARKER('C',' ',' ',' '))		// multi-channel center
+			#define LFE_MARKER		(MAKE_MARKER('L','F','E',' '))		// multi-channel low frequency enhancement
+		#define CMPR_MARKER		(MAKE_MARKER('C','M','P','R'))		// Compression Type Chunk
+		#define ABSS_MARKER		(MAKE_MARKER('A','B','S','S'))		// Absolute Start Time Chunk
+		#define LSCO_MARKER		(MAKE_MARKER('L','S','C','O'))		// Loudspeaker Configuration Chunk
+#define DSD_MARKER		(MAKE_MARKER('D','S','D',' '))		// DSD Sound Data Chunk (required or DST)
+#define DST_MARKER		(MAKE_MARKER('D','S','T',' '))		// DST Sound Data Chunk (required or DSD)
+	#define FRTE_MARKER		(MAKE_MARKER('F','R','T','E'))	// DST Frame Information Chunk
+	#define DSTF_MARKER		(MAKE_MARKER('D','S','T','F'))	// DST Frame Data Chunk
+	#define DSTC_MARKER		(MAKE_MARKER('D','S','T','C'))	// DST Frame CRC Chunk
+#define DSTI_MARKER		(MAKE_MARKER('D','S','T','I'))		// DST Sound Index Chunk (optional)
+#define COMT_MARKER		(MAKE_MARKER('C','O','M','T'))		// comments Chunk (optional)
+#define DIIN_MARKER		(MAKE_MARKER('D','I','I','N'))		// Edited Master Information Chunk (optional)
+	#define EMID_MARKER		(MAKE_MARKER('E','M','I','D'))		// Edited Master ID Chunk (optional)
+	#define MARK_MARKER		(MAKE_MARKER('M','A','R','K'))		// Edited Master ID Chunk (optional)
+	#define DIAR_MARKER		(MAKE_MARKER('D','I','A','R'))		// Artist Chunk (optional)
+	#define DITI_MARKER		(MAKE_MARKER('D','I','T','I'))		// Title Chunk (optional)
+#define MANF_MARKER		(MAKE_MARKER('M','A','N','F'))		// Manufacturer Specific Chunk (optional)
 
 #define DSDIFF_VERSION 0x01050000
 #define DSDIFF_VERSION_STRING "version 1.5.0.0"

@@ -18,42 +18,19 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  */ 
-  
-#ifndef __SYS_IO_BUFFER_H__
-#define __SYS_IO_BUFFER_H__
 
-#ifndef(__lv2ppu__)
-#error you need the psl1ght/lv2 ppu compatible compiler!
-#endif
-
-#include <stdint.h> 
-#include <ppu-lv2.h>
+#ifndef __COMMON_H__
+#define __COMMON_H__
 
 #ifdef __cplusplus
 extern "C" {
 #endif 
 
-static inline int sys_io_buffer_create(int *io_buffer, int buffer_count) {
-	lv2syscall5(624, buffer_count, 2, 64*2048, 512, (uint64_t) io_buffer);
-	return_to_user_prog(int);
-}
-
-static inline int sys_io_buffer_destroy(int io_buffer) {
-	lv2syscall1(625, io_buffer);
-	return_to_user_prog(int);
-}
-
-static inline int sys_io_buffer_allocate(int io_buffer, int *block) {
-	lv2syscall2(626, io_buffer, (uint64_t) block);
-	return_to_user_prog(int);
-}
-
-static inline int sys_io_buffer_free(int io_buffer, int block) {
-	lv2syscall2(627, io_buffer, block);
-	return_to_user_prog(int);
-}
+#define max(a, b)	(((a) > (b))? (a): (b))
+#define min(a, b)	(((a) < (b))? (a): (b))
 
 #ifdef __cplusplus
 };
-#endif
-#endif /* _SYS_IO_BUFFER_H__ */
+#endif 
+
+#endif /* __COMMON_H__ */

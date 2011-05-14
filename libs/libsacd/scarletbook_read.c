@@ -269,7 +269,7 @@ static int scarletbook_read_channel_toc(scarletbook_handle_t *handle, int channe
 
 	text_channel_counter = 0;
 	while (p < (channel_data + channel_toc->size * SACD_LSN_SIZE)) {
-		if (strncmp(p, "SACDTTxt", 8) == 0) {
+		if (strncmp((char *) p, "SACDTTxt", 8) == 0) {
 			channel_text_t *channel_text;
 			channel_text = handle->channel_text[channel_nr][text_channel_counter] = (channel_text_t*) p;
 			for (i = 0; i < channel_toc->track_count; i++) {
@@ -277,13 +277,13 @@ static int scarletbook_read_channel_toc(scarletbook_handle_t *handle, int channe
 			}
 			++text_channel_counter;
 			p += SACD_LSN_SIZE;
-		} else if (strncmp(p, "SACD_IGL", 8) == 0) {
+		} else if (strncmp((char *) p, "SACD_IGL", 8) == 0) {
 			handle->channel_isrc[channel_nr] = (channel_isrc_t*) p;
 			p += SACD_LSN_SIZE * 2;
-		} else if (strncmp(p, "SACD_ACC", 8) == 0) {
+		} else if (strncmp((char *) p, "SACD_ACC", 8) == 0) {
 			// skip
 			p += SACD_LSN_SIZE * 32;
-		} else if (strncmp(p, "SACDTRL1", 8) == 0) {
+		} else if (strncmp((char *) p, "SACDTRL1", 8) == 0) {
 			channel_tracklist_offset_t *tracklist;
 			tracklist = handle->channel_tracklist_offset[channel_nr] = (channel_tracklist_offset_t*) p;
 			for (i = 0; i < channel_toc->track_count; i++) {
@@ -291,7 +291,7 @@ static int scarletbook_read_channel_toc(scarletbook_handle_t *handle, int channe
 				SWAP32(tracklist->track_length_lsn[i]);
 			}
 			p += SACD_LSN_SIZE;
-		} else if (strncmp(p, "SACDTRL2", 8) == 0) {
+		} else if (strncmp((char *) p, "SACDTRL2", 8) == 0) {
 			channel_tracklist_abs_t *tracklist;
 			tracklist = handle->channel_tracklist_time[channel_nr] = (channel_tracklist_abs_t*) p;
 			for (i = 0; i < channel_toc->track_count; i++) {

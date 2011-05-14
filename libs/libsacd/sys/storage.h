@@ -22,11 +22,12 @@
 #ifndef __SYS_STORAGE_H__
 #define __SYS_STORAGE_H__
 
-#ifndef(__lv2ppu__)
+#ifndef __lv2ppu__
 #error you need the psl1ght/lv2 ppu compatible compiler!
 #endif
 
 #include <stdint.h> 
+#include <string.h>
 #include <ppu-lv2.h>
 
 #ifdef __cplusplus
@@ -88,11 +89,11 @@ static inline int sys_storage_send_atapi_command(uint32_t fd, struct lv2_atapi_c
 	lv2syscall7(616
 	              , fd
 	              , LV2_STORAGE_SEND_ATAPI_COMMAND
-	              , (uint32_t) atapi_cmnd
+	              , (uint64_t) atapi_cmnd
 	              , sizeof (struct lv2_atapi_cmnd_block)
-	              , (uint32_t) buffer
+	              , (uint64_t) buffer
 	              , atapi_cmnd->block_size
-	              , (uint32_t) &tag);
+	              , (uint64_t) &tag);
 
 	return_to_user_prog(int);
 }
@@ -102,18 +103,18 @@ static inline int sys_storage_async_configure(uint32_t fd, int io_buffer, sys_ev
 	              , fd
 	              , io_buffer
 	              , equeue_id
-	              , (uint32_t) unknown);
+	              , (uint64_t) unknown);
 
 	return_to_user_prog(int);
 }
 
 static inline int sys_storage_get_device_info(uint64_t device, uint8_t *buffer) {
-	lv2syscall2(609, device, (uint32_t) buffer);
+	lv2syscall2(609, device, (uint64_t) buffer);
 	return_to_user_prog(int);
 }
 
 static inline int sys_storage_open(uint64_t id, int *fd) {
-	lv2syscall4(600, id, 0, (uint32_t) fd, 0);
+	lv2syscall4(600, id, 0, (uint64_t) fd, 0);
 	return_to_user_prog(int);
 }
 
@@ -122,13 +123,13 @@ static inline int sys_storage_close(int fd) {
 	return_to_user_prog(int);
 }
 
-static inline int sys_storage_read(int fd, uint32_t start_sector, uint32_t sectors, uint8_t *bounce_buf, uint8_t *sectors_read) {
-	lv2syscall7(602, fd, 0, start_sector, sectors, (uint32_t) bounce_buf, (uint32_t) sectors_read, 0);
+static inline int sys_storage_read(int fd, uint32_t start_sector, uint32_t sectors, uint8_t *bounce_buf, uint32_t *sectors_read) {
+	lv2syscall7(602, fd, 0, start_sector, sectors, (uint64_t) bounce_buf, (uint64_t) sectors_read, 0);
 	return_to_user_prog(int);
 }
 
 static inline int sys_storage_async_read(int fd, uint32_t start_sector, uint32_t sectors, uint8_t *unknown1, uint64_t user_data) {
-	lv2syscall7(606, fd, 0, start_sector, sectors, (uint32_t) unknown1, user_data, 0);
+	lv2syscall7(606, fd, 0, start_sector, sectors, (uint64_t) unknown1, user_data, 0);
 	return_to_user_prog(int);
 }
 
@@ -145,7 +146,7 @@ static inline int sys_storage_reset_bd(void) {
  */
 static inline int sys_storage_authenticate_bd(void) {
 	int func = 0x43;
-	lv2syscall2(864, 0x5007, (uint32_t) &func);
+	lv2syscall2(864, 0x5007, (uint64_t) &func);
 	return_to_user_prog(int);
 }
 

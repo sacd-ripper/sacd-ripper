@@ -25,9 +25,11 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <io.h>
 
-#include "sacd_reader.h"
+#if defined(__lv2ppu__)
+#include <sys/storage.h>	
+#endif	
+
 #include "scarletbook_types.h"
 #include "sacd_input.h"
 
@@ -50,8 +52,12 @@ sacd_input_t sacd_input_open(const char *target)
   }
 
   /* Open the device */
-#ifndef WIN32
+#if defined(WIN32)
   dev->fd = open(target, O_RDONLY);
+#elif defined(__lv2ppu__)
+  if (sys_storage_open(0x0101000000000006, &dev->fd) != 0) {
+  	dev->fd = -1;
+  }
 #else
   dev->fd = open(target, O_RDONLY | O_BINARY);
 #endif
@@ -74,29 +80,26 @@ char *sacd_input_error(sacd_input_t dev)
 }
 
 /**
- * seek into the device.
- */
-int sacd_input_seek(sacd_input_t dev, int blocks)
-{
-  off_t pos;
-
-  pos = lseek(dev->fd, (off_t)blocks * (off_t)SACD_LSN_SIZE, SEEK_SET);
-  if(pos < 0) {
-      return pos;
-  }
-  /* assert pos % SACD_LSN_SIZE == 0 */
-  return (int) (pos / SACD_LSN_SIZE);
-}
-
-/**
  * read data from the device.
  */
 ssize_t sacd_input_read(sacd_input_t dev, int pos, int blocks, void *buffer)
 {
+#if defined(__lv2ppu__)
+
+	int ret;
+	uint32_t sectors_read;
+	
+	ret = sys_storage_read(dev->fd, pos, blocks, buffer, &sectors_read);
+	
+	return (ret != 0) ? 0 : sectors_read;
+
+#else 
+
   ssize_t ret, len;
 
   ret = lseek(dev->fd, (off_t)pos * (off_t)SACD_LSN_SIZE, SEEK_SET);
   if(ret < 0) {
+
       return 0;
   }
 
@@ -127,6 +130,8 @@ ssize_t sacd_input_read(sacd_input_t dev, int pos, int blocks, void *buffer)
   }
 
   return blocks;
+  
+#endif  
 }
 
 /**
@@ -136,7 +141,11 @@ int sacd_input_close(sacd_input_t dev)
 {
   int ret;
 
+#if defined(__lv2ppu__)
+  ret = sys_storage_close(dev->fd);
+#else
   ret = close(dev->fd);
+#endif
 
   if(ret < 0)
     return ret;

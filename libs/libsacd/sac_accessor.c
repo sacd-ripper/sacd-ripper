@@ -1,32 +1,55 @@
-#include <sys/spu_initialize.h>
-#include <sys/raw_spu.h>
-#include <sys/spu_utility.h>
-#include <sys/ppu_thread.h>
-#include <cell/cell_fs.h>
-#include <sys/synchronization.h>
+/**
+ * SACD Ripper - http://code.google.com/p/sacd-ripper/
+ *
+ * Copyright (c) 2010-2011 by respective authors. 
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ */ 
+ 
+#include <ppu-lv2.h> 
+#include <lv2/spu.h>
+#include <sys/mutex.h>
+#include <sys/spu.h>
+#include <sys/cond.h>
+#include <sys/thread.h>
+#include <sys/file.h>
+#include <string.h>
+#include <malloc.h>
 
 #include "sac_accessor.h"
-#include "sacd_lv2_storage.h"
-#include "debug.h"
-#include "utils.h"
+#include "common.h"
+#include "ioctl.h"
 
 #ifdef USE_ISOSELF
 int file_alloc_load(const char *, uint8_t **, unsigned int *);
 #endif
 
-void handle_interrupt(uint64_t);
+void handle_interrupt(void *);
 int sac_exec_generate_key_1(uint8_t *, uint32_t, uint32_t *);
 int sac_exec_validate_key_1(uint8_t *, uint32_t);
 int sac_exec_generate_key_2(uint8_t *, uint32_t, uint32_t *);
 int sac_exec_validate_key_2(uint8_t *, uint32_t);
 int sac_exec_validate_key_3(uint8_t *, uint32_t);
-int exchange_data(int, uint8_t *, int, uint8_t *, int, usecond_t);
+int exchange_data(int, uint8_t *, int, uint8_t *, int, uint32_t);
 
 sac_accessor_t *sa = NULL;
 
 int create_sac_accessor(void) {
-	sys_cond_attribute_t cond_attr;
-	sys_mutex_attribute_t mutex_attr;
+	sys_cond_attr_t cond_attr;
+	sys_mutex_attr_t mutex_attr;
 #ifndef USE_ISOSELF
 	uint32_t entry;
 #endif
@@ -38,7 +61,7 @@ int create_sac_accessor(void) {
 
 	sa = malloc(sizeof (sac_accessor_t));
 	if (sa == NULL) {
-		LOG_ERROR("sac_accessor_t malloc failed\n");
+		//LOG_ERROR("sac_accessor_t malloc failed\n");
 		return -1;
 	}
 	memset(sa, 0, sizeof (sac_accessor_t));
@@ -47,132 +70,136 @@ int create_sac_accessor(void) {
 	memset(sa->buffer, 0, DMA_BUFFER_SIZE);
 
 	// Initialize SPUs
-	LOG_INFO("Initializing SPUs\n");
-	ret = sys_spu_initialize(MAX_PHYSICAL_SPU, MAX_RAW_SPU);
-	if (ret != CELL_OK) {
-		LOG_ERROR("sys_spu_initialize failed: %d\n", ret);
+	//LOG_INFO("Initializing SPUs\n");
+	ret = sysSpuInitialize(MAX_PHYSICAL_SPU, MAX_RAW_SPU);
+	if (ret != 0) {
+		//LOG_ERROR("sysSpuInitialize failed: %d\n", ret);
 		return ret;
 	}
 
 #ifdef USE_ISOSELF
 	ret = file_alloc_load(SAC_MODULE_LOCATION, &sa->module_buffer, &sa->module_size);
-	if (ret != CELL_OK) {
-		LOG_ERROR("cannot load file: " SAC_MODULE_LOCATION "0x%x\n", ret);
+	if (ret != 0) {
+		//LOG_ERROR("cannot load file: " SAC_MODULE_LOCATION "0x%x\n", ret);
 		return 0;
 	}
 
 	ret = sys_isoself_spu_create(&sa->id, sa->module_buffer);
-	if (ret != CELL_OK) {
-		LOG_ERROR("sys_isoself_spu_create : 0x%x\n", ret);
+	if (ret != 0) {
+		//LOG_ERROR("sys_isoself_spu_create : 0x%x\n", ret);
 		return 0;
 	}
 #else
-	LOG_INFO("syscall sys_raw_spu_create...");
-	ret = sys_raw_spu_create(&sa->id, NULL);
+	//LOG_INFO("syscall sys_raw_spu_create...");
+	ret = sysSpuRawCreate(&sa->id, NULL);
 	if (ret) {
-		LOG_ERROR("sys_raw_spu_create failed %d\n", ret);
+		//LOG_ERROR("sys_raw_spu_create failed %d\n", ret);
 		return ret;
 	}
-	LOG_INFO("succeeded. raw_spu number is %d\n", sa->id);
+	//LOG_INFO("succeeded. raw_spu number is %d\n", sa->id);
 
 	// Reset all pending interrupts before starting.
-	sys_raw_spu_set_int_stat(sa->id, 2, 0xfUL);
-	sys_raw_spu_set_int_stat(sa->id, 0, 0xfUL);
+	sysSpuRawSetIntStat(sa->id, 2, 0xfUL);
+	sysSpuRawSetIntStat(sa->id, 0, 0xfUL);
 
-	LOG_INFO("syscall sys_raw_spu_load...");
-	ret = sys_raw_spu_load(sa->id, SAC_MODULE_LOCATION, &entry);
+	//LOG_INFO("syscall sys_raw_spu_load...");
+	ret = sysSpuRawLoad(sa->id, SAC_MODULE_LOCATION, &entry);
 	if (ret) {
-		LOG_ERROR("raw_spu_load failed %d\n", ret);
+		//LOG_ERROR("raw_spu_load failed %d\n", ret);
 		return ret;
 	}
-	LOG_INFO("succeeded. entry %x\n", entry);
+	//LOG_INFO("succeeded. entry %x\n", entry);
 #endif
 
 #ifdef USE_ISOSELF
 	ret = sys_isoself_spu_set_int_mask(sa->id, SPU_INTR_CLASS_2, INTR_PPU_MB_MASK | INTR_STOP_MASK | INTR_HALT_MASK);
-	if (ret != CELL_OK) {
-		LOG_ERROR("sys_isoself_spu_set_int_mask : 0x%x\n", ret);
+	if (ret != 0) {
+		//LOG_ERROR("sys_isoself_spu_set_int_mask : 0x%x\n", ret);
 		return 0;
 	}
 #else
-	ret = sys_raw_spu_set_int_mask(sa->id, SPU_INTR_CLASS_2, INTR_PPU_MB_MASK | INTR_STOP_MASK | INTR_HALT_MASK);
-	if (ret != CELL_OK) {
-		LOG_ERROR("sys_raw_spu_set_int_mask : 0x%x\n", ret);
+	ret = sysSpuRawSetIntMask(sa->id, SPU_INTR_CLASS_2, INTR_PPU_MB_MASK | INTR_STOP_MASK | INTR_HALT_MASK);
+	if (ret != 0) {
+		//LOG_ERROR("sys_raw_spu_set_int_mask : 0x%x\n", ret);
 		return ret;
 	}
 #endif
 
-	sys_cond_attribute_initialize(cond_attr);
-	sys_mutex_attribute_initialize(mutex_attr);
+    memset(&cond_attr, 0, sizeof(sys_cond_attr_t));
+    cond_attr.attr_pshared = SYS_COND_ATTR_PSHARED; 
 
-	if (sys_mutex_create(&sa->mmio_mutex, &mutex_attr) != CELL_OK) {
-		LOG_ERROR("create mmio_mutex failed.\n");
+    memset(&mutex_attr, 0, sizeof(sys_mutex_attr_t));
+    mutex_attr.attr_protocol = SYS_MUTEX_PROTOCOL_PRIO;
+    mutex_attr.attr_recursive = SYS_MUTEX_ATTR_NOT_RECURSIVE;
+    mutex_attr.attr_pshared = SYS_MUTEX_ATTR_PSHARED;
+    mutex_attr.attr_adaptive = SYS_MUTEX_ATTR_NOT_ADAPTIVE;
+
+	if (sysMutexCreate(&sa->mmio_mutex, &mutex_attr) != 0) {
+		//LOG_ERROR("create mmio_mutex failed.\n");
 		return -1;
 	}
 
-	if (sys_cond_create(&sa->mmio_cond, sa->mmio_mutex, &cond_attr) != CELL_OK) {
-		LOG_ERROR("create mmio_cond failed.\n");
+	if (sysCondCreate(&sa->mmio_cond, sa->mmio_mutex, &cond_attr) != 0) {
+		//LOG_ERROR("create mmio_cond failed.\n");
 		return -1;
 	}
 
-	// Create an interrupt PPU thread. (flag = SYS_PPU_THREAD_CREATE_INTERRUPT)
-	LOG_INFO("Creating a PPU thread.\n");
-	if ((ret = sys_ppu_thread_create(&sa->handler, handle_interrupt, 0xdeadbeef, PRIMARY_PPU_THREAD_PRIO,
+	if ((ret = sysThreadCreate(&sa->handler, handle_interrupt, 0, PRIMARY_PPU_THREAD_PRIO,
 	                                 PRIMARY_PPU_STACK_SIZE,
-	                                 SYS_PPU_THREAD_CREATE_INTERRUPT, (char *) "SEL Interrupt PPU Thread"))
-	    != CELL_OK) {
-		LOG_ERROR("ppu_thread_create returned %d\n", ret);
+	                                 THREAD_INTERRUPT, (char *) "SEL Interrupt PPU Thread"))
+	    != 0) {
+		//LOG_ERROR("ppu_thread_create returned %d\n", ret);
 		return ret;
 	}
 
 #ifdef USE_ISOSELF
 	ret = sys_isoself_spu_create_interrupt_tag(sa->id, SPU_INTR_CLASS_2, SYS_HW_THREAD_ANY, &sa->intrtag);
-	if (ret != CELL_OK) {
-		LOG_ERROR("sys_isoself_spu_create_interrupt_tag : 0x%x\n", ret);
+	if (ret != 0) {
+		//LOG_ERROR("sys_isoself_spu_create_interrupt_tag : 0x%x\n", ret);
 		return 0;
 	}
 #else
-	ret = sys_raw_spu_create_interrupt_tag(sa->id, SPU_INTR_CLASS_2, SYS_HW_THREAD_ANY, &sa->intrtag);
-	if (ret != CELL_OK) {
-		LOG_ERROR("sys_raw_spu_create_interrupt_tag : 0x%x\n", ret);
+	ret = sysSpuRawCreateInterrupTag(sa->id, SPU_INTR_CLASS_2, SYS_HW_THREAD_ANY, &sa->intrtag);
+	if (ret != 0) {
+		//LOG_ERROR("sys_raw_spu_create_interrupt_tag : 0x%x\n", ret);
 		return ret;
 	}
 #endif
 
 	// Establishing the interrupt tag on the interrupt PPU thread.
-	LOG_INFO("Establishing the interrupt tag on the interrupt PPU thread.\n");
-	if ((ret = sys_interrupt_thread_establish(&sa->ih, sa->intrtag, sa->handler,
-	                                          sa->id)) != CELL_OK) {
-		LOG_ERROR("sys_interrupt_thread_establish returned %d\n", ret);
+	//LOG_INFO("Establishing the interrupt tag on the interrupt PPU thread.\n");
+	if ((ret = sysInterruptThreadEstablish(&sa->ih, sa->intrtag, sa->handler,
+	                                          sa->id)) != 0) {
+		//LOG_ERROR("sys_interrupt_thread_establish returned %d\n", ret);
 		return ret;
 	}
 
 #ifdef USE_ISOSELF
 	ret = sys_isoself_spu_set_int_mask(sa->id, SPU_INTR_CLASS_2, INTR_PPU_MB_MASK);
-	if (ret != CELL_OK) {
-		LOG_ERROR("sys_isoself_spu_set_int_mask : 0x%x\n", ret);
+	if (ret != 0) {
+		//LOG_ERROR("sys_isoself_spu_set_int_mask : 0x%x\n", ret);
 		return 0;
 	}
 
 	ret = sys_isoself_spu_start(sa->id);
-	if (ret != CELL_OK) {
-		LOG_ERROR("sys_isoself_spu_start : 0x%x\n", ret);
+	if (ret != 0) {
+		//LOG_ERROR("sys_isoself_spu_start : 0x%x\n", ret);
 		return 0;
 	}
 #else
-	ret = sys_raw_spu_set_int_mask(sa->id, SPU_INTR_CLASS_2, INTR_PPU_MB_MASK);
-	if (ret != CELL_OK) {
-		LOG_ERROR("sys_raw_spu_set_int_mask : 0x%x\n", ret);
+	ret = sysSpuRawSetIntMask(sa->id, SPU_INTR_CLASS_2, INTR_PPU_MB_MASK);
+	if (ret != 0) {
+		//LOG_ERROR("sys_raw_spu_set_int_mask : 0x%x\n", ret);
 		return ret;
 	}
 
 	// Run the Raw SPU
-	sys_raw_spu_mmio_write(sa->id, SPU_NPC, entry);
-	sys_raw_spu_mmio_write(sa->id, SPU_RunCntl, 0x1);
+	sysSpuRawWriteProblemStorage(sa->id, SPU_NextPC, entry);
+	sysSpuRawWriteProblemStorage(sa->id, SPU_RunCtrl, 0x1);
 	EIEIO;
 #endif
 
-	sys_raw_spu_mmio_write(sa->id, SPU_In_MBox, (uint32_t) sa->buffer);
+	sysSpuRawWriteProblemStorage(sa->id, SPU_In_MBox, (uint64_t) sa->buffer);
 	EIEIO;
 
 	return 0;
@@ -191,27 +218,27 @@ int destroy_sac_accessor(void) {
 	}
 
 	if (sa->id != 0) {
-		ret = sys_raw_spu_mmio_read(sa->id, SPU_Status);
+		ret = sysSpuRawReadProblemStorage(sa->id, SPU_Status);
 		EIEIO;
 
 		if (ret & 0x1) {
-			LOG_INFO("sys_raw_spu_mmio_write 0x%x\n", EXIT_SAC_CMD);
-			sys_raw_spu_mmio_write(sa->id, SPU_In_MBox, EXIT_SAC_CMD);
+			//LOG_INFO("sysSpuRawWriteProblemStorage 0x%x\n", EXIT_SAC_CMD);
+			sysSpuRawWriteProblemStorage(sa->id, SPU_In_MBox, EXIT_SAC_CMD);
 			EIEIO;
 		}
 	}
 
 	if (ret == 0 && sa->ih != 0) {
-		if ((ret = sys_interrupt_thread_disestablish(sa->ih)) != CELL_OK) {
-			LOG_ERROR("sys_interrupt_thread_disestablish returned %d\n", ret);
+		if ((ret = sysInterruptThreadDisestablish(sa->ih)) != 0) {
+			//LOG_ERROR("sysInterruptThreadDisestablish returned %d\n", ret);
 		} else {
 			sa->ih = 0;
 		}
 	}
 
 	if (sa->intrtag != 0) {
-		if ((ret = sys_interrupt_tag_destroy(sa->intrtag)) != CELL_OK) {
-			LOG_ERROR("sys_interrupt_tag_destroy returned %d\n", ret);
+		if ((ret = sysInterruptTagDestroy(sa->intrtag)) != 0) {
+			//LOG_ERROR("sys_interrupt_tag_destroy returned %d\n", ret);
 		} else {
 			sa->intrtag = 0;
 		}
@@ -219,12 +246,12 @@ int destroy_sac_accessor(void) {
 
 	if (sa->id != 0) {
 #ifdef USE_ISOSELF
-		if ((ret = sys_isoself_spu_destroy(sa->id)) != CELL_OK) {
-			LOG_ERROR("sys_isoself_spu_destroy returned %d\n", ret);
+		if ((ret = sys_isoself_spu_destroy(sa->id)) != 0) {
+			//LOG_ERROR("sys_isoself_spu_destroy returned %d\n", ret);
 		}
 #else
-		if ((ret = sys_raw_spu_destroy(sa->id)) != CELL_OK) {
-			LOG_ERROR("sys_raw_spu_destroy returned %d\n", ret);
+		if ((ret = sysSpuRawDestroy(sa->id)) != 0) {
+			//LOG_ERROR("sys_raw_spu_destroy returned %d\n", ret);
 		}
 #endif
 	}
@@ -235,16 +262,16 @@ int destroy_sac_accessor(void) {
 	}
 
 	if (sa->mmio_cond != 0) {
-		if ((ret = sys_cond_destroy(sa->mmio_cond)) != CELL_OK) {
-			LOG_ERROR("destroy mmio_cond failed.\n");
+		if ((ret = sysCondDestroy(sa->mmio_cond)) != 0) {
+			//LOG_ERROR("destroy mmio_cond failed.\n");
 		} else {
 			sa->mmio_cond = 0;
 		}
 	}
 
 	if (sa->mmio_mutex != 0) {
-		if ((ret = sys_mutex_destroy(sa->mmio_mutex)) != CELL_OK) {
-			LOG_ERROR("destroy mmio_mutex failed.\n");
+		if ((ret = sysMutexDestroy(sa->mmio_mutex)) != 0) {
+			//LOG_ERROR("destroy mmio_mutex failed.\n");
 		} else {
 			sa->mmio_mutex = 0;
 		}
@@ -256,25 +283,25 @@ int destroy_sac_accessor(void) {
 	return ret;
 }
 
-void handle_interrupt(uint64_t arg) {
+void handle_interrupt(void *arg) {
 	uint64_t stat;
 	int ret;
 
-	LOG_INFO("huh: %llx", arg);
+	//LOG_INFO("huh: %llx", arg);
 
 	// Create a tag to handle class 2 interrupt, because PPU Interrupt MB is
 	// handled by class 2.
 #ifdef USE_ISOSELF
 	ret = sys_isoself_spu_get_int_stat(sa->id, SPU_INTR_CLASS_2, &stat);
-	if (ret != CELL_OK) {
-		LOG_ERROR("sys_isoself_spu_get_int_stat failed %d\n", ret);
-		sys_interrupt_thread_eoi();
+	if (ret != 0) {
+		//LOG_ERROR("sys_isoself_spu_get_int_stat failed %d\n", ret);
+		sysInterruptThreadEOI();
 	}
 #else
-	ret = sys_raw_spu_get_int_stat(sa->id, SPU_INTR_CLASS_2, &stat);
-	if (ret != CELL_OK) {
-		LOG_ERROR("sys_raw_spu_get_int_stat failed %d\n", ret);
-		sys_interrupt_thread_eoi();
+	ret = sysSpuRawGetIntStat(sa->id, SPU_INTR_CLASS_2, &stat);
+	if (ret != 0) {
+		//LOG_ERROR("sys_raw_spu_get_int_stat failed %d\n", ret);
+		sysInterruptThreadEOI();
 	}
 #endif
 
@@ -283,60 +310,60 @@ void handle_interrupt(uint64_t arg) {
 
 #ifdef USE_ISOSELF
 		ret = sys_isoself_spu_read_puint_mb(sa->id, &sa->error_code);
-		if (ret != CELL_OK) {
-			LOG_ERROR("sys_isoself_spu_read_puint_mb failed %d\n", ret);
-			sys_mutex_unlock(sa->mmio_mutex);
-			sys_interrupt_thread_eoi();
+		if (ret != 0) {
+			//LOG_ERROR("sys_isoself_spu_read_puint_mb failed %d\n", ret);
+			sysMutexUnlock(sa->mmio_mutex);
+			sysInterruptThreadEOI();
 		}
 
 		// Reset the PPU_INTR_MB interrupt status bit.
 		ret = sys_isoself_spu_set_int_stat(sa->id, SPU_INTR_CLASS_2, INTR_PPU_MB_MASK);
-		if (ret != CELL_OK) {
-			LOG_ERROR("sys_isoself_spu_set_int_stat failed %d\n", ret);
-			sys_mutex_unlock(sa->mmio_mutex);
-			sys_interrupt_thread_eoi();
+		if (ret != 0) {
+			//LOG_ERROR("sys_isoself_spu_set_int_stat failed %d\n", ret);
+			sysMutexUnlock(sa->mmio_mutex);
+			sysInterruptThreadEOI();
 		}
 #else
-		ret = sys_raw_spu_read_puint_mb(sa->id, &sa->error_code);
-		if (ret != CELL_OK) {
-			LOG_ERROR("sys_raw_spu_read_puint_mb failed %d\n", ret);
-			sys_mutex_unlock(sa->mmio_mutex);
-			sys_interrupt_thread_eoi();
+		ret = sysSpuRawReadPuintMb(sa->id, &sa->error_code);
+		if (ret != 0) {
+			//LOG_ERROR("sys_raw_spu_read_puint_mb failed %d\n", ret);
+			sysMutexUnlock(sa->mmio_mutex);
+			sysInterruptThreadEOI();
 		}
 
 		// Reset the PPU_INTR_MB interrupt status bit.
-		ret = sys_raw_spu_set_int_stat(sa->id, SPU_INTR_CLASS_2, INTR_PPU_MB_MASK);
-		if (ret != CELL_OK) {
-			LOG_ERROR("sys_raw_spu_set_int_stat failed %d\n", ret);
-			sys_mutex_unlock(sa->mmio_mutex);
-			sys_interrupt_thread_eoi();
+		ret = sysSpuRawSetIntStat(sa->id, SPU_INTR_CLASS_2, INTR_PPU_MB_MASK);
+		if (ret != 0) {
+			//LOG_ERROR("sys_raw_spu_set_int_stat failed %d\n", ret);
+			sysMutexUnlock(sa->mmio_mutex);
+			sysInterruptThreadEOI();
 		}
 #endif
 
-		ret = sys_mutex_lock(sa->mmio_mutex, 0);
-		if (ret != CELL_OK) {
-			LOG_ERROR("sys_mutex_lock() failed. (%d)\n", ret);
-			sys_interrupt_thread_eoi();
+		ret = sysMutexLock(sa->mmio_mutex, 0);
+		if (ret != 0) {
+			//LOG_ERROR("sysMutexLock() failed. (%d)\n", ret);
+			sysInterruptThreadEOI();
 		}
 
-		ret = sys_cond_signal(sa->mmio_cond);
-		if (ret != CELL_OK) {
-			sys_mutex_unlock(sa->mmio_mutex);
-			sys_interrupt_thread_eoi();
+		ret = sysCondSignal(sa->mmio_cond);
+		if (ret != 0) {
+			sysMutexUnlock(sa->mmio_mutex);
+			sysInterruptThreadEOI();
 		}
 
-		ret = sys_mutex_unlock(sa->mmio_mutex);
-		if (ret != CELL_OK) {
-			sys_interrupt_thread_eoi();
+		ret = sysMutexUnlock(sa->mmio_mutex);
+		if (ret != 0) {
+			sysInterruptThreadEOI();
 		}
 	}
-	sys_interrupt_thread_eoi();
+	sysInterruptThreadEOI();
 }
 
 int exchange_data(int func_nr
                   , uint8_t *write_buffer, int write_count
                   , uint8_t *read_buffer, int read_count
-                  , usecond_t timeout) {
+                  , uint32_t timeout) {
 
 	int ret;
 
@@ -346,28 +373,28 @@ int exchange_data(int func_nr
 		memcpy(sa->buffer, write_buffer, min(write_count, DMA_BUFFER_SIZE));
 	}
 
-	LOG_INFO("exchange_data: [sys_mutex_lock]\n");
-	ret = sys_mutex_lock(sa->mmio_mutex, 0);
-	if (ret != CELL_OK) {
-		LOG_ERROR("sys_mutex_lock() failed. (%d)\n", ret);
+	//LOG_INFO("exchange_data: [sysMutexLock]\n");
+	ret = sysMutexLock(sa->mmio_mutex, 0);
+	if (ret != 0) {
+		//LOG_ERROR("sysMutexLock() failed. (%d)\n", ret);
 		return ret;
 	}
 
-	LOG_INFO("exchange_data: [writing func %d for amount %d..]\n", func_nr, read_count);
-	sys_raw_spu_mmio_write(sa->id, SPU_In_MBox, func_nr);
-	sys_raw_spu_mmio_write(sa->id, SPU_In_MBox, read_count);
+	//LOG_INFO("exchange_data: [writing func %d for amount %d..]\n", func_nr, read_count);
+	sysSpuRawWriteProblemStorage(sa->id, SPU_In_MBox, func_nr);
+	sysSpuRawWriteProblemStorage(sa->id, SPU_In_MBox, read_count);
 
-	LOG_INFO("exchange_data: [sys_cond_wait]\n");
-	ret = sys_cond_wait(sa->mmio_cond, timeout);
-	if (ret != CELL_OK) {
-		LOG_ERROR("exchange_data: [sys_cond_wait timeout]\n");
-		sys_mutex_unlock(sa->mmio_mutex);
+	//LOG_INFO("exchange_data: [sysCondWait]\n");
+	ret = sysCondWait(sa->mmio_cond, timeout);
+	if (ret != 0) {
+		//LOG_ERROR("exchange_data: [sysCondWait timeout]\n");
+		sysMutexUnlock(sa->mmio_mutex);
 		return ret;
 	}
 
-	LOG_INFO("exchange_data: [sys_mutex_unlock]\n");
-	ret = sys_mutex_unlock(sa->mmio_mutex);
-	if (ret != CELL_OK) {
+	//LOG_INFO("exchange_data: [sysMutexUnlock]\n");
+	ret = sysMutexUnlock(sa->mmio_mutex);
+	if (ret != 0) {
 		return ret;
 	}
 
@@ -506,7 +533,7 @@ int sac_exec_key_exchange(int fd) {
 	memset(buffer, 0, 256);
 
 	ret = ps3rom_lv2_report_key_start(fd, buffer);
-	LOG_INFO("ps3rom_lv2_report_key1[%x] %x\n", fd, ret);
+	//LOG_INFO("ps3rom_lv2_report_key1[%x] %x\n", fd, ret);
 	if (ret != 0) {
 		return ret;
 	}
@@ -514,27 +541,27 @@ int sac_exec_key_exchange(int fd) {
 	agid = buffer[7];
 
 	ret = sac_exec_generate_key_1(buffer, 0xcc, &buffer_size);
-	LOG_INFO("sac_exec_generate_key 0 %x %x\n", buffer_size, ret);
+	//LOG_INFO("sac_exec_generate_key 0 %x %x\n", buffer_size, ret);
 	//LOG_DATA(key, 256);
 	if (ret != 0) {
 		return ret;
 	}
 
 	ret = ps3rom_lv2_send_key(fd, agid, buffer_size, buffer, 2);
-	LOG_INFO("ps3rom_lv2_send_key[2] %x %x\n", buffer_size, ret);
+	//LOG_INFO("ps3rom_lv2_send_key[2] %x %x\n", buffer_size, ret);
 	if (ret != 0) {
 		return ret;
 	}
 
 	buffer_size = 0xcc;
 	ret = ps3rom_lv2_report_key(fd, agid, &buffer_size, buffer, 2);
-	LOG_INFO("ps3rom_lv2_report_key[2] %x %x\n", buffer_size, ret);
+	//LOG_INFO("ps3rom_lv2_report_key[2] %x %x\n", buffer_size, ret);
 	if (ret != 0) {
 		return ret;
 	}
 
 	ret = sac_exec_validate_key_1(buffer, 0xc5);
-	LOG_INFO("sac_exec_validate_key_1[%x]\n", ret);
+	//LOG_INFO("sac_exec_validate_key_1[%x]\n", ret);
 	if (ret != 0) {
 		return ret;
 	}
@@ -543,25 +570,25 @@ int sac_exec_key_exchange(int fd) {
 	memset(buffer, 0, 256);
 
 	ret = sac_exec_generate_key_2(buffer, 0xb0, &buffer_size);
-	LOG_INFO("sac_exec_generate_key_2[%x] %x\n", buffer_size, ret);
+	//LOG_INFO("sac_exec_generate_key_2[%x] %x\n", buffer_size, ret);
 	if (ret != 0) {
 		return ret;
 	}
 
 	ret = ps3rom_lv2_send_key(fd, agid, buffer_size, buffer, 3);
-	LOG_INFO("ps3rom_lv2_send_key[3] %x %x\n", buffer_size, ret);
+	//LOG_INFO("ps3rom_lv2_send_key[3] %x %x\n", buffer_size, ret);
 	if (ret != 0) {
 		return ret;
 	}
 
 	ret = ps3rom_lv2_report_key(fd, agid, &buffer_size, buffer, 3);
-	LOG_INFO("ps3rom_lv2_report_key[3] %x %x\n", buffer_size, ret);
+	//LOG_INFO("ps3rom_lv2_report_key[3] %x %x\n", buffer_size, ret);
 	if (ret != 0) {
 		return ret;
 	}
 
 	ret = sac_exec_validate_key_2(buffer, 0xae);
-	LOG_INFO("sac_exec_validate_key_2[%x]\n", ret);
+	//LOG_INFO("sac_exec_validate_key_2[%x]\n", ret);
 	if (ret != 0) {
 		return ret;
 	}
@@ -571,19 +598,19 @@ int sac_exec_key_exchange(int fd) {
 
 	buffer_size = 0x30;
 	ret = ps3rom_lv2_report_key(fd, agid, &buffer_size, buffer, 4);
-	LOG_INFO("ps3rom_lv2_report_key[4] %x %x\n", buffer_size, ret);
+	//LOG_INFO("ps3rom_lv2_report_key[4] %x %x\n", buffer_size, ret);
 	if (ret != 0) {
 		return ret;
 	}
 
 	ret = sac_exec_validate_key_3(buffer, 0x30);
-	LOG_INFO("sac_exec_validate_key_3[%x]\n", ret);
+	//LOG_INFO("sac_exec_validate_key_3[%x]\n", ret);
 	if (ret != 0) {
 		return ret;
 	}
 
 	ret = ps3rom_lv2_report_key_finish(fd, agid);
-	LOG_INFO("ps3rom_lv2_report_finish [0xff] %x\n", ret);
+	//LOG_INFO("ps3rom_lv2_report_finish [0xff] %x\n", ret);
 
 	return ret;
 }
@@ -592,41 +619,41 @@ int sac_exec_key_exchange(int fd) {
 
 int file_alloc_load(const char *file_path, uint8_t **buf, unsigned int *size) {
 	int ret, fd;
-	CellFsStat status;
+	sysFSStat status;
 	uint64_t read_length;
 
-	ret = cellFsOpen(file_path, CELL_FS_O_RDONLY, &fd, NULL, 0);
-	if (ret != CELL_FS_SUCCEEDED) {
-		LOG_ERROR("file %s open error : 0x%x\n", file_path, ret);
+	ret = sysLv2FsOpen(file_path, SYS_O_RDONLY, &fd, 0, 0, 0);
+	if (ret != 0) {
+		//LOG_ERROR("file %s open error : 0x%x\n", file_path, ret);
 		return -1;
 	}
 
-	ret = cellFsFstat(fd, &status);
-	if (ret != CELL_FS_SUCCEEDED) {
-		LOG_ERROR("file %s get stat error : 0x%x\n", file_path, ret);
-		cellFsClose(fd);
+	ret = sysLv2FsFStat(fd, &status);
+	if (ret != 0) {
+		//LOG_ERROR("file %s get stat error : 0x%x\n", file_path, ret);
+		sysLv2FsClose(fd);
 		return -1;
 	}
 
 	*buf = malloc(status.st_size);
 	if (*buf == NULL) {
-		LOG_ERROR("alloc failed\n");
-		cellFsClose(fd);
+		//LOG_ERROR("alloc failed\n");
+		sysLv2FsClose(fd);
 		return -1;
 	}
 
-	ret = cellFsRead(fd, *buf, status.st_size, &read_length);
-	if (ret != CELL_FS_SUCCEEDED || status.st_size != read_length) {
-		LOG_ERROR("file %s read error : 0x%x\n", file_path, ret);
-		cellFsClose(fd);
+	ret = sysLv2FsRead(fd, *buf, status.st_size, &read_length);
+	if (ret != 0 || status.st_size != read_length) {
+		//LOG_ERROR("file %s read error : 0x%x\n", file_path, ret);
+		sysLv2FsClose(fd);
 		free(*buf);
 		*buf = NULL;
 		return -1;
 	}
 
-	ret = cellFsClose(fd);
-	if (ret != CELL_FS_SUCCEEDED) {
-		LOG_ERROR("file %s close error : 0x%x\n", file_path, ret);
+	ret = sysLv2FsClose(fd);
+	if (ret != 0) {
+		//LOG_ERROR("file %s close error : 0x%x\n", file_path, ret);
 		free(*buf);
 		*buf = NULL;
 		return -1;
