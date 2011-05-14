@@ -154,6 +154,14 @@ sacd_reader_t *sacd_open( const char *ppath )
 	}
 #endif
 
+#if defined(__lv2ppu__)
+	{
+		ret_val = sacd_open_image_file( path );
+		free(path);
+		return ret_val;
+	}
+#endif
+
     ret = stat( path, &fileinfo );
 
     if( ret < 0 ) {
