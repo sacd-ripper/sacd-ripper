@@ -22,7 +22,7 @@
 #ifndef SCARLETBOOK_READ_H_INCLUDED
 #define SCARLETBOOK_READ_H_INCLUDED
 
-#include "scarletbook_types.h"
+#include "scarletbook.h"
 #include "sacd_reader.h"
 
 #ifdef __cplusplus

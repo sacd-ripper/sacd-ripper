@@ -78,39 +78,7 @@ enum
 
 } character_set_t;
 
-const char *album_genre[] =
-{
-    "Not used"
-  , "Not defined"
-  , "Adult Contemporary"
-  , "Alternative Rock"
-  , "Children's Music"
-  , "Classical"
-  , "Contemporary Christian"
-  , "Country"
-  , "Dance"
-  , "Easy Listening"
-  , "Erotic"
-  , "Folk"
-  , "Gospel"
-  , "Hip Hop"
-  , "Jazz"
-  , "Latin"
-  , "Musical"
-  , "New Age"
-  , "Opera"
-  , "Operetta"
-  , "Pop Music"
-  , "RAP"
-  , "Reggae"
-  , "Rock Music"
-  , "Rhythm & Blues"
-  , "Sound Effects"
-  , "Sound Track"
-  , "Spoken Word"
-  , "World Music"
-  , "Blues"
-};
+extern const char *album_genre[];
 
 enum
 {
@@ -155,12 +123,7 @@ enum
 
 } category_t;
 
-const char *album_category[] =
-{
-      "Not used"
-    , "General"
-    , "Japanese"
-};
+extern const char *album_category[];
 
 enum
 {

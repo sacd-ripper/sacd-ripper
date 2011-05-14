@@ -22,7 +22,7 @@
 #ifndef DSDIFF_WRITER_H_INCLUDED
 #define DSDIFF_WRITER_H_INCLUDED
 
-#include "scarletbook_types.h"
+#include "scarletbook.h"
 
 typedef struct {
 

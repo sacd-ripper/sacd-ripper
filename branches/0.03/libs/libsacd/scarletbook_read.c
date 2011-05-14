@@ -27,7 +27,7 @@
 #include <string.h>
 
 #include "endianess.h"
-#include "scarletbook_types.h"
+#include "scarletbook.h"
 #include "scarletbook_read.h"
 #include "sacd_reader.h"
 #include "sacd_read_internal.h"

@@ -27,7 +27,7 @@
 #include <ctype.h>
 #include <assert.h>
 
-#include "scarletbook_types.h"
+#include "scarletbook.h"
 #include "scarletbook_print.h"
 
 char *substr(const char *pstr, int start, int numchars) {
