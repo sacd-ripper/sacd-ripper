@@ -23,7 +23,7 @@
 #define SCARLETBOOK_PRINT_H_INCLUDED
 
 #include <inttypes.h>
-#include "scarletbook_types.h"
+#include "scarletbook.h"
 
 void scarletbook_print(scarletbook_handle_t *);
 

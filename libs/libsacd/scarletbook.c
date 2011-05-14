@@ -19,18 +19,45 @@
  *
  */ 
  
-#ifndef SCARLETBOOK_ID3_H_INCLUDED
-#define SCARLETBOOK_ID3_H_INCLUDED
-
 #include "scarletbook.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-int scarletbook_id3_tag_render(scarletbook_handle_t *, uint8_t *, int, int);
-
-#ifdef __cplusplus
+const char *album_genre[] =
+{
+    "Not used"
+  , "Not defined"
+  , "Adult Contemporary"
+  , "Alternative Rock"
+  , "Children's Music"
+  , "Classical"
+  , "Contemporary Christian"
+  , "Country"
+  , "Dance"
+  , "Easy Listening"
+  , "Erotic"
+  , "Folk"
+  , "Gospel"
+  , "Hip Hop"
+  , "Jazz"
+  , "Latin"
+  , "Musical"
+  , "New Age"
+  , "Opera"
+  , "Operetta"
+  , "Pop Music"
+  , "RAP"
+  , "Reggae"
+  , "Rock Music"
+  , "Rhythm & Blues"
+  , "Sound Effects"
+  , "Sound Track"
+  , "Spoken Word"
+  , "World Music"
+  , "Blues"
 };
-#endif
-#endif /* SCARLETBOOK_ID3_H_INCLUDED */
+
+const char *album_category[] =
+{
+      "Not used"
+    , "General"
+    , "Japanese"
+};

@@ -30,7 +30,7 @@
 #include <sys/storage.h>	
 #endif	
 
-#include "scarletbook_types.h"
+#include "scarletbook.h"
 #include "sacd_input.h"
 
 struct sacd_input_s {

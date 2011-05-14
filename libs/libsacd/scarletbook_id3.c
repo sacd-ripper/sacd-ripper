@@ -27,7 +27,7 @@
 #include <string.h>
 
 #include "config.h"
-#include "scarletbook_types.h"
+#include "scarletbook.h"
 
 #include "id3tag.h"
 
