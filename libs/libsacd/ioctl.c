@@ -19,6 +19,10 @@
  *
  */ 
 
+#ifndef __lv2ppu__
+#error you need the psl1ght/lv2 ppu compatible compiler!
+#endif
+
 #include <sys/storage.h>
 #include "ioctl.h"
 
@@ -176,13 +180,6 @@ int ps3rom_lv2_send_key(int fd, uint8_t agid, uint32_t key_size, uint8_t *key, u
 	//if (buffer_align != 0) {
 	//	memset(buffer + key_size + 4, 0, buffer_align);
 	//}
-	//
-	//buffer[0xfc] = buffer_size >> 24;
-	//buffer[0xfd] = buffer_size >> 16;
-	//buffer[0xfe] = buffer_size >> 8;
-	//buffer[0xff] = buffer_size & 0xff;
-	//LOG_DATA(&atapi_cmnd, 0x38);
-	//LOG_DATA(buffer, 256);
 
 	res = sys_storage_send_atapi_command(fd, &atapi_cmnd, buffer);
 
@@ -295,191 +292,3 @@ int ps3rom_lv2_read_track(int fd, uint8_t *buffer, uint8_t track) {
 
 	return res;
 }
-
-#if 0
-
-int get_device_info(uint64_t device_id) {
-	uint8_t device_info[64];
-	int ret = sys_storage_get_device_info(device_id, device_info);
-	uint64_t total_sectors = *((uint64_t*) &device_info[40]);
-	uint32_t sector_size = *((uint32_t*) &device_info[48]);
-	//is_writeable = device_info[56];
-	return (ret != CELL_OK || total_sectors == 0 || sector_size != 2048 ? -1 : 0);
-}
-
-
-/*
-   void open_storage(void) {
-    int fail_count = 0;
-    int res = storage_open();
-
-    while (res == -1 && fail_count != 5) {
-        sys_timer_usleep(5000000);
-        res = storage_open();
-   ++fail_count;
-    }
-
-    if (res == CELL_OK) {
-        ret = get_device_info(driver->device_id);
-    }
-   }
- */
-/*
-   static inline int sys_storage_async_read(int fd, uint32_t start_sector, uint32_t sectors, uint8_t *bounce_buf, uint64_t *sectors_read) {
-    system_call_7(SYS_STORAGE_READ, fd, 0, start_sector, sectors, (uint32_t) bounce_buf, (uint32_t) sectors_read, 0);
-    return_to_user_prog(int);
-   }
- */
-static void accessor_driver_event_receive(uint64_t arg);
-
-int storage_open(sac_accessor_driver_t *driver) {
-	sys_event_queue_attribute_t queue_attr;
-	sys_mutex_attribute_t mutex_attr;
-	int ret;
-	int tmp;
-
-	ret = get_device_info(driver->device_id);
-	if (ret != CELL_OK) {
-		LOG_ERROR("sys_storage_get_device_info(%llx) failed ! ret = %x\n", driver->device_id, ret);
-		return -1;
-	}
-
-	ret = sys_storage_open(driver->device_id, &driver->fd);
-	if (ret != CELL_OK) {
-		LOG_ERROR("sys_storage_open(%llx) failed ! ret = %x\n", driver->device_id, ret);
-		return ret;
-	}
-
-	/* Create event */
-	sys_event_queue_attribute_initialize(queue_attr);
-	ret = sys_event_queue_create(&driver->queue, &queue_attr, SYS_EVENT_QUEUE_LOCAL, 5);
-	if (ret != CELL_OK) {
-		LOG_ERROR(__FILE__ ":%d:sys_event_queue_create failed\n", __LINE__);
-		return ret;
-	}
-
-
-	ret = sys_io_buffer_create(&driver->io_buffer, 10);
-	LOG_INFO("sys_io_buffer_create[%x]\n", ret);
-
-	ret = sys_io_buffer_allocate(driver->io_buffer, &driver->io_buffer_piece);
-	LOG_INFO("sys_io_buffer_allocate[%x] %x\n", ret, driver->io_buffer_piece);
-
-	ret = sys_storage_async_configure(driver->fd, driver->io_buffer, driver->queue, &tmp);
-	if (ret != CELL_OK) {
-		LOG_ERROR("sys_storage_async_configure ret = %x\n", ret);
-		return -3;
-	}
-	LOG_INFO("sys_storage_async_configure[%x]\n", ret);
-
-	sys_mutex_attribute_initialize(mutex_attr);
-	if (sys_mutex_create(&driver->read_async_mutex_id, &mutex_attr) != CELL_OK) {
-		LOG_ERROR("create mmio_mutex failed.\n");
-		return -3;
-	}
-
-	/* Initialze input thread */
-	ret = sys_ppu_thread_create(&driver->thread_id,
-	                            accessor_driver_event_receive,
-	                            (uintptr_t) driver,
-	                            1050,
-	                            8192,
-	                            SYS_PPU_THREAD_CREATE_JOINABLE,
-	                            "accessor_driver_event_receive");
-	if (ret != CELL_OK) {
-		LOG_ERROR("sys_ppu_thread_create\n");
-		return -3;
-	}
-	return ret;
-}
-
-int storage_close(sac_accessor_driver_t *driver) {
-	uint64_t thr_exit_code;
-	int ret;
-
-	ret = sys_storage_close(driver->fd);
-	if (ret != CELL_OK) {
-		LOG_ERROR("sys_storage_close failed: %x\n", ret);
-		return ret;
-	}
-
-	/*	clean event_queue for spu_printf */
-	ret = sys_event_queue_destroy(driver->queue, SYS_EVENT_QUEUE_DESTROY_FORCE);
-	if (ret) {
-		LOG_ERROR("sys_event_queue_destroy failed %x\n", ret);
-		return ret;
-	}
-
-	ret = sys_io_buffer_free(driver->io_buffer, driver->io_buffer_piece);
-	if (ret != CELL_OK) {
-		LOG_ERROR("sys_io_buffer_free (%#x) %x\n", ret, driver->io_buffer_piece);
-		return ret;
-	}
-	LOG_INFO("sys_io_buffer_free[%x]\n", ret);
-
-	ret = sys_io_buffer_destroy(driver->io_buffer);
-	if (ret != CELL_OK) {
-		LOG_ERROR("sys_io_buffer_destroy (%#x) %x\n", ret, driver->io_buffer);
-		return ret;
-	}
-	LOG_INFO("sys_io_buffer_destroy[%x]\n", ret);
-
-	/*E
-	 * Wait until pu_thr exits
-	 * If sys_ppu_thread_join() succeeds, output the exit status.
-	 */
-	LOG_INFO("Wait for the PPU thread %llu exits.\n", driver->thread_id);
-	ret = sys_ppu_thread_join(driver->thread_id, &thr_exit_code);
-	if (ret != CELL_OK) {
-		LOG_ERROR("sys_ppu_thread_join failed (%#x)\n", ret);
-		return ret;
-	}
-
-	ret = sys_mutex_destroy(driver->read_async_mutex_id);
-	if (ret != CELL_OK) {
-		LOG_ERROR("sys_mutex_destroy(au_mutex) failed ! ret = %x\n", ret);
-	}
-
-	memset(driver, 0, sizeof(sac_accessor_driver_t));
-
-	return ret;
-}
-
-/*E
- * The event queue ID is passed as an argument
- */
-static void accessor_driver_event_receive(uint64_t arg) {
-	sac_accessor_driver_t *driver = (sac_accessor_driver_t *) (uintptr_t) arg;
-	sys_event_t event;
-	int ret;
-
-	LOG_INFO("starting thread..\n");
-
-	/*E
-	 * Receive events
-	 */
-	while (1) {
-		ret = sys_event_queue_receive(driver->queue, &event, SYS_NO_TIMEOUT);
-		LOG_INFO("received event..\n");
-
-		if (ret != CELL_OK) {
-			if (ret == ECANCELED || ret == ESRCH) {
-				/*E An expected error when sys_event_queue_cancel is called */
-				break;
-			} else {
-				/*E An unexpected error */
-				LOG_ERROR("accessor_driver_event_receive: sys_event_queue_receive failed (%#x)\n", ret);
-				sys_ppu_thread_exit(-1);
-				return;
-			}
-		}
-		LOG_INFO("accessor_driver_event_receive: source = %llx, data1 = %llx, data2 = %llx, data3 = %llx\n",
-		         event.source, event.data1, event.data2, event.data3);
-
-		LOG_DATA((uint8_t *) ((uint32_t) driver->io_buffer_piece), 8*2048);
-	}
-
-	LOG_INFO("accessor_driver_event_receive: Exit\n");
-	sys_ppu_thread_exit(0);
-}
-#endif

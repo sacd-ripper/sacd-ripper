@@ -18,6 +18,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  */ 
+
+#ifndef __lv2ppu__
+#error you need the psl1ght/lv2 ppu compatible compiler!
+#endif
  
 #include <ppu-lv2.h> 
 #include <lv2/spu.h>
@@ -286,8 +290,6 @@ int destroy_sac_accessor(void) {
 void handle_interrupt(void *arg) {
 	uint64_t stat;
 	int ret;
-
-	//LOG_INFO("huh: %llx", arg);
 
 	// Create a tag to handle class 2 interrupt, because PPU Interrupt MB is
 	// handled by class 2.
