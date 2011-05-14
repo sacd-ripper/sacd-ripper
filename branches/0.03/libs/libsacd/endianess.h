@@ -24,17 +24,22 @@
 
 #include <config.h>
 
-#if defined(WORDS_BIGENDIAN)
+#if defined(__BIG_ENDIAN__)
+
 /* All bigendian systems are fine, just ignore the swaps. */
 #define SWAP16(x) (void)(x)
 #define SWAP32(x) (void)(x)
 #define SWAP64(x) (void)(x)
 
-#define hton16(x) (void)(x)
-#define hton32(x) (void)(x)
-#define hton64(x) (void)(x)
+#define hton16(x) (uint16_t)(x)
+#define hton32(x) (uint32_t)(x)
+#define hton64(x) (uint64_t)(x)
+
+#define	MAKE_MARKER(a,b,c,d)	(((a) << 24) | ((b) << 16) | ((c) << 8) | (d))
 
 #else
+
+#define	MAKE_MARKER(a,b,c,d)	((a) | ((b) << 8) | ((c) << 16) | ((d) << 24))
 
 /* For __FreeBSD_version */
 #if defined(HAVE_SYS_PARAM_H)
@@ -124,13 +129,6 @@
 
 #endif
 
-#endif /* WORDS_BIGENDIAN */
-
-
-#if defined(WORDS_BIGENDIAN)
-#define MAKE_MARKER(x)       (uint32_t)(x)
-#else
-#define MAKE_MARKER(x)       hton32((uint32_t)(x))
-#endif
+#endif /* __BIG_ENDIAN__ */
 
 #endif /* ENDIANESS_H_INCLUDED */

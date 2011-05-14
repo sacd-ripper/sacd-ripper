@@ -44,7 +44,6 @@
  * The length of one Logical Block of an SACD.
  */
 #define SACD_LSN_SIZE               2048
-
 #define SACD_SAMPLING_FREQUENCY     2822400
 
 #define START_OF_FILE_SYSTEM_AREA   0
@@ -57,11 +56,6 @@
 
 #define MAX_GENRE_COUNT             29
 #define MAX_CATEGORY_COUNT          3
-
-/**
- * Opaque type that is used as a handle for one instance of an opened SACD.
- */
-typedef struct sacd_reader_s sacd_reader_t;
 
 enum 
 {
@@ -84,7 +78,7 @@ enum
 
 } character_set_t;
 
-static const char *album_genre[] =
+const char *album_genre[] =
 {
     "Not used"
   , "Not defined"
@@ -161,7 +155,7 @@ enum
 
 } category_t;
 
-static const char *album_category[] =
+const char *album_category[] =
 {
       "Not used"
     , "General"
@@ -386,13 +380,10 @@ typedef struct
     uint32_t       track_length_abs[255];
 } ATTRIBUTE_PACKED channel_tracklist_abs_t;
 
-#if PRAGMA_PACK
-#pragma pack()
-#endif
-
 typedef struct {
 
-  sacd_reader_t*				sacd;
+  //sacd_reader_t
+  void*							sacd;
 
   uint8_t *						master_data;
   master_toc_t *				master_toc;
@@ -406,7 +397,10 @@ typedef struct {
   channel_tracklist_abs_t *	channel_tracklist_time[2];
   channel_text_t *				channel_text[2][8];
   channel_isrc_t *				channel_isrc[2];
-
 } scarletbook_handle_t;
+
+#if PRAGMA_PACK
+#pragma pack()
+#endif
 
 #endif /* SCARLETBOOK_TYPES_H_INCLUDED */

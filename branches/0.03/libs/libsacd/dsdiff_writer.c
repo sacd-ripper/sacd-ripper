@@ -27,9 +27,13 @@
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <io.h>
 #include <time.h>
 
+#if defined(__lv2ppu__)
+#include <lv2/sysfs.h>	
+#endif	
+
+#include "sacd_reader.h"
 #include "scarletbook_id3.h"
 #include "endianess.h"
 #include "dsdiff_writer.h"
@@ -63,11 +67,18 @@ dsdiff_handle_t	*dsdiff_create(scarletbook_handle_t *sb_handle, char *filename, 
 	handle = (dsdiff_handle_t *) malloc(sizeof(dsdiff_handle_t));
 	memset(handle, 0, sizeof(dsdiff_handle_t));
 
+#if defined(__lv2ppu__)
+	if (sysFsOpen(filename, SYS_O_RDWR | SYS_O_CREAT | SYS_O_TRUNC, &handle->fd, 0, 0) != 0) {
+		fprintf(stderr, "error creating %s", filename);
+		return 0;
+	}
+#else
 	handle->fd = open(filename, O_RDWR | O_CREAT | O_TRUNC | O_BINARY, 0666);
 	if (handle->fd == -1) {
 		fprintf(stderr, "error creating %s", filename);
 		return 0;
 	}
+#endif
 	handle->header = (uint8_t *) malloc(DSDFIFF_BUFFER_SIZE);
 	memset(handle->header, 0, DSDFIFF_BUFFER_SIZE);
 
@@ -210,7 +221,7 @@ dsdiff_handle_t	*dsdiff_create(scarletbook_handle_t *sb_handle, char *filename, 
 		chunk_header_t *id3_chunk;
 		int id3_chunk_size;
 		id3_chunk = (chunk_header_t *) write_ptr;
-		id3_chunk->chunk_id = MAKE_MARKER('ID3 ');
+		id3_chunk->chunk_id = MAKE_MARKER('I','D','3',' ');
 		id3_chunk_size = scarletbook_id3_tag_render(sb_handle, write_ptr + CHUNK_HEADER_SIZE, channel, track);
 		id3_chunk->chunk_data_size = CALC_CHUNK_SIZE(id3_chunk_size);
 
@@ -294,7 +305,14 @@ dsdiff_handle_t	*dsdiff_create(scarletbook_handle_t *sb_handle, char *filename, 
 	handle->header_size = CEIL_ODD_NUMBER(write_ptr - handle->header);
 	form_dsd_chunk->chunk_data_size = CALC_CHUNK_SIZE(handle->header_size + handle->footer_size - COMMENTS_CHUNK_SIZE + CEIL_ODD_NUMBER(track_size));
 
+#if defined(__lv2ppu__)
+	{
+	uint64_t nrw;
+	sysFsWrite(handle->fd, handle->header, handle->header_size, &nrw); 
+	}
+#else
 	write(handle->fd, handle->header, handle->header_size);
+#endif
 
 	return handle;
 }
@@ -304,10 +322,21 @@ void dsdiff_close(dsdiff_handle_t *handle) {
 	if (!handle)
 		return;
 
+#if defined(__lv2ppu__)
+	{
+	uint64_t nrw;
+	sysFsWrite(handle->fd, handle->footer, handle->footer_size, &nrw); 
+	}
+#else
 	write(handle->fd, handle->footer, handle->footer_size);
+#endif
 
 	if (handle->fd)
+#if defined(__lv2ppu__)
+		sysFsClose(handle->fd);
+#else
 		close(handle->fd);
+#endif
 	if (handle->header)
 		free(handle->header);
 	if (handle->footer)
