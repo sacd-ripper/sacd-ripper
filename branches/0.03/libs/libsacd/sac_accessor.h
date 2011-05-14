@@ -22,11 +22,15 @@
 #ifndef __SAC_ACCESSOR_H__
 #define __SAC_ACCESSOR_H__
 
+#ifndef __lv2ppu__
+#error you need the psl1ght/lv2 ppu compatible compiler!
+#endif
+
 #include <ppu-types.h>
 #include <sys/spu.h>
 #include <lv2/interrupt.h>
 
-#define USE_ISOSELF 1
+//#define USE_ISOSELF 1
 
 #ifdef USE_ISOSELF
 #include <sys/isoself.h>
@@ -65,7 +69,7 @@ extern "C" {
 #ifdef USE_ISOSELF
 	#define SAC_MODULE_LOCATION "/dev_flash/vsh/module/SacModule.spu.isoself"
 #else
-	#define SAC_MODULE_LOCATION "/dev_usb000/SacModule.spu.elf"
+	#define SAC_MODULE_LOCATION "/dev_hdd0/game/SACDRIP01/USRDIR/sac_module.spu.elf"
 #endif
 
 enum {
