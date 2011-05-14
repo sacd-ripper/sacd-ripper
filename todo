@@ -1,15 +1,9 @@
-in order of importance:
+- add open & closing of BD
+- read TOC & display information
 
-- asynchronous read
-- add logging to file, serve log with webserver
-- add web interface
-- add dialogs
-- patching geohot 3.55
+- asynchronous read & write
+- add logging to file
 - add dst decoding
-
-- compile with psl1ght
-
-- add unpacking SacModule and decoder.spu
 
 - fill ID3 tag with SACDText
 - add sony dsf export support

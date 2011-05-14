@@ -26,8 +26,8 @@ ICON0		:=	../bin/ICON0.PNG
 TARGET		:=	$(notdir $(CURDIR))
 BUILD		:=	build
 SOURCES		:=	src
-DATA		:=	data
-INCLUDES	:=	src libs/libunself
+DATA		:=	
+INCLUDES	:=	src libs/libunself libs/libpatchutils
 
 #---------------------------------------------------------------------------------
 # options for code generation
@@ -41,13 +41,13 @@ LDFLAGS		=	$(MACHDEP) -Wl,-Map,$(notdir $@).map
 #---------------------------------------------------------------------------------
 # any extra libraries we wish to link with the project
 #---------------------------------------------------------------------------------
-LIBS	:=	-lrsx -lgcm_sys -lio -lsysutil -lrt -llv2 -lm -lunself -lz
+LIBS	:=	-lrsx -lgcm_sys -lio -lsysutil -lrt -llv2 -lm -lunself -lz -lpatchutils
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
 # include and lib
 #---------------------------------------------------------------------------------
-LIBDIRS	:= $(PORTLIBS) ../libs/libunself 
+LIBDIRS	:= $(PORTLIBS) ../libs/libunself ../libs/libpatchutils
 
 #---------------------------------------------------------------------------------
 # no real need to edit anything past this point unless you need to add additional
