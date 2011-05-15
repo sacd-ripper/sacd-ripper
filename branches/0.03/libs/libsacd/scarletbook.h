@@ -258,7 +258,7 @@ typedef struct
     uint16_t       size;                      // ex. 40 (total size of TOC)
     uint8_t        zero_01[4];
 	uint32_t       max_byte_rate;
-	uint8_t        sample_frequency;		  // 0x04 = 2822400 (physically there can be no others values, or..? :)
+	uint8_t        sample_frequency;		  // 0x04 = 2822400 (physically there can be no other values, or..? :)
 	uint8_t        encoding;
 	uint8_t        zero_02[10];
     uint8_t        channel_count;

@@ -43,6 +43,7 @@
 #include "rsxutil.h"
 #include "exit_handler.h"
 #include "install.h"
+#include "output_device.h"
 
 char *substr(const char *pstr, int start, int numchars) {
 	static char pnew[255];
@@ -52,6 +53,12 @@ char *substr(const char *pstr, int start, int numchars) {
 }
 
 static int dialog_action = 0;
+
+// information about the current disc
+static int bd_contains_sacd_disc = -1;
+
+// when a disc has changed this is set to zero
+static int bd_disc_changed = -1;
 
 static void dialog_handler(msgButton button,void *usrData) {
 	switch(button) {
@@ -93,108 +100,162 @@ int patch_syscall_864(void) {
 	return 0;
 }
 
-static int disc_status = -1;
-static int disc_changed = 0;
+void dump_sample_to_output_device(void) {
+	msgType dialog_type;
+	char file_path[50];
+	char message[200];
+	int fd_in, i;
+	FILE * fd_out;
+	uint32_t sectors_read;
+	snprintf(file_path, 200, "%s/sacd_analysis.bin", output_device);
+	
+	fd_out = fopen (file_path, "wb");
+	if (fd_out) {
 
-static void bd_eject_disc_callback(void)
-{
-	disc_status = 0;
-	disc_changed = 1;
-	printf("GameSample:: Disc Ejected.\n") ;
+		uint8_t *buffer = (uint8_t *) malloc(4 * 2048);
+
+		if (sys_storage_open(BD_DEVICE, &fd_in) == 0) {
+
+			for (i = 0; i < 256; i += 4) {
+				memset(buffer, 0, 4 * 2048);
+				sys_storage_read(fd_in, i, 4, buffer, &sectors_read);
+				fwrite(buffer, 1, 4 * 2048, fd_out);
+			}
+			
+			sys_storage_close(fd_in);
+		}
+		free(buffer);
+		fclose(fd_out);
+	}
+
+	snprintf(message, 200, "Dump analysis has been written to: [%s]\nPlease send this sample to the author of this program.", file_path);
+	dialog_type = (MSG_DIALOG_NORMAL | MSG_DIALOG_DISABLE_CANCEL_ON);
+	msgDialogOpen2(dialog_type, message, dialog_handler, NULL, NULL);
+
+	dialog_action = 0;
+	bd_disc_changed = 0;
+	while(!dialog_action && !user_requested_exit() && bd_disc_changed == 0) {
+
+		sysUtilCheckCallback();
+		flip();
+	}
+	msgDialogAbort();
+
 }
 
-static void bd_insert_disc_callback(uint32_t disc_type, char *title_id)
-{
-	disc_changed = 1;
-	printf("GameSample:: Disc Inserted.\n") ;
+static void bd_eject_disc_callback(void) {
+	bd_contains_sacd_disc = -1;
+	bd_disc_changed = -1;
+}
+
+static void bd_insert_disc_callback(uint32_t disc_type, char *title_id) {
+
+	bd_disc_changed = 1;
+
 	if (disc_type == SYS_DISCTYPE_PS3) {
-		disc_status = 0;
-		printf("PS3 Game Disc Inserted.\n") ;
-		printf("InsertDiscInfo::titleId       = [%s]\n", title_id);
-	} else if (disc_type == SYS_DISCTYPE_OTHER) {
-		printf("Other Format Disc Inserted.\n") ;
-		disc_status = 1;
+		// cannot do anything with a PS3 disc..
+		bd_contains_sacd_disc = 0;
 	} else {
-		printf("Unknown discType.\n");
-		disc_status = 1;
+		// unknown disc
+		bd_contains_sacd_disc = 1;
 	}
 }
 
-int get_largest_output_device(char **device, double *device_space) {
-	static const char *device_list[11] = {
-		"/dev_usb000", "/dev_usb001", "/dev_usb002", "/dev_usb003",
-		"/dev_usb004", "/dev_usb005", "/dev_usb006", "/dev_usb007",
-		"/dev_cf", "/dev_sd", "/dev_ms"
-	}; 
-	static int old_devices;
-	static char* current_device;
-	uint32_t current_devices = 0;
-	char *largest_device = 0;
-	double largest_device_space = 0;
-	int i;
+void main_loop(void) {
+	msgType dialog_type;
+	char message[512];
+	char *message_ptr = message;
 
-	for (i = 0; i < 11; i++) {
-		sysFSStat fstatus;
-		if (sysLv2FsStat(device_list[i], &fstatus) == 0) {
-			current_devices |= 1 << i;
+	sacd_reader_t *sacd_reader;
+	scarletbook_handle_t *sb_handle = 0;
+	
+	// did the disc change?
+	if (bd_contains_sacd_disc && (output_device_changed || bd_disc_changed)) {
+
+		// open the BD device
+		sacd_reader = sacd_open("/dev_bdvd");
+		if (sacd_reader) {
+
+			// read the scarletbook information
+			sb_handle = scarletbook_open(sacd_reader, 0);
+			if (sb_handle) {
+
+				master_text_t *master_text = sb_handle->master_text[0];
+	
+				snprintf(message_ptr, 512, 
+						"disc status: %d\n"
+						"title: %s\n"
+						"device: %s %.2fGB\n"
+						, bd_contains_sacd_disc
+						, substr((char*) master_text + master_text->disc_title_position, 0, 60)
+						, (output_device ? output_device : "no device"), output_device_space);
+
+				scarletbook_close(sb_handle);
+				sb_handle = 0;
+			} else {
+				bd_contains_sacd_disc = 0;
+			}
+
+			// close the input device asap
+			sacd_close(sacd_reader);
+			sacd_reader = 0;
+
 		} else {
-			current_devices &= ~(1 << i);
+			bd_contains_sacd_disc = 0;
 		}
 	}
-	
-	if (old_devices != current_devices) {
-		for (i = 0; i < 11; i++) {
-			if ((current_devices >> i) & 1) {
-				double free_disk_space;
-				uint32_t block_size;
-				uint64_t free_block_count;
+
+	// by default we have no user controls
+	dialog_type = (MSG_DIALOG_NORMAL | MSG_DIALOG_DISABLE_CANCEL_ON);
+
+	if (!bd_contains_sacd_disc) {
 		
-				sysFsGetFreeSize(device_list[i], &block_size, &free_block_count);
-				free_disk_space = (((uint64_t) block_size * free_block_count));
-				free_disk_space = free_disk_space / 1073741824.00; // convert to GB
-				
-				if (free_disk_space > largest_device_space) {
-					largest_device = (char *) device_list[i];
-					largest_device_space = free_disk_space;
-				}
-			}
-		}
-	}
-	
-	if (old_devices != current_devices) {
-		old_devices = current_devices;
-		if (current_device != largest_device) {
-			current_device = *device = largest_device;
-			*device_space = largest_device_space;
-			return 1;
+		// was the disc changed since startup?
+		if (bd_disc_changed == -1 || !output_device) {
+			snprintf(message_ptr, 512, "The current disc is empty or not recognized as an SACD, please re-insert.\n\n%s"
+					, (output_device ? "" : "(Also make sure you connect an external fat32 formatted harddisk!)"));
+		} else {
+			snprintf(message_ptr, 512, "The containing disc is not recognized as an SACD.\n"
+									   "Would you like to RAW dump the first 2Mb to [%s (%.2fGB available)] for analysis?",
+			   						   output_device, output_device_space);
+
+			dialog_type |= MSG_DIALOG_BTN_TYPE_OK;
 		}
 	}
 
-	return 0;
-} 
+	// can we start ripping?
+	//dialog_type |= MSG_DIALOG_BTN_TYPE_OK;
 
-int get_button_pressed() {
-	int i;
-	padInfo padinfo;
-	padData paddata;
-	
-	ioPadGetInfo(&padinfo);
-	for (i = 0; i < MAX_PADS; i++) {
-		if (padinfo.status[i]) {
-			ioPadGetData(i, &paddata);
-			if (paddata.BTN_LEFT || paddata.BTN_RIGHT || paddata.BTN_START || paddata.BTN_DOWN) {
-				return 1;
-			}
-		}
+	msgDialogOpen2(dialog_type, message_ptr, dialog_handler, NULL, NULL);
+
+	dialog_action = 0;
+	bd_disc_changed = 0;
+	output_device_changed = 0;
+	while(!dialog_action && !user_requested_exit() && bd_disc_changed == 0 && output_device_changed == 0) {
+		
+		// poll for new output devices
+		poll_output_devices();
+
+		sysUtilCheckCallback();
+		flip();
 	}
-	return 0;
+	msgDialogAbort();
+
+	// user wants to dump 2Mb to output device
+	if (dialog_action == 1 && !bd_contains_sacd_disc) {
+
+		dump_sample_to_output_device();
+
+		// action is already handled
+		dialog_action = 0;
+	}
+    
 }
-
 
 int main(int argc,char *argv[]) {
 	int ret;
 	void *host_addr = memalign(1024 * 1024, HOST_SIZE);
-	msgType dialogType;
+	msgType dialog_type;
 
 	init_screen(host_addr, HOST_SIZE);
 	ioPadInit(7);
@@ -207,15 +268,14 @@ int main(int argc,char *argv[]) {
 	ret = patch_syscall_864();
 	if (ret < 0) {
 	
-		dialogType = (MSG_DIALOG_NORMAL | MSG_DIALOG_BTN_TYPE_OK | MSG_DIALOG_DISABLE_CANCEL_ON);
-		msgDialogOpen2(dialogType, "ERROR: Couldn't patch syscall 864, returning to the XMB.", dialog_handler, NULL, NULL);
+		dialog_type = (MSG_DIALOG_NORMAL | MSG_DIALOG_BTN_TYPE_OK | MSG_DIALOG_DISABLE_CANCEL_ON);
+		msgDialogOpen2(dialog_type, "ERROR: Couldn't patch syscall 864, returning to the XMB.", dialog_handler, NULL, NULL);
 
 		dialog_action = 0;
 		while(!dialog_action && !user_requested_exit()) {
 			sysUtilCheckCallback();
 			flip();
 		}
-	    
 		msgDialogAbort();
 		
 		return 0;
@@ -225,15 +285,14 @@ int main(int argc,char *argv[]) {
 	ret = install_modules();
 	if (ret < 0) {
 	
-		dialogType = (MSG_DIALOG_NORMAL | MSG_DIALOG_BTN_TYPE_OK | MSG_DIALOG_DISABLE_CANCEL_ON);
-		msgDialogOpen2(dialogType, "Installation was aborted, returning to the XMB.", dialog_handler, NULL, NULL);
+		dialog_type = (MSG_DIALOG_NORMAL | MSG_DIALOG_BTN_TYPE_OK | MSG_DIALOG_DISABLE_CANCEL_ON);
+		msgDialogOpen2(dialog_type, "Installation was aborted, returning to the XMB.", dialog_handler, NULL, NULL);
 
 		dialog_action = 0;
 		while(!dialog_action && !user_requested_exit()) {
 			sysUtilCheckCallback();
 			flip();
 		}
-	    
 		msgDialogAbort();
 		
 		return 0;
@@ -248,76 +307,25 @@ int main(int argc,char *argv[]) {
 
 	ret = sysDiscRegisterDiscChangeCallback( &bd_eject_disc_callback, &bd_insert_disc_callback );
 
-{
-		double sp = 0;
-		char *dv = 0;
-		char *str = (char *) malloc(512);
+	// poll for an output_device
+	poll_output_devices();
 
-		while(1) {
 
-			sacd_reader_t *sacd_reader;
-			scarletbook_handle_t *handle = 0;
-			int dev, btn = 0;
-			
-			str[0] = 0x00;
+	while(1) {
+
+		// main loop
+		main_loop();
 		
-			dev = get_largest_output_device(&dv, &sp);
-
-			sacd_reader = sacd_open("/dev_bdvd");
-			if (sacd_reader) {
-
-				handle = scarletbook_open(sacd_reader, 0);
-
-				scarletbook_close(handle);
-
-				if (handle) {
-					master_text_t *master_text = handle->master_text[0];
-		
-					snprintf(str, 512, 
-							"disc status: %d\n"
-							"title: %s\n"
-							"device: %s %.2fGB\n"
-							"button: %d\n"
-							, disc_status
-							, substr((char*) master_text + master_text->disc_title_position, 0, 60)
-							, dv == 0 ? "no device" : dv, sp
-							, btn);
-				} else {
-					snprintf(str, 512,
-							"disc status: %d\n"
-							"device: %s %.2fGB\n"
-							"button: %d\n"
-							, disc_status
-							, dv == 0 ? "no device" : dv, sp
-							, btn);
-				}
-				sacd_close(sacd_reader);
-			}
-	
-			btn = 0;			
-	
-			dialogType = (MSG_DIALOG_NORMAL | MSG_DIALOG_BTN_TYPE_OK | MSG_DIALOG_DISABLE_CANCEL_ON);
-			msgDialogOpen2(dialogType, str, dialog_handler, NULL, NULL);
-	
-			dialog_action = 0;
-			while(!dialog_action && !user_requested_exit() && disc_changed == 0 && dev == 0 && btn == 0) {
-				dev = get_largest_output_device(&dv, &sp);
-
-				//btn = get_button_pressed();
-				
-				sysUtilCheckCallback();
-				flip();
-			}
-		    
-			msgDialogAbort();
+		// did user request to start the ripping process?
+		if (dialog_action == 1) {
 			
-			if (disc_changed == 1)
-				disc_changed = 0;
-
-			if (user_requested_exit())
-				break;
 		}
-}
+		
+		// break out of the loop when requested
+		if (user_requested_exit())
+			break;
+	}
+
 	ret = sysDiscUnregisterDiscChangeCallback();
 
 	return 0;
