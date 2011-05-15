@@ -112,14 +112,14 @@ void dump_sample_to_output_device(void) {
 	fd_out = fopen (file_path, "wb");
 	if (fd_out) {
 
-		uint8_t *buffer = (uint8_t *) malloc(4 * 2048);
+		uint8_t *buffer = (uint8_t *) malloc(2048);
 
 		if (sys_storage_open(BD_DEVICE, &fd_in) == 0) {
 
-			for (i = 0; i < 256; i += 4) {
-				memset(buffer, 0, 4 * 2048);
-				sys_storage_read(fd_in, i, 4, buffer, &sectors_read);
-				fwrite(buffer, 1, 4 * 2048, fd_out);
+			for (i = 0; i < 1024; i++) {
+				memset(buffer, 0, 2048);
+				sys_storage_read(fd_in, i, 1, buffer, &sectors_read);
+				fwrite(buffer, 1, 2048, fd_out);
 			}
 			
 			sys_storage_close(fd_in);

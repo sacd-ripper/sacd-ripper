@@ -1,14 +1,20 @@
-- display disc information
+todo:
 
-- write tiny thread safe logging library
 - start ripping
 	- ask which channels to rip (in case of multiple channels)
 	- show not enough disc space message
 	- display ripping dual/single progress bar
-	- asynchronous read & write
+	- asynchronous/threaded read & write
 	- add dst decoding
 
 - add splitted iso image support
 - add sony dsf export support
+
+enhancement:
+
+- display more disc information
+- logging thread safe
+
+bugs:
 
 - fix dump analysis raw image
