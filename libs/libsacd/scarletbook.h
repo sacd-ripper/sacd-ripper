@@ -352,14 +352,16 @@ typedef struct
 } ATTRIBUTE_PACKED channel_tracklist_abs_t;
 
 typedef struct {
-
-  //sacd_reader_t
-  void*							sacd;
+  
+  void*							sacd; 		//sacd_reader_t
 
   uint8_t *						master_data;
   master_toc_t *				master_toc;
   master_text_t *				master_text[8];
   master_man_t *				master_man;
+
+  int	 	                    twoch_idx;
+  int	 	                    mulch_idx;
 
   uint8_t *						channel_data[2];
   int							channel_count;
@@ -371,6 +373,18 @@ typedef struct {
 
   channel_isrc_t *				channel_isrc[2];
 } scarletbook_handle_t;
+
+/**
+ * helper functions..
+ */
+
+static inline int has_two_channel(scarletbook_handle_t *handle) {
+	return handle->twoch_idx != -1;	
+}
+
+static inline int has_multi_channel(scarletbook_handle_t *handle) {
+	return handle->mulch_idx != -1;	
+}
 
 #if PRAGMA_PACK
 #pragma pack()
