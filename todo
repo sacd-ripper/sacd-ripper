@@ -1,7 +1,6 @@
-- dump 2Mb analysis raw image on user request (after boot & reinserting of disc)
 - display disc information
-- write tiny thread safe logging library
 
+- write tiny thread safe logging library
 - start ripping
 	- ask which channels to rip (in case of multiple channels)
 	- show not enough disc space message
@@ -10,5 +9,6 @@
 	- add dst decoding
 
 - add splitted iso image support
-- fill ID3 tag with SACDText
 - add sony dsf export support
+
+- fix dump analysis raw image
