@@ -386,6 +386,10 @@ static inline int has_multi_channel(scarletbook_handle_t *handle) {
 	return handle->mulch_idx != -1;	
 }
 
+static inline int has_both_channels(scarletbook_handle_t *handle) {
+	return handle->twoch_idx != -1 && handle->mulch_idx != -1;	
+}
+
 #if PRAGMA_PACK
 #pragma pack()
 #endif
