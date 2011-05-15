@@ -267,10 +267,10 @@ static int scarletbook_read_channel_toc(scarletbook_handle_t *handle, int channe
 	}
 
 	// is this the 2 channel?
-	if (channel->channel_count == 2 && channel->loudspeaker_config == 0) {
-	  sb->twoch_idx = channel_nr;
+	if (channel_toc->channel_count == 2 && channel_toc->loudspeaker_config == 0) {
+	  handle->twoch_idx = channel_nr;
 	} else {
-	  sb->mulch_idx = channel_nr;
+	  handle->mulch_idx = channel_nr;
 	}
 
 	// Channel TOC size is SACD_LSN_SIZE
