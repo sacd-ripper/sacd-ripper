@@ -1,4 +1,3 @@
-#if 0
 /**
  * SACD Ripper - http://code.google.com/p/sacd-ripper/
  *
@@ -55,7 +54,7 @@ static void update_id3_frame (struct id3_tag *tag, const char *frame_name, const
 		id3_tag_attachframe (tag, frame);
 	}
 
-	if (frame_name == ID3_FRAME_COMMENT) {
+	if (strcmp(frame_name, ID3_FRAME_COMMENT) == 0) {
 		field = id3_frame_field (frame, 3);
 		field->type = ID3_FIELD_TYPE_STRINGFULL;
 	} else {
@@ -63,17 +62,9 @@ static void update_id3_frame (struct id3_tag *tag, const char *frame_name, const
 		field->type = ID3_FIELD_TYPE_STRINGLIST;
 	}
 
-	ucs4 = id3_latin1_ucs4duplicate (data);
+	ucs4 = id3_latin1_ucs4duplicate((const id3_latin1_t *) data);
 
-	if (frame_name == ID3_FRAME_GENRE) {
-		char tmp[10];
-		int index = id3_genre_number (ucs4);
-		free (ucs4);
-		sprintf(tmp, "%d", index);
-		ucs4 = id3_latin1_ucs4duplicate (tmp);
-	}
-
-	if (frame_name == ID3_FRAME_COMMENT) {
+	if (strcmp(frame_name, ID3_FRAME_COMMENT) == 0) {
 		res = id3_field_setfullstring (field, ucs4);
 	} else {
 		res = id3_field_setstrings (field, 1, &ucs4);
@@ -86,21 +77,41 @@ static void update_id3_frame (struct id3_tag *tag, const char *frame_name, const
 
 int scarletbook_id3_tag_render(scarletbook_handle_t *handle, uint8_t *buffer, int channel, int track) {
 
+	const int sacd_id3_genres[] = {
+		  12, 12, 40, 12, 32, 140, 2
+		, 3, 98, 12, 80, 38, 7, 8, 86, 77
+		, 10, 103, 104, 13, 15, 16, 17, 14
+		, 37, 24, 101, 12, 0, 12, 12, 12
+	};
 	struct id3_tag *id3tag; 
+	char tmp[200];
 	int len;
 
 	id3tag = id3_tag_new();
 	id3_tag_clearframes(id3tag);
 	id3tag->options |= ID3_TAG_OPTION_COMPRESSION; 
 
-	// TODO
-	update_id3_frame (id3tag, ID3_FRAME_TITLE, "Titles");
-	update_id3_frame (id3tag, ID3_FRAME_ARTIST, "Artist");
-	update_id3_frame (id3tag, ID3_FRAME_ALBUM, "Album"); 
-	update_id3_frame (id3tag, ID3_FRAME_YEAR, "");
-	update_id3_frame (id3tag, ID3_FRAME_COMMENT, "");
-	update_id3_frame (id3tag, ID3_FRAME_TRACK, "");
-	update_id3_frame (id3tag, ID3_FRAME_GENRE, ""); 
+	memset(tmp, 0, sizeof(tmp));
+
+	if (handle->channel_track_text[channel]->track_type_title)
+		update_id3_frame (id3tag, ID3_FRAME_TITLE, handle->channel_track_text[channel]->track_type_title);
+	if (handle->channel_track_text[channel]->track_type_performer)
+		update_id3_frame (id3tag, ID3_FRAME_ARTIST, handle->channel_track_text[channel]->track_type_performer);
+	if (handle->master_text[0]->album_title_position) {
+		snprintf(tmp, 200, "%s", (char*) handle->master_text[0] + handle->master_text[0]->album_title_position);
+		update_id3_frame (id3tag, ID3_FRAME_ALBUM, tmp); 
+	}
+	if (handle->channel_track_text[channel]->track_type_message)
+		update_id3_frame (id3tag, ID3_FRAME_COMMENT, handle->channel_track_text[channel]->track_type_message);
+
+	snprintf(tmp, 200, "%04d", handle->master_toc->disc_date_year);
+	update_id3_frame (id3tag, ID3_FRAME_YEAR, tmp);
+
+	snprintf(tmp, 200, "%d", track + 1); // internally tracks start from 0
+	update_id3_frame (id3tag, ID3_FRAME_TRACK, tmp);
+
+	snprintf(tmp, 200, "%d", sacd_id3_genres[handle->channel_isrc[channel]->track_genre[track].genre & 0x1f]);
+	update_id3_frame (id3tag, ID3_FRAME_GENRE, tmp); 
 
 	len = id3_tag_render(id3tag, buffer);
 
@@ -108,4 +119,3 @@ int scarletbook_id3_tag_render(scarletbook_handle_t *handle, uint8_t *buffer, in
 
 	return len;
 }
-#endif

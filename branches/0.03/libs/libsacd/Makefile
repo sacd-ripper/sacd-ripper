@@ -33,7 +33,7 @@ endif
 LIBRARY		:= $(LIBDIR)/libsacd
 
 #---------------------------------------------------------------------------------
-DEFINCS		:= -I$(BASEDIR) -I$(PSL1GHT)/ppu/include
+DEFINCS		:= -I$(BASEDIR) -I$(PSL1GHT)/ppu/include -I$(BASEDIR)/../libid3tag
 INCLUDES	:=	$(DEFINCS)
 
 CFLAGS		:= -O2 -mregnames -Wall -mcpu=cell $(MACHDEP) -DLIBSACD_INTERNAL $(INCLUDES) -Wa,-mcell -DWITH_PL3
