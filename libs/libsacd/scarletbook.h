@@ -19,8 +19,8 @@
  *
  */ 
  
-#ifndef SCARLETBOOK_TYPES_H_INCLUDED
-#define SCARLETBOOK_TYPES_H_INCLUDED
+#ifndef SCARLETBOOK_H_INCLUDED
+#define SCARLETBOOK_H_INCLUDED
 
 #include <inttypes.h>
 
@@ -285,18 +285,26 @@ typedef struct
 
 typedef struct
 {
-    uint8_t        track_text_count;
-    uint16_t       max_byte_rate;
-    uint8_t        track_type;
-    uint8_t        unknown_02;
-    char           track_text[];
-} ATTRIBUTE_PACKED track_text_t;
+	char *track_type_title;
+	char *track_type_performer;
+	char *track_type_songwriter;
+	char *track_type_composer;
+	char *track_type_arranger;
+	char *track_type_message;
+	char *track_type_extra_message;
+	char *track_type_title_phonetic;
+	char *track_type_performer_phonetic;
+	char *track_type_songwriter_phonetic;
+	char *track_type_composer_phonetic;
+	char *track_type_arranger_phonetic;
+	char *track_type_message_phonetic;
+	char *track_type_extra_message_phonetic;
+} channel_track_text_t;
 
 typedef struct
 {
-    char           id[8];                     // SACDText
-    uint16_t       track_text_position[255];
-    uint8_t        data[];
+    char           id[8];                     // SACDTTxt
+    uint16_t       track_text_position[];
 } ATTRIBUTE_PACKED channel_text_t;
 
 typedef struct
@@ -357,8 +365,10 @@ typedef struct {
   int							channel_count;
   channel_toc_t *				channel_toc[2];
   channel_tracklist_offset_t *	channel_tracklist_offset[2];
-  channel_tracklist_abs_t *	channel_tracklist_time[2];
-  channel_text_t *				channel_text[2][8];
+  channel_tracklist_abs_t *		channel_tracklist_time[2];
+  channel_text_t *				channel_text[2];
+  channel_track_text_t			channel_track_text[2][255];		// max of 255 supported tracks
+
   channel_isrc_t *				channel_isrc[2];
 } scarletbook_handle_t;
 
@@ -366,4 +376,4 @@ typedef struct {
 #pragma pack()
 #endif
 
-#endif /* SCARLETBOOK_TYPES_H_INCLUDED */
+#endif /* SCARLETBOOK_H_INCLUDED */

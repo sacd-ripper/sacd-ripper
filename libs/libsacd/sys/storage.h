@@ -34,6 +34,8 @@
 extern "C" {
 #endif 
 
+#define BD_DEVICE 0x0101000000000006ULL
+
 /* The generic packet command opcodes for CD/DVD Logical Units,
  * From Table 57 of the SFF8090 Ver. 3 (Mt. Fuji) draft standard. */
 #define GPCMD_GET_CONFIGURATION             0x46

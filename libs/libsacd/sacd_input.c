@@ -28,6 +28,8 @@
 
 #if defined(__lv2ppu__)
 #include <sys/storage.h>	
+#elif defined(WIN32)
+#include <io.h>
 #endif	
 
 #include "scarletbook.h"
@@ -55,7 +57,7 @@ sacd_input_t sacd_input_open(const char *target)
 #if defined(WIN32)
   dev->fd = open(target, O_RDONLY);
 #elif defined(__lv2ppu__)
-  if (sys_storage_open(0x0101000000000006, &dev->fd) != 0) {
+  if (sys_storage_open(BD_DEVICE, &dev->fd) != 0) {
   	dev->fd = -1;
   }
 #else

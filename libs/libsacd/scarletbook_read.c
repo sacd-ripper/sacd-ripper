@@ -224,7 +224,7 @@ static int scarletbook_read_master_toc(scarletbook_handle_t *handle) {
 }
 
 static int scarletbook_read_channel_toc(scarletbook_handle_t *handle, int channel_nr) {
-	int i, text_channel_counter;
+	int i, j;
 	channel_toc_t *channel_toc;
     uint8_t *channel_data;
 	uint8_t *p;
@@ -267,15 +267,78 @@ static int scarletbook_read_channel_toc(scarletbook_handle_t *handle, int channe
 	// Channel TOC size is SACD_LSN_SIZE
 	p += SACD_LSN_SIZE;
 
-	text_channel_counter = 0;
 	while (p < (channel_data + channel_toc->size * SACD_LSN_SIZE)) {
 		if (strncmp((char *) p, "SACDTTxt", 8) == 0) {
-			channel_text_t *channel_text;
-			channel_text = handle->channel_text[channel_nr][text_channel_counter] = (channel_text_t*) p;
 			for (i = 0; i < channel_toc->track_count; i++) {
+				channel_text_t *channel_text;
+				uint8_t track_type, track_amount;
+				char *track_ptr;
+				channel_text = handle->channel_text[channel_nr] = (channel_text_t*) p;
 				SWAP16(channel_text->track_text_position[i]);
+				if (channel_text->track_text_position[i] > 0) {
+					track_ptr = (char *) (p + channel_text->track_text_position[i]);
+					track_amount = *track_ptr;
+					track_ptr += 4;
+					for (j = 0; j < track_amount; j++) {
+						track_type = *track_ptr;
+						track_ptr++;
+						track_ptr++; // skip unknown 0x20
+						if (*track_ptr != 0) {
+							switch (track_type) {
+							case TRACK_TYPE_TITLE:
+								handle->channel_track_text[channel_nr][i].track_type_title = track_ptr;
+								break;
+							case TRACK_TYPE_PERFORMER:
+								handle->channel_track_text[channel_nr][i].track_type_performer = track_ptr;
+								break;
+							case TRACK_TYPE_SONGWRITER:
+								handle->channel_track_text[channel_nr][i].track_type_songwriter = track_ptr;
+								break;
+							case TRACK_TYPE_COMPOSER:
+								handle->channel_track_text[channel_nr][i].track_type_composer = track_ptr;
+								break;
+							case TRACK_TYPE_ARRANGER:
+								handle->channel_track_text[channel_nr][i].track_type_arranger = track_ptr;
+								break;
+							case TRACK_TYPE_MESSAGE:
+								handle->channel_track_text[channel_nr][i].track_type_message = track_ptr;
+								break;
+							case TRACK_TYPE_EXTRA_MESSAGE:
+								handle->channel_track_text[channel_nr][i].track_type_extra_message = track_ptr;
+								break;
+							case TRACK_TYPE_TITLE_PHONETIC:
+								handle->channel_track_text[channel_nr][i].track_type_title_phonetic = track_ptr;
+								break;
+							case TRACK_TYPE_PERFORMER_PHONETIC:
+								handle->channel_track_text[channel_nr][i].track_type_performer_phonetic = track_ptr;
+								break;
+							case TRACK_TYPE_SONGWRITER_PHONETIC:
+								handle->channel_track_text[channel_nr][i].track_type_songwriter_phonetic = track_ptr;
+								break;
+							case TRACK_TYPE_COMPOSER_PHONETIC:
+								handle->channel_track_text[channel_nr][i].track_type_composer_phonetic = track_ptr;
+								break;
+							case TRACK_TYPE_ARRANGER_PHONETIC:
+								handle->channel_track_text[channel_nr][i].track_type_arranger_phonetic = track_ptr;
+								break;
+							case TRACK_TYPE_MESSAGE_PHONETIC:
+								handle->channel_track_text[channel_nr][i].track_type_message_phonetic = track_ptr;
+								break;
+							case TRACK_TYPE_EXTRA_MESSAGE_PHONETIC:
+								handle->channel_track_text[channel_nr][i].track_type_extra_message_phonetic = track_ptr;
+								break;
+							}
+						}
+						if (j < track_amount - 1) {
+							while (*track_ptr != 0)
+								track_ptr++;
+
+							while (*track_ptr == 0)
+								track_ptr++;
+						}
+					}
+				}
 			}
-			++text_channel_counter;
 			p += SACD_LSN_SIZE;
 		} else if (strncmp((char *) p, "SACD_IGL", 8) == 0) {
 			handle->channel_isrc[channel_nr] = (channel_isrc_t*) p;
