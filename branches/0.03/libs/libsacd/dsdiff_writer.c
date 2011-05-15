@@ -31,6 +31,8 @@
 
 #if defined(__lv2ppu__)
 #include <lv2/sysfs.h>	
+#elif defined(WIN32)
+#include <io.h>
 #endif	
 
 #include "sacd_reader.h"
@@ -217,7 +219,7 @@ dsdiff_handle_t	*dsdiff_create(scarletbook_handle_t *sb_handle, char *filename, 
 
 	// we add a custom (unsupported) ID3 chunk to the PROP chunk to maintain all track information
 	// within one file
-	{
+	/*{
 		chunk_header_t *id3_chunk;
 		int id3_chunk_size;
 		id3_chunk = (chunk_header_t *) write_ptr;
@@ -226,7 +228,7 @@ dsdiff_handle_t	*dsdiff_create(scarletbook_handle_t *sb_handle, char *filename, 
 		id3_chunk->chunk_data_size = CALC_CHUNK_SIZE(id3_chunk_size);
 
 		write_ptr += CEIL_ODD_NUMBER(CHUNK_HEADER_SIZE + id3_chunk_size);
-	}
+	}*/
 
 	// all properties have been written, now set the property chunk size
 	property_chunk->chunk_data_size = CALC_CHUNK_SIZE(write_ptr - prop_ptr - CHUNK_HEADER_SIZE);
