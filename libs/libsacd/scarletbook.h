@@ -82,36 +82,36 @@ extern const char *album_genre[];
 
 enum
 {
-    GENRE_NOT_USED                      = 0
-  , GENRE_NOT_DEFINED                   = 1
-  , GENRE_ADULT_CONTEMPORARY            = 2
-  , GENRE_ALTERNATIVE_ROCK              = 3
-  , GENRE_CHILDRENS_MUSIC               = 4
-  , GENRE_CLASSICAL                     = 5
-  , GENRE_CONTEMPORARY_CHRISTIAN        = 6
-  , GENRE_COUNTRY                       = 7
-  , GENRE_DANCE                         = 8
-  , GENRE_EASY_LISTENING                = 9
-  , GENRE_EROTIC                        = 10
-  , GENRE_FOLK                          = 11
-  , GENRE_GOSPEL                        = 12
-  , GENRE_HIP_HOP                       = 13
-  , GENRE_JAZZ                          = 14
-  , GENRE_LATIN                         = 15
-  , GENRE_MUSICAL                       = 16
-  , GENRE_NEW_AGE                       = 17
-  , GENRE_OPERA                         = 18
-  , GENRE_OPERETTA                      = 19
-  , GENRE_POP_MUSIC                     = 20
-  , GENRE_RAP                           = 21
-  , GENRE_REGGAE                        = 22
-  , GENRE_ROCK_MUSIC                    = 23
-  , GENRE_RHYTHM_AND_BLUES              = 24
-  , GENRE_SOUND_EFFECTS                 = 25
-  , GENRE_SOUND_TRACK                   = 26
-  , GENRE_SPOKEN_WORD                   = 27
-  , GENRE_WORLD_MUSIC                   = 28
-  , GENRE_BLUES                         = 29
+    GENRE_NOT_USED                      = 0  // 12
+  , GENRE_NOT_DEFINED                   = 1  // 12
+  , GENRE_ADULT_CONTEMPORARY            = 2  // 12
+  , GENRE_ALTERNATIVE_ROCK              = 3  // 40
+  , GENRE_CHILDRENS_MUSIC               = 4  // 12
+  , GENRE_CLASSICAL                     = 5  // 32
+  , GENRE_CONTEMPORARY_CHRISTIAN        = 6  // 140
+  , GENRE_COUNTRY                       = 7  // 2
+  , GENRE_DANCE                         = 8  // 3
+  , GENRE_EASY_LISTENING                = 9  // 98
+  , GENRE_EROTIC                        = 10 // 12
+  , GENRE_FOLK                          = 11 // 80
+  , GENRE_GOSPEL                        = 12 // 38
+  , GENRE_HIP_HOP                       = 13 // 7
+  , GENRE_JAZZ                          = 14 // 8
+  , GENRE_LATIN                         = 15 // 86
+  , GENRE_MUSICAL                       = 16 // 77
+  , GENRE_NEW_AGE                       = 17 // 10
+  , GENRE_OPERA                         = 18 // 103
+  , GENRE_OPERETTA                      = 19 // 104
+  , GENRE_POP_MUSIC                     = 20 // 13
+  , GENRE_RAP                           = 21 // 15
+  , GENRE_REGGAE                        = 22 // 16
+  , GENRE_ROCK_MUSIC                    = 23 // 17
+  , GENRE_RHYTHM_AND_BLUES              = 24 // 14
+  , GENRE_SOUND_EFFECTS                 = 25 // 37
+  , GENRE_SOUND_TRACK                   = 26 // 24
+  , GENRE_SPOKEN_WORD                   = 27 // 101
+  , GENRE_WORLD_MUSIC                   = 28 // 12
+  , GENRE_BLUES                         = 29 // 0
 
 } genre_t;
 
@@ -318,7 +318,9 @@ typedef struct
 typedef struct
 {
     char           id[8];                     // SACD_IGL
-    isrc_t         isrc[170];
+    isrc_t         isrc[255];
+	uint32_t	   zero_01;
+	genre_table_t  track_genre[255];
 } ATTRIBUTE_PACKED channel_isrc_t;
 
 typedef struct
