@@ -66,6 +66,8 @@ scarletbook_handle_t *scarletbook_open(sacd_reader_t *sacd, int title) {
 
   memset(sb, 0, sizeof(scarletbook_handle_t));
   sb->sacd = sacd;
+  sb->twoch_idx = -1;
+  sb->mulch_idx = -1;
 
   if (!scarletbook_read_master_toc(sb)) {
     fprintf(stderr, "libsacdread: Can't read Master TOC.\n");
@@ -262,6 +264,13 @@ static int scarletbook_read_channel_toc(scarletbook_handle_t *handle, int channe
 	if (channel_toc->version > SUPPORT_SCARLETBOOK_VERSION) {
 		fprintf(stderr, "libsacdread: Unsupported version: %2i.%2i\n", (channel_toc->version >> 8) & 0xff, channel_toc->version & 0xff);
 		return 0;
+	}
+
+	// is this the 2 channel?
+	if (channel->channel_count == 2 && channel->loudspeaker_config == 0) {
+	  sb->twoch_idx = channel_nr;
+	} else {
+	  sb->mulch_idx = channel_nr;
 	}
 
 	// Channel TOC size is SACD_LSN_SIZE
