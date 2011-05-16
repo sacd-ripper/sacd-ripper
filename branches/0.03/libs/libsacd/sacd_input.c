@@ -160,7 +160,6 @@ ssize_t sacd_input_read(sacd_input_t dev, int pos, int blocks, void *buffer)
 
     return blocks;
 #endif
-
 }
 
 /**
