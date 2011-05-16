@@ -244,7 +244,10 @@ int install_modules(void)
         do
         {
             dialogType = (MSG_DIALOG_NORMAL | MSG_DIALOG_BTN_TYPE_OK);
-            msgDialogOpen2(dialogType, "The SACD authentication and DST decoder modules need to be extracted.\nMake sure you have the PS3 keys (app-pub-355, iso-iv-355, etc..) in the root of an external USB/flash disc.", dialog_handler, NULL, NULL);
+            msgDialogOpen2(dialogType, "The SACD authentication and DST decoder modules need to be extracted.\n"
+                           "Make sure you have the PS3 keys (app-pub-355, iso-iv-355, etc..) in the"
+                           " root of an external USB/flash disc."
+                           , dialog_handler, NULL, NULL);
             dialog_action = 0;
             while (!dialog_action && !user_requested_exit())
             {
@@ -276,7 +279,9 @@ int install_modules(void)
             else
             {
                 dialogType = (MSG_DIALOG_NORMAL | MSG_DIALOG_BTN_TYPE_OK);
-                msgDialogOpen2(dialogType, "ERROR: The keys were not found or the modules could not be extracted.\nPlease try again.", dialog_handler, NULL, NULL);
+                msgDialogOpen2(dialogType, "ERROR: The keys were not found or the modules could not be extracted.\n"
+                               "Please try again."
+                               , dialog_handler, NULL, NULL);
                 dialog_action = 0;
                 while (!dialog_action && !user_requested_exit())
                 {

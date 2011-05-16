@@ -706,18 +706,18 @@ int file_alloc_load(const char *file_path, uint8_t **buf, unsigned int *size)
     sysFSStat status;
     uint64_t  read_length;
 
-    ret = sysLv2FsOpen(file_path, SYS_O_RDONLY, &fd, 0, 0, 0);
+    ret = sysFsOpen(file_path, SYS_O_RDONLY, &fd, 0, 0);
     if (ret != 0)
     {
         //LOG_ERROR("file %s open error : 0x%x\n", file_path, ret);
         return -1;
     }
 
-    ret = sysLv2FsFStat(fd, &status);
+    ret = sysFsFStat(fd, &status);
     if (ret != 0)
     {
         //LOG_ERROR("file %s get stat error : 0x%x\n", file_path, ret);
-        sysLv2FsClose(fd);
+        sysFsClose(fd);
         return -1;
     }
 
@@ -725,21 +725,21 @@ int file_alloc_load(const char *file_path, uint8_t **buf, unsigned int *size)
     if (*buf == NULL)
     {
         //LOG_ERROR("alloc failed\n");
-        sysLv2FsClose(fd);
+        sysFsClose(fd);
         return -1;
     }
 
-    ret = sysLv2FsRead(fd, *buf, status.st_size, &read_length);
+    ret = sysFsRead(fd, *buf, status.st_size, &read_length);
     if (ret != 0 || status.st_size != read_length)
     {
         //LOG_ERROR("file %s read error : 0x%x\n", file_path, ret);
-        sysLv2FsClose(fd);
+        sysFsClose(fd);
         free(*buf);
         *buf = NULL;
         return -1;
     }
 
-    ret = sysLv2FsClose(fd);
+    ret = sysFsClose(fd);
     if (ret != 0)
     {
         //LOG_ERROR("file %s close error : 0x%x\n", file_path, ret);
