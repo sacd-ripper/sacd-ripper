@@ -118,22 +118,22 @@ int file_simple_save(const char *filePath, void *buf, unsigned int fileSize)
         LOG_ERROR("buffer is null\n");
     }
 
-    ret = sysLv2FsOpen(filePath, SYS_O_WRONLY | SYS_O_CREAT | SYS_O_TRUNC, &fd, S_IRWXU | S_IRWXG | S_IRWXO, NULL, 0);
+    ret = sysFsOpen(filePath, SYS_O_WRONLY | SYS_O_CREAT | SYS_O_TRUNC, &fd, NULL, 0);
     if ((ret != 0))        // && (ret != EPERM) ){
     {
         LOG_ERROR("file %s open error : 0x%x\n", filePath, ret);
         return -1;
     }
 
-    ret = sysLv2FsWrite(fd, buf, fileSize, &writelen);
+    ret = sysFsWrite(fd, buf, fileSize, &writelen);
     if (ret != 0 || fileSize != writelen)
     {
         LOG_ERROR("file %s read error : 0x%x\n", filePath, ret);
-        sysLv2FsClose(fd);
+        sysFsClose(fd);
         return -1;
     }
 
-    ret = sysLv2FsClose(fd);
+    ret = sysFsClose(fd);
     if (ret != 0)
     {
         LOG_ERROR("file %s close error : 0x%x\n", filePath, ret);
@@ -202,7 +202,7 @@ void dump_sample_to_output_device(void)
 
     sprintf(file_path, "%s/sacd_analysis.bin", output_device);
 
-    ret = sysLv2FsOpen(file_path, SYS_O_WRONLY | SYS_O_CREAT | SYS_O_TRUNC, &fd_out, S_IRWXU | S_IRWXG | S_IRWXO, NULL, 0);
+    ret = sysFsOpen(file_path, SYS_O_WRONLY | SYS_O_CREAT | SYS_O_TRUNC, &fd_out, NULL, 0);
     if (fd_out)
     {
         uint8_t *buffer = (uint8_t *) malloc(2048);
@@ -225,7 +225,7 @@ void dump_sample_to_output_device(void)
 
                 LOG_INFO("sys storage_read %x %x %x\n", ret, fd_in, sectors_read);
 
-                sysLv2FsWrite(fd_out, buffer, 2048, &writelen);
+                sysFsWrite(fd_out, buffer, 2048, &writelen);
 
                 msgDialogProgressBarInc(MSG_PROGRESSBAR_INDEX0, (int) i * 100 / 1024);
 
@@ -238,7 +238,7 @@ void dump_sample_to_output_device(void)
             msgDialogAbort();
         }
         free(buffer);
-        sysLv2FsClose(fd_out);
+        sysFsClose(fd_out);
     }
 
     snprintf(message, 512, "Dump analysis has been written to: [%s]\nPlease send this sample to the author of this program.", file_path);
