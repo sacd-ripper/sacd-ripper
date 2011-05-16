@@ -22,7 +22,7 @@
 #ifndef __SYS_IO_BUFFER_H__
 #define __SYS_IO_BUFFER_H__
 
-#ifndef (__lv2ppu__)
+#ifndef __lv2ppu__
 #error you need the psl1ght/lv2 ppu compatible compiler!
 #endif
 
@@ -33,25 +33,31 @@
 extern "C" {
 #endif
 
-static inline int sys_io_buffer_create(int *io_buffer, int buffer_count)
+typedef int sys_io_buffer_t; 
+typedef int sys_io_block_t; 
+
+static inline int sys_io_buffer_create(int io_block_count, int block_size, int blocks, int unknown_3, sys_io_buffer_t *io_buffer)
 {
-    lv2syscall5(624, buffer_count, 2, 64 * 2048, 512, (uint64_t) io_buffer);
+    // unknown_3, alignment? (spotted: 512, 1024, any other value == crash)
+
+    lv2syscall5(624, io_block_count, block_size, blocks, unknown_3 & 0x600, (uint64_t) io_buffer);
+
     return_to_user_prog(int);
 }
 
-static inline int sys_io_buffer_destroy(int io_buffer)
+static inline int sys_io_buffer_destroy(sys_io_buffer_t io_buffer)
 {
     lv2syscall1(625, io_buffer);
     return_to_user_prog(int);
 }
 
-static inline int sys_io_buffer_allocate(int io_buffer, int *block)
+static inline int sys_io_buffer_allocate(sys_io_buffer_t io_buffer, sys_io_block_t *block)
 {
     lv2syscall2(626, io_buffer, (uint64_t) block);
     return_to_user_prog(int);
 }
 
-static inline int sys_io_buffer_free(int io_buffer, int block)
+static inline int sys_io_buffer_free(sys_io_buffer_t io_buffer, sys_io_block_t block)
 {
     lv2syscall2(627, io_buffer, block);
     return_to_user_prog(int);

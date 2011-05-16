@@ -30,6 +30,8 @@
 #include <string.h>
 #include <ppu-lv2.h>
 
+#include <sys/io_buffer.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -105,7 +107,7 @@ static inline int sys_storage_send_atapi_command(uint32_t fd, struct lv2_atapi_c
     return_to_user_prog(int);
 }
 
-static inline int sys_storage_async_configure(uint32_t fd, int io_buffer, sys_event_queue_t equeue_id, int *unknown)
+static inline int sys_storage_async_configure(uint32_t fd, sys_io_buffer_t io_buffer, sys_event_queue_t equeue_id, int *unknown)
 {
     lv2syscall4(605
                 , fd
@@ -140,9 +142,9 @@ static inline int sys_storage_read(int fd, uint32_t start_sector, uint32_t secto
     return_to_user_prog(int);
 }
 
-static inline int sys_storage_async_read(int fd, uint32_t start_sector, uint32_t sectors, uint8_t *unknown1, uint64_t user_data)
+static inline int sys_storage_async_read(int fd, uint32_t start_sector, uint32_t sectors, sys_io_block_t bounce_buf, uint64_t user_data)
 {
-    lv2syscall7(606, fd, 0, start_sector, sectors, (uint64_t) unknown1, user_data, 0);
+    lv2syscall7(606, fd, 0, start_sector, sectors, bounce_buf, user_data, 0);
     return_to_user_prog(int);
 }
 

@@ -319,8 +319,6 @@ void main_loop(void)
             // close the input device asap
             sacd_close(sacd_reader);
             sacd_reader = 0;
-
-            bd_contains_sacd_disc = 0;
         }
         else
         {
@@ -444,7 +442,7 @@ int main(int argc, char *argv[])
     // poll for an output_device
     poll_output_devices();
 
-    dump_sample_to_output_device();
+    //dump_sample_to_output_device();
 
     while (1)
     {
