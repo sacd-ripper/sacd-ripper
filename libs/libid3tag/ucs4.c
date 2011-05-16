@@ -41,12 +41,12 @@ id3_ucs4_t const id3_ucs4_empty[] = { 0 };
  */
 id3_length_t id3_ucs4_length(id3_ucs4_t const *ucs4)
 {
-  id3_ucs4_t const *ptr = ucs4;
+    id3_ucs4_t const *ptr = ucs4;
 
-  while (*ptr)
-    ++ptr;
+    while (*ptr)
+        ++ptr;
 
-  return ptr - ucs4;
+    return ptr - ucs4;
 }
 
 /*
@@ -55,7 +55,7 @@ id3_length_t id3_ucs4_length(id3_ucs4_t const *ucs4)
  */
 id3_length_t id3_ucs4_size(id3_ucs4_t const *ucs4)
 {
-  return id3_ucs4_length(ucs4) + 1;
+    return id3_ucs4_length(ucs4) + 1;
 }
 
 /*
@@ -64,7 +64,7 @@ id3_length_t id3_ucs4_size(id3_ucs4_t const *ucs4)
  */
 id3_length_t id3_ucs4_latin1size(id3_ucs4_t const *ucs4)
 {
-  return id3_ucs4_size(ucs4);
+    return id3_ucs4_size(ucs4);
 }
 
 /*
@@ -73,18 +73,19 @@ id3_length_t id3_ucs4_latin1size(id3_ucs4_t const *ucs4)
  */
 id3_length_t id3_ucs4_utf16size(id3_ucs4_t const *ucs4)
 {
-  id3_length_t size = 0;
+    id3_length_t size = 0;
 
-  while (*ucs4) {
-    ++size;
-    if (*ucs4 >= 0x00010000L &&
-	*ucs4 <= 0x0010ffffL)
-      ++size;
+    while (*ucs4)
+    {
+        ++size;
+        if (*ucs4 >= 0x00010000L &&
+            *ucs4 <= 0x0010ffffL)
+            ++size;
 
-    ++ucs4;
-  }
+        ++ucs4;
+    }
 
-  return size + 1;
+    return size + 1;
 }
 
 /*
@@ -93,28 +94,29 @@ id3_length_t id3_ucs4_utf16size(id3_ucs4_t const *ucs4)
  */
 id3_length_t id3_ucs4_utf8size(id3_ucs4_t const *ucs4)
 {
-  id3_length_t size = 0;
+    id3_length_t size = 0;
 
-  while (*ucs4) {
-    if (*ucs4 <= 0x0000007fL)
-      size += 1;
-    else if (*ucs4 <= 0x000007ffL)
-      size += 2;
-    else if (*ucs4 <= 0x0000ffffL)
-      size += 3;
-    else if (*ucs4 <= 0x001fffffL)
-      size += 4;
-    else if (*ucs4 <= 0x03ffffffL)
-      size += 5;
-    else if (*ucs4 <= 0x7fffffffL)
-      size += 6;
-    else
-      size += 2;  /* based on U+00B7 replacement char */
+    while (*ucs4)
+    {
+        if (*ucs4 <= 0x0000007fL)
+            size += 1;
+        else if (*ucs4 <= 0x000007ffL)
+            size += 2;
+        else if (*ucs4 <= 0x0000ffffL)
+            size += 3;
+        else if (*ucs4 <= 0x001fffffL)
+            size += 4;
+        else if (*ucs4 <= 0x03ffffffL)
+            size += 5;
+        else if (*ucs4 <= 0x7fffffffL)
+            size += 6;
+        else
+            size += 2;  /* based on U+00B7 replacement char */
 
-    ++ucs4;
-  }
+        ++ucs4;
+    }
 
-  return size + 1;
+    return size + 1;
 }
 
 /*
@@ -123,13 +125,13 @@ id3_length_t id3_ucs4_utf8size(id3_ucs4_t const *ucs4)
  */
 id3_latin1_t *id3_ucs4_latin1duplicate(id3_ucs4_t const *ucs4)
 {
-  id3_latin1_t *latin1;
+    id3_latin1_t *latin1;
 
-  latin1 = malloc(id3_ucs4_latin1size(ucs4) * sizeof(*latin1));
-  if (latin1)
-    id3_latin1_encode(latin1, ucs4);
+    latin1 = malloc(id3_ucs4_latin1size(ucs4) * sizeof(*latin1));
+    if (latin1)
+        id3_latin1_encode(latin1, ucs4);
 
-  return release(latin1);
+    return release(latin1);
 }
 
 /*
@@ -138,13 +140,13 @@ id3_latin1_t *id3_ucs4_latin1duplicate(id3_ucs4_t const *ucs4)
  */
 id3_utf16_t *id3_ucs4_utf16duplicate(id3_ucs4_t const *ucs4)
 {
-  id3_utf16_t *utf16;
+    id3_utf16_t *utf16;
 
-  utf16 = malloc(id3_ucs4_utf16size(ucs4) * sizeof(*utf16));
-  if (utf16)
-    id3_utf16_encode(utf16, ucs4);
+    utf16 = malloc(id3_ucs4_utf16size(ucs4) * sizeof(*utf16));
+    if (utf16)
+        id3_utf16_encode(utf16, ucs4);
 
-  return release(utf16);
+    return release(utf16);
 }
 
 /*
@@ -153,13 +155,13 @@ id3_utf16_t *id3_ucs4_utf16duplicate(id3_ucs4_t const *ucs4)
  */
 id3_utf8_t *id3_ucs4_utf8duplicate(id3_ucs4_t const *ucs4)
 {
-  id3_utf8_t *utf8;
+    id3_utf8_t *utf8;
 
-  utf8 = malloc(id3_ucs4_utf8size(ucs4) * sizeof(*utf8));
-  if (utf8)
-    id3_utf8_encode(utf8, ucs4);
+    utf8 = malloc(id3_ucs4_utf8size(ucs4) * sizeof(*utf8));
+    if (utf8)
+        id3_utf8_encode(utf8, ucs4);
 
-  return release(utf8);
+    return release(utf8);
 }
 
 /*
@@ -168,8 +170,8 @@ id3_utf8_t *id3_ucs4_utf8duplicate(id3_ucs4_t const *ucs4)
  */
 void id3_ucs4_copy(id3_ucs4_t *dest, id3_ucs4_t const *src)
 {
-  while ((*dest++ = *src++))
-    ;
+    while ((*dest++ = *src++))
+        ;
 }
 
 /*
@@ -178,13 +180,13 @@ void id3_ucs4_copy(id3_ucs4_t *dest, id3_ucs4_t const *src)
  */
 id3_ucs4_t *id3_ucs4_duplicate(id3_ucs4_t const *src)
 {
-  id3_ucs4_t *ucs4;
+    id3_ucs4_t *ucs4;
 
-  ucs4 = malloc(id3_ucs4_size(src) * sizeof(*ucs4));
-  if (ucs4)
-    id3_ucs4_copy(ucs4, src);
+    ucs4 = malloc(id3_ucs4_size(src) * sizeof(*ucs4));
+    if (ucs4)
+        id3_ucs4_copy(ucs4, src);
 
-  return ucs4;
+    return ucs4;
 }
 
 /*
@@ -193,20 +195,20 @@ id3_ucs4_t *id3_ucs4_duplicate(id3_ucs4_t const *src)
  */
 void id3_ucs4_putnumber(id3_ucs4_t *ucs4, unsigned long number)
 {
-  int digits[10], *digit;
+    int digits[10], *digit;
 
-  digit = digits;
+    digit = digits;
 
-  do {
-    *digit++ = number % 10;
-    number  /= 10;
-  }
-  while (number);
+    do
+    {
+        *digit++ = number % 10;
+        number  /= 10;
+    } while (number);
 
-  while (digit != digits)
-    *ucs4++ = '0' + *--digit;
+    while (digit != digits)
+        *ucs4++ = '0' + *--digit;
 
-  *ucs4 = 0;
+    *ucs4 = 0;
 }
 
 /*
@@ -215,10 +217,10 @@ void id3_ucs4_putnumber(id3_ucs4_t *ucs4, unsigned long number)
  */
 unsigned long id3_ucs4_getnumber(id3_ucs4_t const *ucs4)
 {
-  unsigned long number = 0;
+    unsigned long number = 0;
 
-  while (*ucs4 >= '0' && *ucs4 <= '9')
-    number = 10 * number + (*ucs4++ - '0');
+    while (*ucs4 >= '0' && *ucs4 <= '9')
+        number = 10 * number + (*ucs4++ - '0');
 
-  return number;
+    return number;
 }

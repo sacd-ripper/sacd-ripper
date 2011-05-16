@@ -31,7 +31,7 @@
 /* genres are stored in ucs4 format */
 # include "genre.dat"
 
-# define NGENRES  (sizeof(genre_table) / sizeof(genre_table[0]))
+# define NGENRES    (sizeof(genre_table) / sizeof(genre_table[0]))
 
 /*
  * NAME:	genre->index()
@@ -39,7 +39,7 @@
  */
 id3_ucs4_t const *id3_genre_index(unsigned int index)
 {
-  return (index < NGENRES) ? genre_table[index] : 0;
+    return (index < NGENRES) ? genre_table[index] : 0;
 }
 
 /*
@@ -48,27 +48,28 @@ id3_ucs4_t const *id3_genre_index(unsigned int index)
  */
 id3_ucs4_t const *id3_genre_name(id3_ucs4_t const *string)
 {
-  id3_ucs4_t const *ptr;
-  static id3_ucs4_t const genre_remix[] = { 'R', 'e', 'm', 'i', 'x', 0 };
-  static id3_ucs4_t const genre_cover[] = { 'C', 'o', 'v', 'e', 'r', 0 };
-  unsigned long number;
+    id3_ucs4_t const        *ptr;
+    static id3_ucs4_t const genre_remix[] = { 'R', 'e', 'm', 'i', 'x', 0 };
+    static id3_ucs4_t const genre_cover[] = { 'C', 'o', 'v', 'e', 'r', 0 };
+    unsigned long           number;
 
-  if (string == 0 || *string == 0)
-    return id3_ucs4_empty;
+    if (string == 0 || *string == 0)
+        return id3_ucs4_empty;
 
-  if (string[0] == 'R' && string[1] == 'X' && string[2] == 0)
-    return genre_remix;
-  if (string[0] == 'C' && string[1] == 'R' && string[2] == 0)
-    return genre_cover;
+    if (string[0] == 'R' && string[1] == 'X' && string[2] == 0)
+        return genre_remix;
+    if (string[0] == 'C' && string[1] == 'R' && string[2] == 0)
+        return genre_cover;
 
-  for (ptr = string; *ptr; ++ptr) {
-    if (*ptr < '0' || *ptr > '9')
-      return string;
-  }
+    for (ptr = string; *ptr; ++ptr)
+    {
+        if (*ptr < '0' || *ptr > '9')
+            return string;
+    }
 
-  number = id3_ucs4_getnumber(string);
+    number = id3_ucs4_getnumber(string);
 
-  return (number < NGENRES) ? genre_table[number] : string;
+    return (number < NGENRES) ? genre_table[number] : string;
 }
 
 /*
@@ -78,15 +79,16 @@ id3_ucs4_t const *id3_genre_name(id3_ucs4_t const *string)
 static
 id3_ucs4_t translate(id3_ucs4_t ch)
 {
-  if (ch) {
-    if (ch >= 'A' && ch <= 'Z')
-      ch += 'a' - 'A';
+    if (ch)
+    {
+        if (ch >= 'A' && ch <= 'Z')
+            ch += 'a' - 'A';
 
-    if (ch < 'a' || ch > 'z')
-      ch = ID3_UCS4_REPLACEMENTCHAR;
-  }
+        if (ch < 'a' || ch > 'z')
+            ch = ID3_UCS4_REPLACEMENTCHAR;
+    }
 
-  return ch;
+    return ch;
 }
 
 /*
@@ -96,23 +98,23 @@ id3_ucs4_t translate(id3_ucs4_t ch)
 static
 int compare(id3_ucs4_t const *str1, id3_ucs4_t const *str2)
 {
-  id3_ucs4_t c1, c2;
+    id3_ucs4_t c1, c2;
 
-  if (str1 == str2)
-    return 1;
-
-  do {
-    do
-      c1 = translate(*str1++);
-    while (c1 == ID3_UCS4_REPLACEMENTCHAR);
+    if (str1 == str2)
+        return 1;
 
     do
-      c2 = translate(*str2++);
-    while (c2 == ID3_UCS4_REPLACEMENTCHAR);
-  }
-  while (c1 && c1 == c2);
+    {
+        do
+            c1 = translate(*str1++);
+        while (c1 == ID3_UCS4_REPLACEMENTCHAR);
 
-  return c1 == c2;
+        do
+            c2 = translate(*str2++);
+        while (c2 == ID3_UCS4_REPLACEMENTCHAR);
+    } while (c1 && c1 == c2);
+
+    return c1 == c2;
 }
 
 /*
@@ -121,31 +123,34 @@ int compare(id3_ucs4_t const *str1, id3_ucs4_t const *str2)
  */
 int id3_genre_number(id3_ucs4_t const *string)
 {
-  id3_ucs4_t const *ptr;
-  int i;
+    id3_ucs4_t const *ptr;
+    int              i;
 
-  if (string == 0 || *string == 0)
+    if (string == 0 || *string == 0)
+        return -1;
+
+    for (ptr = string; *ptr; ++ptr)
+    {
+        if (*ptr < '0' || *ptr > '9')
+            break;
+    }
+
+    if (*ptr == 0)
+    {
+        unsigned long number;
+
+        number = id3_ucs4_getnumber(string);
+
+        return (number <= 0xff) ? number : -1;
+    }
+
+    for (i = 0; i < NGENRES; ++i)
+    {
+        if (compare(string, genre_table[i]))
+            return i;
+    }
+
+    /* no equivalent */
+
     return -1;
-
-  for (ptr = string; *ptr; ++ptr) {
-    if (*ptr < '0' || *ptr > '9')
-      break;
-  }
-
-  if (*ptr == 0) {
-    unsigned long number;
-
-    number = id3_ucs4_getnumber(string);
-
-    return (number <= 0xff) ? number : -1;
-  }
-
-  for (i = 0; i < NGENRES; ++i) {
-    if (compare(string, genre_table[i]))
-      return i;
-  }
-
-  /* no equivalent */
-
-  return -1;
 }

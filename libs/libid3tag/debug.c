@@ -38,185 +38,196 @@
 
 # if defined(DEBUG)
 
-# define DEBUG_MAGIC  0xdeadbeefL
+# define DEBUG_MAGIC    0xdeadbeefL
 
-struct debug {
-  char const *file;
-  unsigned int line;
-  size_t size;
-  struct debug *next;
-  struct debug *prev;
-  long int magic;
+struct debug
+{
+    char const   *file;
+    unsigned int line;
+    size_t       size;
+    struct debug *next;
+    struct debug *prev;
+    long int     magic;
 };
 
 static struct debug *allocated;
-static int registered;
+static int          registered;
 
 static
 void check(void)
 {
-  struct debug *debug;
+    struct debug *debug;
 
-  for (debug = allocated; debug; debug = debug->next) {
-    if (debug->magic != DEBUG_MAGIC) {
-      fprintf(stderr, "memory corruption\n");
-      break;
+    for (debug = allocated; debug; debug = debug->next)
+    {
+        if (debug->magic != DEBUG_MAGIC)
+        {
+            fprintf(stderr, "memory corruption\n");
+            break;
+        }
+
+        fprintf(stderr, "%s:%u: leaked %lu bytes\n",
+                debug->file, debug->line, debug->size);
     }
-
-    fprintf(stderr, "%s:%u: leaked %lu bytes\n",
-	    debug->file, debug->line, debug->size);
-  }
 }
 
 void *id3_debug_malloc(size_t size, char const *file, unsigned int line)
 {
-  struct debug *debug;
+    struct debug *debug;
 
-  if (!registered) {
-    atexit(check);
-    registered = 1;
-  }
+    if (!registered)
+    {
+        atexit(check);
+        registered = 1;
+    }
 
-  if (size == 0)
-    fprintf(stderr, "%s:%u: malloc(0)\n", file, line);
+    if (size == 0)
+        fprintf(stderr, "%s:%u: malloc(0)\n", file, line);
 
-  debug = malloc(sizeof(*debug) + size);
-  if (debug == 0) {
-    fprintf(stderr, "%s:%u: malloc(%lu) failed\n", file, line, size);
-    return 0;
-  }
+    debug = malloc(sizeof(*debug) + size);
+    if (debug == 0)
+    {
+        fprintf(stderr, "%s:%u: malloc(%lu) failed\n", file, line, size);
+        return 0;
+    }
 
-  debug->magic = DEBUG_MAGIC;
+    debug->magic = DEBUG_MAGIC;
 
-  debug->file = file;
-  debug->line = line;
-  debug->size = size;
+    debug->file = file;
+    debug->line = line;
+    debug->size = size;
 
-  debug->next = allocated;
-  debug->prev = 0;
+    debug->next = allocated;
+    debug->prev = 0;
 
-  if (allocated)
-    allocated->prev = debug;
+    if (allocated)
+        allocated->prev = debug;
 
-  allocated = debug;
+    allocated = debug;
 
-  return ++debug;
+    return ++debug;
 }
 
 void *id3_debug_calloc(size_t nmemb, size_t size,
-		       char const *file, unsigned int line)
+                       char const *file, unsigned int line)
 {
-  void *ptr;
+    void *ptr;
 
-  ptr = id3_debug_malloc(nmemb * size, file, line);
-  if (ptr)
-    memset(ptr, 0, nmemb * size);
+    ptr = id3_debug_malloc(nmemb * size, file, line);
+    if (ptr)
+        memset(ptr, 0, nmemb * size);
 
-  return ptr;
+    return ptr;
 }
 
 void *id3_debug_realloc(void *ptr, size_t size,
-			char const *file, unsigned int line)
+                        char const *file, unsigned int line)
 {
-  struct debug *debug, *new;
+    struct debug *debug, *new;
 
-  if (size == 0) {
-    id3_debug_free(ptr, file, line);
-    return 0;
-  }
+    if (size == 0)
+    {
+        id3_debug_free(ptr, file, line);
+        return 0;
+    }
 
-  if (ptr == 0)
-    return id3_debug_malloc(size, file, line);
+    if (ptr == 0)
+        return id3_debug_malloc(size, file, line);
 
-  debug = ptr;
-  --debug;
+    debug = ptr;
+    --debug;
 
-  if (debug->magic != DEBUG_MAGIC) {
-    fprintf(stderr, "%s:%u: realloc(%p, %lu) memory not allocated\n",
-	    file, line, ptr, size);
-    return 0;
-  }
+    if (debug->magic != DEBUG_MAGIC)
+    {
+        fprintf(stderr, "%s:%u: realloc(%p, %lu) memory not allocated\n",
+                file, line, ptr, size);
+        return 0;
+    }
 
-  new = realloc(debug, sizeof(*debug) + size);
-  if (new == 0) {
-    fprintf(stderr, "%s:%u: realloc(%p, %lu) failed\n", file, line, ptr, size);
-    return 0;
-  }
+    new = realloc(debug, sizeof(*debug) + size);
+    if (new == 0)
+    {
+        fprintf(stderr, "%s:%u: realloc(%p, %lu) failed\n", file, line, ptr, size);
+        return 0;
+    }
 
-  if (allocated == debug)
-    allocated = new;
+    if (allocated == debug)
+        allocated = new;
 
-  debug = new;
+    debug = new;
 
-  debug->file = file;
-  debug->line = line;
-  debug->size = size;
+    debug->file = file;
+    debug->line = line;
+    debug->size = size;
 
-  if (debug->next)
-    debug->next->prev = debug;
-  if (debug->prev)
-    debug->prev->next = debug;
+    if (debug->next)
+        debug->next->prev = debug;
+    if (debug->prev)
+        debug->prev->next = debug;
 
-  return ++debug;
+    return ++debug;
 }
 
 void id3_debug_free(void *ptr, char const *file, unsigned int line)
 {
-  struct debug *debug;
+    struct debug *debug;
 
-  if (ptr == 0) {
-    fprintf(stderr, "%s:%u: free(0)\n", file, line);
-    return;
-  }
+    if (ptr == 0)
+    {
+        fprintf(stderr, "%s:%u: free(0)\n", file, line);
+        return;
+    }
 
-  debug = ptr;
-  --debug;
+    debug = ptr;
+    --debug;
 
-  if (debug->magic != DEBUG_MAGIC) {
-    fprintf(stderr, "%s:%u: free(%p) memory not allocated\n", file, line, ptr);
-    return;
-  }
+    if (debug->magic != DEBUG_MAGIC)
+    {
+        fprintf(stderr, "%s:%u: free(%p) memory not allocated\n", file, line, ptr);
+        return;
+    }
 
-  debug->magic = 0;
+    debug->magic = 0;
 
-  if (debug->next)
-    debug->next->prev = debug->prev;
-  if (debug->prev)
-    debug->prev->next = debug->next;
+    if (debug->next)
+        debug->next->prev = debug->prev;
+    if (debug->prev)
+        debug->prev->next = debug->next;
 
-  if (allocated == debug)
-    allocated = debug->next;
+    if (allocated == debug)
+        allocated = debug->next;
 
-  free(debug);
+    free(debug);
 }
 
 void *id3_debug_release(void *ptr, char const *file, unsigned int line)
 {
-  struct debug *debug;
+    struct debug *debug;
 
-  if (ptr == 0)
-    return 0;
+    if (ptr == 0)
+        return 0;
 
-  debug = ptr;
-  --debug;
+    debug = ptr;
+    --debug;
 
-  if (debug->magic != DEBUG_MAGIC) {
-    fprintf(stderr, "%s:%u: release(%p) memory not allocated\n",
-	    file, line, ptr);
-    return ptr;
-  }
+    if (debug->magic != DEBUG_MAGIC)
+    {
+        fprintf(stderr, "%s:%u: release(%p) memory not allocated\n",
+                file, line, ptr);
+        return ptr;
+    }
 
-  if (debug->next)
-    debug->next->prev = debug->prev;
-  if (debug->prev)
-    debug->prev->next = debug->next;
+    if (debug->next)
+        debug->next->prev = debug->prev;
+    if (debug->prev)
+        debug->prev->next = debug->next;
 
-  if (allocated == debug)
-    allocated = debug->next;
+    if (allocated == debug)
+        allocated = debug->next;
 
-  memmove(debug, debug + 1, debug->size);
+    memmove(debug, debug + 1, debug->size);
 
-  return debug;
+    return debug;
 }
 
 # endif

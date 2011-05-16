@@ -30,7 +30,7 @@ void id3_frame_addref(struct id3_frame *);
 void id3_frame_delref(struct id3_frame *);
 
 struct id3_frame *id3_frame_parse(id3_byte_t const **, id3_length_t,
-				  unsigned int);
+                                  unsigned int);
 id3_length_t id3_frame_render(struct id3_frame const *, id3_byte_t **, int);
 
 # endif

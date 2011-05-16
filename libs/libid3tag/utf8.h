@@ -33,7 +33,7 @@ id3_length_t id3_utf8_encodechar(id3_utf8_t *, id3_ucs4_t);
 void id3_utf8_decode(id3_utf8_t const *, id3_ucs4_t *);
 void id3_utf8_encode(id3_utf8_t *, id3_ucs4_t const *);
 
-id3_length_t id3_utf8_put(id3_byte_t **, id3_utf8_t);
+id3_length_t id3_utf8_put(id3_byte_t * *, id3_utf8_t);
 id3_utf8_t id3_utf8_get(id3_byte_t const **);
 
 id3_length_t id3_utf8_serialize(id3_byte_t **, id3_ucs4_t const *, int);

@@ -36,7 +36,7 @@ id3_length_t id3_latin1_encodechar(id3_latin1_t *, id3_ucs4_t);
 void id3_latin1_decode(id3_latin1_t const *, id3_ucs4_t *);
 void id3_latin1_encode(id3_latin1_t *, id3_ucs4_t const *);
 
-id3_length_t id3_latin1_put(id3_byte_t **, id3_latin1_t);
+id3_length_t id3_latin1_put(id3_byte_t * *, id3_latin1_t);
 id3_latin1_t id3_latin1_get(id3_byte_t const **);
 
 id3_length_t id3_latin1_serialize(id3_byte_t **, id3_ucs4_t const *, int);

@@ -1,7 +1,7 @@
 /**
  * SACD Ripper - http://code.google.com/p/sacd-ripper/
  *
- * Copyright (c) 2010-2011 by respective authors. 
+ * Copyright (c) 2010-2011 by respective authors.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- */ 
+ */
 
 #ifndef __IOCTL_H__
 #define __IOCTL_H__
@@ -31,7 +31,7 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif 
+#endif
 
 extern int ps3rom_lv2_init(int fd, uint8_t *buffer);
 extern int ps3rom_lv2_enable_encryption(int fd, uint8_t *buffer, uint32_t lba);
@@ -50,6 +50,6 @@ extern int ps3rom_lv2_report_key_finish(int fd, uint8_t agid);
 
 #ifdef __cplusplus
 };
-#endif 
+#endif
 
 #endif /* __IOCTL_H__ */

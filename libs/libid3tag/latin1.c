@@ -37,12 +37,12 @@
  */
 id3_length_t id3_latin1_length(id3_latin1_t const *latin1)
 {
-  id3_latin1_t const *ptr = latin1;
+    id3_latin1_t const *ptr = latin1;
 
-  while (*ptr)
-    ++ptr;
+    while (*ptr)
+        ++ptr;
 
-  return ptr - latin1;
+    return ptr - latin1;
 }
 
 /*
@@ -51,7 +51,7 @@ id3_length_t id3_latin1_length(id3_latin1_t const *latin1)
  */
 id3_length_t id3_latin1_size(id3_latin1_t const *latin1)
 {
-  return id3_latin1_length(latin1) + 1;
+    return id3_latin1_length(latin1) + 1;
 }
 
 /*
@@ -60,8 +60,8 @@ id3_length_t id3_latin1_size(id3_latin1_t const *latin1)
  */
 void id3_latin1_copy(id3_latin1_t *dest, id3_latin1_t const *src)
 {
-  while ((*dest++ = *src++))
-    ;
+    while ((*dest++ = *src++))
+        ;
 }
 
 /*
@@ -70,13 +70,13 @@ void id3_latin1_copy(id3_latin1_t *dest, id3_latin1_t const *src)
  */
 id3_latin1_t *id3_latin1_duplicate(id3_latin1_t const *src)
 {
-  id3_latin1_t *latin1;
+    id3_latin1_t *latin1;
 
-  latin1 = malloc(id3_latin1_size(src) * sizeof(*latin1));
-  if (latin1)
-    id3_latin1_copy(latin1, src);
+    latin1 = malloc(id3_latin1_size(src) * sizeof(*latin1));
+    if (latin1)
+        id3_latin1_copy(latin1, src);
 
-  return latin1;
+    return latin1;
 }
 
 /*
@@ -85,13 +85,13 @@ id3_latin1_t *id3_latin1_duplicate(id3_latin1_t const *src)
  */
 id3_ucs4_t *id3_latin1_ucs4duplicate(id3_latin1_t const *latin1)
 {
-  id3_ucs4_t *ucs4;
+    id3_ucs4_t *ucs4;
 
-  ucs4 = malloc((id3_latin1_length(latin1) + 1) * sizeof(*ucs4));
-  if (ucs4)
-    id3_latin1_decode(latin1, ucs4);
+    ucs4 = malloc((id3_latin1_length(latin1) + 1) * sizeof(*ucs4));
+    if (ucs4)
+        id3_latin1_decode(latin1, ucs4);
 
-  return release(ucs4);
+    return release(ucs4);
 }
 
 /*
@@ -99,11 +99,11 @@ id3_ucs4_t *id3_latin1_ucs4duplicate(id3_latin1_t const *latin1)
  * DESCRIPTION:	decode a (single) latin1 char into a single ucs4 char
  */
 id3_length_t id3_latin1_decodechar(id3_latin1_t const *latin1,
-				   id3_ucs4_t *ucs4)
+                                   id3_ucs4_t *ucs4)
 {
-  *ucs4 = *latin1;
+    *ucs4 = *latin1;
 
-  return 1;
+    return 1;
 }
 
 /*
@@ -112,11 +112,11 @@ id3_length_t id3_latin1_decodechar(id3_latin1_t const *latin1,
  */
 id3_length_t id3_latin1_encodechar(id3_latin1_t *latin1, id3_ucs4_t ucs4)
 {
-  *latin1 = ucs4;
-  if (ucs4 > 0x000000ffL)
-    *latin1 = ID3_UCS4_REPLACEMENTCHAR;
+    *latin1 = ucs4;
+    if (ucs4 > 0x000000ffL)
+        *latin1 = ID3_UCS4_REPLACEMENTCHAR;
 
-  return 1;
+    return 1;
 }
 
 /*
@@ -125,9 +125,9 @@ id3_length_t id3_latin1_encodechar(id3_latin1_t *latin1, id3_ucs4_t ucs4)
  */
 void id3_latin1_decode(id3_latin1_t const *latin1, id3_ucs4_t *ucs4)
 {
-  do
-    latin1 += id3_latin1_decodechar(latin1, ucs4);
-  while (*ucs4++);
+    do
+        latin1 += id3_latin1_decodechar(latin1, ucs4);
+    while (*ucs4++);
 }
 
 /*
@@ -136,9 +136,9 @@ void id3_latin1_decode(id3_latin1_t const *latin1, id3_ucs4_t *ucs4)
  */
 void id3_latin1_encode(id3_latin1_t *latin1, id3_ucs4_t const *ucs4)
 {
-  do
-    latin1 += id3_latin1_encodechar(latin1, *ucs4);
-  while (*ucs4++);
+    do
+        latin1 += id3_latin1_encodechar(latin1, *ucs4);
+    while (*ucs4++);
 }
 
 /*
@@ -147,10 +147,10 @@ void id3_latin1_encode(id3_latin1_t *latin1, id3_ucs4_t const *ucs4)
  */
 id3_length_t id3_latin1_put(id3_byte_t **ptr, id3_latin1_t latin1)
 {
-  if (ptr)
-    *(*ptr)++ = latin1;
+    if (ptr)
+        *(*ptr)++ = latin1;
 
-  return 1;
+    return 1;
 }
 
 /*
@@ -159,7 +159,7 @@ id3_length_t id3_latin1_put(id3_byte_t **ptr, id3_latin1_t latin1)
  */
 id3_latin1_t id3_latin1_get(id3_byte_t const **ptr)
 {
-  return *(*ptr)++;
+    return *(*ptr)++;
 }
 
 /*
@@ -167,22 +167,24 @@ id3_latin1_t id3_latin1_get(id3_byte_t const **ptr)
  * DESCRIPTION:	serialize a ucs4 string using latin1 encoding
  */
 id3_length_t id3_latin1_serialize(id3_byte_t **ptr, id3_ucs4_t const *ucs4,
-				  int terminate)
+                                  int terminate)
 {
-  id3_length_t size = 0;
-  id3_latin1_t latin1[1], *out;
+    id3_length_t size = 0;
+    id3_latin1_t latin1[1], *out;
 
-  while (*ucs4) {
-    switch (id3_latin1_encodechar(out = latin1, *ucs4++)) {
-    case 1: size += id3_latin1_put(ptr, *out++);
-    case 0: break;
+    while (*ucs4)
+    {
+        switch (id3_latin1_encodechar(out = latin1, *ucs4++))
+        {
+        case 1: size += id3_latin1_put(ptr, *out++);
+        case 0: break;
+        }
     }
-  }
 
-  if (terminate)
-    size += id3_latin1_put(ptr, 0);
+    if (terminate)
+        size += id3_latin1_put(ptr, 0);
 
-  return size;
+    return size;
 }
 
 /*
@@ -191,27 +193,27 @@ id3_length_t id3_latin1_serialize(id3_byte_t **ptr, id3_ucs4_t const *ucs4,
  */
 id3_ucs4_t *id3_latin1_deserialize(id3_byte_t const **ptr, id3_length_t length)
 {
-  id3_byte_t const *end;
-  id3_latin1_t *latin1ptr, *latin1;
-  id3_ucs4_t *ucs4;
+    id3_byte_t const *end;
+    id3_latin1_t     *latin1ptr, *latin1;
+    id3_ucs4_t       *ucs4;
 
-  end = *ptr + length;
+    end = *ptr + length;
 
-  latin1 = malloc((length + 1) * sizeof(*latin1));
-  if (latin1 == 0)
-    return 0;
+    latin1 = malloc((length + 1) * sizeof(*latin1));
+    if (latin1 == 0)
+        return 0;
 
-  latin1ptr = latin1;
-  while (end - *ptr > 0 && (*latin1ptr = id3_latin1_get(ptr)))
-    ++latin1ptr;
+    latin1ptr = latin1;
+    while (end - *ptr > 0 && (*latin1ptr = id3_latin1_get(ptr)))
+        ++latin1ptr;
 
-  *latin1ptr = 0;
+    *latin1ptr = 0;
 
-  ucs4 = malloc((id3_latin1_length(latin1) + 1) * sizeof(*ucs4));
-  if (ucs4)
-    id3_latin1_decode(latin1, ucs4);
+    ucs4 = malloc((id3_latin1_length(latin1) + 1) * sizeof(*ucs4));
+    if (ucs4)
+        id3_latin1_decode(latin1, ucs4);
 
-  free(latin1);
+    free(latin1);
 
-  return ucs4;
+    return ucs4;
 }

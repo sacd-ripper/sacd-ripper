@@ -34,12 +34,12 @@ char const id3_author[]    = ID3_AUTHOR " <" ID3_EMAIL ">";
 
 char const id3_build[] = ""
 # if defined(DEBUG)
-  "DEBUG "
+                         "DEBUG "
 # elif defined(NDEBUG)
-  "NDEBUG "
+                         "NDEBUG "
 # endif
 
 # if defined(EXPERIMENTAL)
-  "EXPERIMENTAL "
+                         "EXPERIMENTAL "
 # endif
 ;
