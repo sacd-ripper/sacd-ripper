@@ -1,7 +1,7 @@
 /**
  * SACD Ripper - http://code.google.com/p/sacd-ripper/
  *
- * Copyright (c) 2010-2011 by respective authors. 
+ * Copyright (c) 2010-2011 by respective authors.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,34 +17,34 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- */ 
- 
+ */
+
 #ifndef SACD_INPUT_H_INCLUDED
 #define SACD_INPUT_H_INCLUDED
 
-#if defined( __MINGW32__ )
+#if defined(__MINGW32__)
 #   undef  lseek
-#   define lseek  _lseeki64
+#   define lseek            _lseeki64
 #   undef  fseeko
-#   define fseeko fseeko64
+#   define fseeko           fseeko64
 #   undef  ftello
-#   define ftello ftello64
+#   define ftello           ftello64
 #   define flockfile(...)
 #   define funlockfile(...)
-#   define getc_unlocked getc
+#   define getc_unlocked    getc
 #   undef  off_t
-#   define off_t off64_t
+#   define off_t            off64_t
 #   undef  stat
-#   define stat  _stati64
-#   define fstat _fstati64
-#   define wstat _wstati64
+#   define stat             _stati64
+#   define fstat            _fstati64
+#   define wstat            _wstati64
 #endif
 
-typedef struct sacd_input_s *sacd_input_t;
+typedef struct sacd_input_s * sacd_input_t;
 
-extern sacd_input_t sacd_input_open  (const char *);
-extern int          sacd_input_close (sacd_input_t);
-extern ssize_t      sacd_input_read  (sacd_input_t, int, int, void *);
-extern char *       sacd_input_error (sacd_input_t);
+extern sacd_input_t sacd_input_open(const char *);
+extern int     sacd_input_close(sacd_input_t);
+extern ssize_t sacd_input_read(sacd_input_t, int, int, void *);
+extern char    * sacd_input_error(sacd_input_t);
 
 #endif /* SACD_INPUT_H_INCLUDED */

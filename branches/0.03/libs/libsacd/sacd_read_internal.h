@@ -1,7 +1,7 @@
 /**
  * SACD Ripper - http://code.google.com/p/sacd-ripper/
  *
- * Copyright (c) 2010-2011 by respective authors. 
+ * Copyright (c) 2010-2011 by respective authors.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- */ 
+ */
 
 #ifndef SACDREAD_INTERNAL_H
 #define SACDREAD_INTERNAL_H
@@ -26,11 +26,11 @@
 #include <unistd.h>
 #endif /* _MSC_VER */
 
-#define CHECK_VALUE(arg) \
- if(!(arg)) { \
-   fprintf(stderr, "\n*** libsacdread: CHECK_VALUE failed in %s:%i ***" \
-                   "\n*** for %s ***\n\n", \
-                   __FILE__, __LINE__, # arg ); \
- }
+#define CHECK_VALUE(arg)                                                     \
+    if (!(arg)) {                                                            \
+        fprintf(stderr, "\n*** libsacdread: CHECK_VALUE failed in %s:%i ***" \
+                "\n*** for %s ***\n\n",                                      \
+                __FILE__, __LINE__, # arg);                                  \
+    }
 
 #endif /* SACDREAD_INTERNAL_H */

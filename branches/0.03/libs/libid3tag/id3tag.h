@@ -29,219 +29,241 @@
 extern "C" {
 # endif
 
-# define ID3_TAG_VERSION		0x0400
-# define ID3_TAG_VERSION_MAJOR(x)	(((x) >> 8) & 0xff)
-# define ID3_TAG_VERSION_MINOR(x)	(((x) >> 0) & 0xff)
+# define ID3_TAG_VERSION    0x0400
+# define ID3_TAG_VERSION_MAJOR(x)    (((x) >> 8) & 0xff)
+# define ID3_TAG_VERSION_MINOR(x)    (((x) >> 0) & 0xff)
 
-typedef unsigned char id3_byte_t;
-typedef unsigned long id3_length_t;
+typedef unsigned char    id3_byte_t;
+typedef unsigned long    id3_length_t;
 
-typedef unsigned long id3_ucs4_t;
+typedef unsigned long    id3_ucs4_t;
 
-typedef unsigned char id3_latin1_t;
-typedef unsigned short id3_utf16_t;
-typedef signed char id3_utf8_t;
+typedef unsigned char    id3_latin1_t;
+typedef unsigned short   id3_utf16_t;
+typedef signed char      id3_utf8_t;
 
-struct id3_tag {
-  unsigned int refcount;
-  unsigned int version;
-  int flags;
-  int extendedflags;
-  int restrictions;
-  int options;
-  unsigned int nframes;
-  struct id3_frame **frames;
-  id3_length_t paddedsize;
+struct id3_tag
+{
+    unsigned int     refcount;
+    unsigned int     version;
+    int              flags;
+    int              extendedflags;
+    int              restrictions;
+    int              options;
+    unsigned int     nframes;
+    struct id3_frame **frames;
+    id3_length_t     paddedsize;
 };
 
-# define ID3_TAG_QUERYSIZE	10
+# define ID3_TAG_QUERYSIZE    10
 
 /* ID3v1 field frames */
 
-# define ID3_FRAME_TITLE	"TIT2"
-# define ID3_FRAME_ARTIST	"TPE1"
-# define ID3_FRAME_ALBUM	"TALB"
-# define ID3_FRAME_TRACK	"TRCK"
-# define ID3_FRAME_YEAR		"TDRC"
-# define ID3_FRAME_GENRE	"TCON"
-# define ID3_FRAME_COMMENT	"COMM"
+# define ID3_FRAME_TITLE      "TIT2"
+# define ID3_FRAME_ARTIST     "TPE1"
+# define ID3_FRAME_ALBUM      "TALB"
+# define ID3_FRAME_TRACK      "TRCK"
+# define ID3_FRAME_YEAR       "TDRC"
+# define ID3_FRAME_GENRE      "TCON"
+# define ID3_FRAME_COMMENT    "COMM"
 
 /* special frames */
 
-# define ID3_FRAME_OBSOLETE	"ZOBS"	/* with apologies to the French */
+# define ID3_FRAME_OBSOLETE    "ZOBS"   /* with apologies to the French */
 
 /* tag flags */
 
-enum {
-  ID3_TAG_FLAG_UNSYNCHRONISATION     = 0x80,
-  ID3_TAG_FLAG_EXTENDEDHEADER        = 0x40,
-  ID3_TAG_FLAG_EXPERIMENTALINDICATOR = 0x20,
-  ID3_TAG_FLAG_FOOTERPRESENT         = 0x10,
+enum
+{
+    ID3_TAG_FLAG_UNSYNCHRONISATION     = 0x80,
+    ID3_TAG_FLAG_EXTENDEDHEADER        = 0x40,
+    ID3_TAG_FLAG_EXPERIMENTALINDICATOR = 0x20,
+    ID3_TAG_FLAG_FOOTERPRESENT         = 0x10,
 
-  ID3_TAG_FLAG_KNOWNFLAGS            = 0xf0
+    ID3_TAG_FLAG_KNOWNFLAGS            = 0xf0
 };
 
 /* tag extended flags */
 
-enum {
-  ID3_TAG_EXTENDEDFLAG_TAGISANUPDATE   = 0x40,
-  ID3_TAG_EXTENDEDFLAG_CRCDATAPRESENT  = 0x20,
-  ID3_TAG_EXTENDEDFLAG_TAGRESTRICTIONS = 0x10,
+enum
+{
+    ID3_TAG_EXTENDEDFLAG_TAGISANUPDATE   = 0x40,
+    ID3_TAG_EXTENDEDFLAG_CRCDATAPRESENT  = 0x20,
+    ID3_TAG_EXTENDEDFLAG_TAGRESTRICTIONS = 0x10,
 
-  ID3_TAG_EXTENDEDFLAG_KNOWNFLAGS      = 0x70
+    ID3_TAG_EXTENDEDFLAG_KNOWNFLAGS      = 0x70
 };
 
 /* tag restrictions */
 
-enum {
-  ID3_TAG_RESTRICTION_TAGSIZE_MASK             = 0xc0,
-  ID3_TAG_RESTRICTION_TAGSIZE_128_FRAMES_1_MB  = 0x00,
-  ID3_TAG_RESTRICTION_TAGSIZE_64_FRAMES_128_KB = 0x40,
-  ID3_TAG_RESTRICTION_TAGSIZE_32_FRAMES_40_KB  = 0x80,
-  ID3_TAG_RESTRICTION_TAGSIZE_32_FRAMES_4_KB   = 0xc0
+enum
+{
+    ID3_TAG_RESTRICTION_TAGSIZE_MASK             = 0xc0,
+    ID3_TAG_RESTRICTION_TAGSIZE_128_FRAMES_1_MB  = 0x00,
+    ID3_TAG_RESTRICTION_TAGSIZE_64_FRAMES_128_KB = 0x40,
+    ID3_TAG_RESTRICTION_TAGSIZE_32_FRAMES_40_KB  = 0x80,
+    ID3_TAG_RESTRICTION_TAGSIZE_32_FRAMES_4_KB   = 0xc0
 };
 
-enum {
-  ID3_TAG_RESTRICTION_TEXTENCODING_MASK        = 0x20,
-  ID3_TAG_RESTRICTION_TEXTENCODING_NONE        = 0x00,
-  ID3_TAG_RESTRICTION_TEXTENCODING_LATIN1_UTF8 = 0x20
+enum
+{
+    ID3_TAG_RESTRICTION_TEXTENCODING_MASK        = 0x20,
+    ID3_TAG_RESTRICTION_TEXTENCODING_NONE        = 0x00,
+    ID3_TAG_RESTRICTION_TEXTENCODING_LATIN1_UTF8 = 0x20
 };
 
-enum {
-  ID3_TAG_RESTRICTION_TEXTSIZE_MASK            = 0x18,
-  ID3_TAG_RESTRICTION_TEXTSIZE_NONE            = 0x00,
-  ID3_TAG_RESTRICTION_TEXTSIZE_1024_CHARS      = 0x08,
-  ID3_TAG_RESTRICTION_TEXTSIZE_128_CHARS       = 0x10,
-  ID3_TAG_RESTRICTION_TEXTSIZE_30_CHARS        = 0x18
+enum
+{
+    ID3_TAG_RESTRICTION_TEXTSIZE_MASK       = 0x18,
+    ID3_TAG_RESTRICTION_TEXTSIZE_NONE       = 0x00,
+    ID3_TAG_RESTRICTION_TEXTSIZE_1024_CHARS = 0x08,
+    ID3_TAG_RESTRICTION_TEXTSIZE_128_CHARS  = 0x10,
+    ID3_TAG_RESTRICTION_TEXTSIZE_30_CHARS   = 0x18
 };
 
-enum {
-  ID3_TAG_RESTRICTION_IMAGEENCODING_MASK       = 0x04,
-  ID3_TAG_RESTRICTION_IMAGEENCODING_NONE       = 0x00,
-  ID3_TAG_RESTRICTION_IMAGEENCODING_PNG_JPEG   = 0x04
+enum
+{
+    ID3_TAG_RESTRICTION_IMAGEENCODING_MASK     = 0x04,
+    ID3_TAG_RESTRICTION_IMAGEENCODING_NONE     = 0x00,
+    ID3_TAG_RESTRICTION_IMAGEENCODING_PNG_JPEG = 0x04
 };
 
-enum {
-  ID3_TAG_RESTRICTION_IMAGESIZE_MASK           = 0x03,
-  ID3_TAG_RESTRICTION_IMAGESIZE_NONE           = 0x00,
-  ID3_TAG_RESTRICTION_IMAGESIZE_256_256        = 0x01,
-  ID3_TAG_RESTRICTION_IMAGESIZE_64_64          = 0x02,
-  ID3_TAG_RESTRICTION_IMAGESIZE_64_64_EXACT    = 0x03
+enum
+{
+    ID3_TAG_RESTRICTION_IMAGESIZE_MASK        = 0x03,
+    ID3_TAG_RESTRICTION_IMAGESIZE_NONE        = 0x00,
+    ID3_TAG_RESTRICTION_IMAGESIZE_256_256     = 0x01,
+    ID3_TAG_RESTRICTION_IMAGESIZE_64_64       = 0x02,
+    ID3_TAG_RESTRICTION_IMAGESIZE_64_64_EXACT = 0x03
 };
 
 /* library options */
 
-enum {
-  ID3_TAG_OPTION_UNSYNCHRONISATION = 0x0001,	/* use unsynchronisation */
-  ID3_TAG_OPTION_COMPRESSION       = 0x0002,	/* use compression */
-  ID3_TAG_OPTION_CRC               = 0x0004,	/* use CRC */
+enum
+{
+    ID3_TAG_OPTION_UNSYNCHRONISATION = 0x0001,  /* use unsynchronisation */
+    ID3_TAG_OPTION_COMPRESSION       = 0x0002,  /* use compression */
+    ID3_TAG_OPTION_CRC               = 0x0004,  /* use CRC */
 
-  ID3_TAG_OPTION_APPENDEDTAG       = 0x0010,	/* tag will be appended */
-  ID3_TAG_OPTION_FILEALTERED       = 0x0020,	/* audio data was altered */
+    ID3_TAG_OPTION_APPENDEDTAG       = 0x0010,  /* tag will be appended */
+    ID3_TAG_OPTION_FILEALTERED       = 0x0020,  /* audio data was altered */
 
-  ID3_TAG_OPTION_ID3V1             = 0x0100	/* render ID3v1/ID3v1.1 tag */
+    ID3_TAG_OPTION_ID3V1             = 0x0100   /* render ID3v1/ID3v1.1 tag */
 };
 
-struct id3_frame {
-  char id[5];
-  char const *description;
-  unsigned int refcount;
-  int flags;
-  int group_id;
-  int encryption_method;
-  id3_byte_t *encoded;
-  id3_length_t encoded_length;
-  id3_length_t decoded_length;
-  unsigned int nfields;
-  union id3_field *fields;
+struct id3_frame
+{
+    char            id[5];
+    char const      *description;
+    unsigned int    refcount;
+    int             flags;
+    int             group_id;
+    int             encryption_method;
+    id3_byte_t      *encoded;
+    id3_length_t    encoded_length;
+    id3_length_t    decoded_length;
+    unsigned int    nfields;
+    union id3_field *fields;
 };
 
-enum {
-  /* frame status flags */
-  ID3_FRAME_FLAG_TAGALTERPRESERVATION	= 0x4000,
-  ID3_FRAME_FLAG_FILEALTERPRESERVATION	= 0x2000,
-  ID3_FRAME_FLAG_READONLY		= 0x1000,
+enum
+{
+    /* frame status flags */
+    ID3_FRAME_FLAG_TAGALTERPRESERVATION  = 0x4000,
+    ID3_FRAME_FLAG_FILEALTERPRESERVATION = 0x2000,
+    ID3_FRAME_FLAG_READONLY              = 0x1000,
 
-  ID3_FRAME_FLAG_STATUSFLAGS            = 0xff00,
+    ID3_FRAME_FLAG_STATUSFLAGS           = 0xff00,
 
-  /* frame format flags */
-  ID3_FRAME_FLAG_GROUPINGIDENTITY	= 0x0040,
-  ID3_FRAME_FLAG_COMPRESSION		= 0x0008,
-  ID3_FRAME_FLAG_ENCRYPTION		= 0x0004,
-  ID3_FRAME_FLAG_UNSYNCHRONISATION	= 0x0002,
-  ID3_FRAME_FLAG_DATALENGTHINDICATOR	= 0x0001,
+    /* frame format flags */
+    ID3_FRAME_FLAG_GROUPINGIDENTITY      = 0x0040,
+    ID3_FRAME_FLAG_COMPRESSION           = 0x0008,
+    ID3_FRAME_FLAG_ENCRYPTION            = 0x0004,
+    ID3_FRAME_FLAG_UNSYNCHRONISATION     = 0x0002,
+    ID3_FRAME_FLAG_DATALENGTHINDICATOR   = 0x0001,
 
-  ID3_FRAME_FLAG_FORMATFLAGS            = 0x00ff,
+    ID3_FRAME_FLAG_FORMATFLAGS           = 0x00ff,
 
-  ID3_FRAME_FLAG_KNOWNFLAGS             = 0x704f
+    ID3_FRAME_FLAG_KNOWNFLAGS            = 0x704f
 };
 
-enum id3_field_type {
-  ID3_FIELD_TYPE_TEXTENCODING,
-  ID3_FIELD_TYPE_LATIN1,
-  ID3_FIELD_TYPE_LATIN1FULL,
-  ID3_FIELD_TYPE_LATIN1LIST,
-  ID3_FIELD_TYPE_STRING,
-  ID3_FIELD_TYPE_STRINGFULL,
-  ID3_FIELD_TYPE_STRINGLIST,
-  ID3_FIELD_TYPE_LANGUAGE,
-  ID3_FIELD_TYPE_FRAMEID,
-  ID3_FIELD_TYPE_DATE,
-  ID3_FIELD_TYPE_INT8,
-  ID3_FIELD_TYPE_INT16,
-  ID3_FIELD_TYPE_INT24,
-  ID3_FIELD_TYPE_INT32,
-  ID3_FIELD_TYPE_INT32PLUS,
-  ID3_FIELD_TYPE_BINARYDATA
+enum id3_field_type
+{
+    ID3_FIELD_TYPE_TEXTENCODING,
+    ID3_FIELD_TYPE_LATIN1,
+    ID3_FIELD_TYPE_LATIN1FULL,
+    ID3_FIELD_TYPE_LATIN1LIST,
+    ID3_FIELD_TYPE_STRING,
+    ID3_FIELD_TYPE_STRINGFULL,
+    ID3_FIELD_TYPE_STRINGLIST,
+    ID3_FIELD_TYPE_LANGUAGE,
+    ID3_FIELD_TYPE_FRAMEID,
+    ID3_FIELD_TYPE_DATE,
+    ID3_FIELD_TYPE_INT8,
+    ID3_FIELD_TYPE_INT16,
+    ID3_FIELD_TYPE_INT24,
+    ID3_FIELD_TYPE_INT32,
+    ID3_FIELD_TYPE_INT32PLUS,
+    ID3_FIELD_TYPE_BINARYDATA
 };
 
-enum id3_field_textencoding {
-  ID3_FIELD_TEXTENCODING_ISO_8859_1 = 0x00,
-  ID3_FIELD_TEXTENCODING_UTF_16     = 0x01,
-  ID3_FIELD_TEXTENCODING_UTF_16BE   = 0x02,
-  ID3_FIELD_TEXTENCODING_UTF_8      = 0x03
+enum id3_field_textencoding
+{
+    ID3_FIELD_TEXTENCODING_ISO_8859_1 = 0x00,
+    ID3_FIELD_TEXTENCODING_UTF_16     = 0x01,
+    ID3_FIELD_TEXTENCODING_UTF_16BE   = 0x02,
+    ID3_FIELD_TEXTENCODING_UTF_8      = 0x03
 };
 
-union id3_field {
-  enum id3_field_type type;
-  struct {
+union id3_field
+{
     enum id3_field_type type;
-    signed long value;
-  } number;
-  struct {
-    enum id3_field_type type;
-    id3_latin1_t *ptr;
-  } latin1;
-  struct {
-    enum id3_field_type type;
-    unsigned int nstrings;
-    id3_latin1_t **strings;
-  } latin1list;
-  struct {
-    enum id3_field_type type;
-    id3_ucs4_t *ptr;
-  } string;
-  struct {
-    enum id3_field_type type;
-    unsigned int nstrings;
-    id3_ucs4_t **strings;
-  } stringlist;
-  struct {
-    enum id3_field_type type;
-    char value[9];
-  } immediate;
-  struct {
-    enum id3_field_type type;
-    id3_byte_t *data;
-    id3_length_t length;
-  } binary;
+    struct
+    {
+        enum id3_field_type type;
+        signed long         value;
+    } number;
+    struct
+    {
+        enum id3_field_type type;
+        id3_latin1_t        *ptr;
+    } latin1;
+    struct
+    {
+        enum id3_field_type type;
+        unsigned int        nstrings;
+        id3_latin1_t        **strings;
+    } latin1list;
+    struct
+    {
+        enum id3_field_type type;
+        id3_ucs4_t          *ptr;
+    } string;
+    struct
+    {
+        enum id3_field_type type;
+        unsigned int        nstrings;
+        id3_ucs4_t          **strings;
+    } stringlist;
+    struct
+    {
+        enum id3_field_type type;
+        char                value[9];
+    } immediate;
+    struct
+    {
+        enum id3_field_type type;
+        id3_byte_t          *data;
+        id3_length_t        length;
+    } binary;
 };
 
 /* file interface */
 
-enum id3_file_mode {
-  ID3_FILE_MODE_READONLY = 0,
-  ID3_FILE_MODE_READWRITE
+enum id3_file_mode
+{
+    ID3_FILE_MODE_READONLY = 0,
+    ID3_FILE_MODE_READWRITE
 };
 
 struct id3_file *id3_file_open(char const *, enum id3_file_mode);
@@ -268,9 +290,9 @@ int id3_tag_attachframe(struct id3_tag *, struct id3_frame *);
 int id3_tag_detachframe(struct id3_tag *, struct id3_frame *);
 
 struct id3_frame *id3_tag_findframe(struct id3_tag const *,
-				    char const *, unsigned int);
+                                    char const *, unsigned int);
 
-signed long id3_tag_query(id3_byte_t const *, id3_length_t);
+signed long    id3_tag_query(id3_byte_t const *, id3_length_t);
 
 struct id3_tag *id3_tag_parse(id3_byte_t const *, id3_length_t);
 id3_length_t id3_tag_render(struct id3_tag const *, id3_byte_t *);
@@ -297,7 +319,7 @@ int id3_field_setstring(union id3_field *, id3_ucs4_t const *);
 int id3_field_setfullstring(union id3_field *, id3_ucs4_t const *);
 int id3_field_setframeid(union id3_field *, char const *);
 int id3_field_setbinarydata(union id3_field *,
-			    id3_byte_t const *, id3_length_t);
+                            id3_byte_t const *, id3_length_t);
 
 signed long id3_field_getint(union id3_field const *);
 enum id3_field_textencoding id3_field_gettextencoding(union id3_field const *);
@@ -307,10 +329,10 @@ id3_ucs4_t const *id3_field_getstring(union id3_field const *);
 id3_ucs4_t const *id3_field_getfullstring(union id3_field const *);
 unsigned int id3_field_getnstrings(union id3_field const *);
 id3_ucs4_t const *id3_field_getstrings(union id3_field const *,
-				       unsigned int);
+                                       unsigned int);
 char const *id3_field_getframeid(union id3_field const *);
 id3_byte_t const *id3_field_getbinarydata(union id3_field const *,
-					  id3_length_t *);
+                                          id3_length_t *);
 
 /* genre interface */
 
@@ -335,22 +357,22 @@ id3_ucs4_t *id3_utf8_ucs4duplicate(id3_utf8_t const *);
 
 /* version interface */
 
-# define ID3_VERSION_MAJOR	0
-# define ID3_VERSION_MINOR	15
-# define ID3_VERSION_PATCH	1
-# define ID3_VERSION_EXTRA	" (beta)"
+# define ID3_VERSION_MAJOR    0
+# define ID3_VERSION_MINOR    15
+# define ID3_VERSION_PATCH    1
+# define ID3_VERSION_EXTRA    " (beta)"
 
-# define ID3_VERSION_STRINGIZE(str)	#str
-# define ID3_VERSION_STRING(num)	ID3_VERSION_STRINGIZE(num)
+# define ID3_VERSION_STRINGIZE(str)    # str
+# define ID3_VERSION_STRING(num)       ID3_VERSION_STRINGIZE(num)
 
-# define ID3_VERSION	ID3_VERSION_STRING(ID3_VERSION_MAJOR) "."  \
-			ID3_VERSION_STRING(ID3_VERSION_MINOR) "."  \
-			ID3_VERSION_STRING(ID3_VERSION_PATCH)  \
-			ID3_VERSION_EXTRA
+# define ID3_VERSION        ID3_VERSION_STRING(ID3_VERSION_MAJOR) "." \
+    ID3_VERSION_STRING(ID3_VERSION_MINOR) "."                         \
+    ID3_VERSION_STRING(ID3_VERSION_PATCH)                             \
+    ID3_VERSION_EXTRA
 
-# define ID3_PUBLISHYEAR	"2000-2004"
-# define ID3_AUTHOR		"Underbit Technologies, Inc."
-# define ID3_EMAIL		"info@underbit.com"
+# define ID3_PUBLISHYEAR    "2000-2004"
+# define ID3_AUTHOR         "Underbit Technologies, Inc."
+# define ID3_EMAIL          "info@underbit.com"
 
 extern char const id3_version[];
 extern char const id3_copyright[];

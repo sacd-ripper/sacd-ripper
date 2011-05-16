@@ -24,7 +24,7 @@
 
 # include "id3tag.h"
 
-# define ID3_UCS4_REPLACEMENTCHAR  0x000000b7L  /* middle dot */
+# define ID3_UCS4_REPLACEMENTCHAR    0x000000b7L /* middle dot */
 
 extern id3_ucs4_t const id3_ucs4_empty[];
 

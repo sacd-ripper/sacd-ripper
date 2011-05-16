@@ -16,37 +16,38 @@
 
 #include "tools.h"
 
-static const char *search_dirs[12] = {
-	"/dev_usb000",
-	"/dev_usb001",
-	"/dev_usb002",
-	"/dev_usb003",
-	"/dev_usb004",
-	"/dev_usb005",
-	"/dev_usb006",
-	"/dev_usb007",
+static const char           *search_dirs[12] = {
+    "/dev_usb000",
+    "/dev_usb001",
+    "/dev_usb002",
+    "/dev_usb003",
+    "/dev_usb004",
+    "/dev_usb005",
+    "/dev_usb006",
+    "/dev_usb007",
 
-	"/dev_cf",
-	"/dev_sd",
-	"/dev_ms",
+    "/dev_cf",
+    "/dev_sd",
+    "/dev_ms",
 
-	NULL
+    NULL
 };
 
 static struct id2name_tbl_t t_key2file[] = {
-    {KEY_LV0, "lv0"},
-    {KEY_LV1, "lv1"},
-    {KEY_LV2, "lv2"},
-    {KEY_APP, "app"},
-    {KEY_ISO, "iso"},
-    {KEY_LDR, "ldr"},
-    {KEY_PKG, "pkg"},
-    {KEY_SPP, "spp"},
-    {0, NULL}
+    { KEY_LV0, "lv0" },
+    { KEY_LV1, "lv1" },
+    { KEY_LV2, "lv2" },
+    { KEY_APP, "app" },
+    { KEY_ISO, "iso" },
+    { KEY_LDR, "ldr" },
+    { KEY_PKG, "pkg" },
+    { KEY_SPP, "spp" },
+    {       0, NULL  }
 };
 
-void fail(const char *a, ...) {
-    char msg[1024];
+void fail(const char *a, ...)
+{
+    char    msg[1024];
     va_list va;
 
     va_start(va, a);
@@ -57,14 +58,15 @@ void fail(const char *a, ...) {
     exit(1);
 }
 
-void decompress(uint8_t *in, uint64_t in_len, uint8_t *out, uint64_t out_len) {
+void decompress(uint8_t *in, uint64_t in_len, uint8_t *out, uint64_t out_len)
+{
     z_stream s;
-    int ret;
+    int      ret;
 
-    memset(&s, 0, sizeof (s));
+    memset(&s, 0, sizeof(s));
 
     s.zalloc = Z_NULL;
-    s.zfree = Z_NULL;
+    s.zfree  = Z_NULL;
     s.opaque = Z_NULL;
 
     ret = inflateInit(&s);
@@ -72,10 +74,10 @@ void decompress(uint8_t *in, uint64_t in_len, uint8_t *out, uint64_t out_len) {
         fail("inflateInit returned %d", ret);
 
     s.avail_in = (uInt) in_len;
-    s.next_in = in;
+    s.next_in  = in;
 
     s.avail_out = (uInt) out_len;
-    s.next_out = out;
+    s.next_out  = out;
 
     ret = inflate(&s, Z_FINISH);
     if (ret != Z_OK && ret != Z_STREAM_END)
@@ -84,8 +86,10 @@ void decompress(uint8_t *in, uint64_t in_len, uint8_t *out, uint64_t out_len) {
     inflateEnd(&s);
 }
 
-const char *id2name(uint32_t id, struct id2name_tbl_t *t, const char *unk) {
-    while (t->name != NULL) {
+const char *id2name(uint32_t id, struct id2name_tbl_t *t, const char *unk)
+{
+    while (t->name != NULL)
+    {
         if (id == t->id)
             return t->name;
         t++;
@@ -93,10 +97,11 @@ const char *id2name(uint32_t id, struct id2name_tbl_t *t, const char *unk) {
     return unk;
 }
 
-static int key_read(const char *path, uint32_t len, uint8_t *dst) {
-    FILE *fp = NULL;
+static int key_read(const char *path, uint32_t len, uint8_t *dst)
+{
+    FILE     *fp = NULL;
     uint32_t read;
-    int ret = -1;
+    int      ret = -1;
 
     fp = fopen(path, "rb");
     if (fp == NULL)
@@ -109,24 +114,25 @@ static int key_read(const char *path, uint32_t len, uint8_t *dst) {
 
     ret = 0;
 
-fail:
+ fail:
     if (fp != NULL)
         fclose(fp);
 
     return ret;
 }
 
-struct keylist_t *keys_get(enum sce_key type) {
-	const char **search_dir = search_dirs;
-    const char *name = NULL;
-    char base[256];
-    char path[256];
-    void *tmp = NULL;
-    char *id;
-    DIR *dp;
-    struct dirent *dent;
+struct keylist_t *keys_get(enum sce_key type)
+{
+    const char       **search_dir = search_dirs;
+    const char       *name        = NULL;
+    char             base[256];
+    char             path[256];
+    void             *tmp = NULL;
+    char             *id;
+    DIR              *dp;
+    struct dirent    *dent;
     struct keylist_t *klist;
-    uint8_t bfr[4];
+    uint8_t          bfr[4];
 
     klist = malloc(sizeof *klist);
     if (klist == NULL)
@@ -138,69 +144,81 @@ struct keylist_t *keys_get(enum sce_key type) {
     if (name == NULL)
         goto fail;
 
-	while (*search_dir) {
+    while (*search_dir)
+    {
+        strcpy(base, *search_dir);
 
-		strcpy(base, *search_dir);
-	
-	    dp = opendir(base);
-	    if (dp != NULL) {
-		    while ((dent = readdir(dp)) != NULL) {
-		        if (strncmp(dent->d_name, name, strlen(name)) == 0 &&
-		                strstr(dent->d_name, "key") != NULL) {
-		            tmp = realloc(klist->keys, (klist->n + 1) * sizeof (struct key_t));
-		            if (tmp == NULL)
-		                goto fail;
-		
-		            id = strrchr(dent->d_name, '-');
-		            if (id != NULL)
-		                id++;
-		
-		            klist->keys = tmp;
-		            memset(&klist->keys[klist->n], 0, sizeof (struct key_t));
-		
-		            snprintf(path, sizeof path, "%s/%s-key-%s", base, name, id);
-		            if (key_read(path, 32, klist->keys[klist->n].key) != 0) {
-		                printf("  key file:   %s (ERROR)\n", path);
-		            }
-		
-		            snprintf(path, sizeof path, "%s/%s-iv-%s", base, name, id);
-		            if (key_read(path, 16, klist->keys[klist->n].iv) != 0) {
-		                printf("  iv file:    %s (ERROR)\n", path);
-		            }
-		
-		            klist->keys[klist->n].pub_avail = -1;
-		            klist->keys[klist->n].priv_avail = -1;
-		
-		            snprintf(path, sizeof path, "%s/%s-pub-%s", base, name, id);
-		            if (key_read(path, 40, klist->keys[klist->n].pub) == 0) {
-		                snprintf(path, sizeof path, "%s/%s-ctype-%s", base, name, id);
-		                key_read(path, 4, bfr);
-		
-		                klist->keys[klist->n].pub_avail = 1;
-		                klist->keys[klist->n].ctype = be32(bfr);
-		            } else {
-		                printf("  pub file:   %s (ERROR)\n", path);
-		            }
-		
-		            snprintf(path, sizeof path, "%s/%s-priv-%s", base, name, id);
-		            if (key_read(path, 21, klist->keys[klist->n].priv) == 0) {
-		                klist->keys[klist->n].priv_avail = 1;
-		            } else {
-		                printf("  priv file:  %s (ERROR)\n", path);
-		            }
-		
-		            klist->n++;
-		        }
-		    }
-		}
-	    
-		search_dir++;
-	}
+        dp = opendir(base);
+        if (dp != NULL)
+        {
+            while ((dent = readdir(dp)) != NULL)
+            {
+                if (strncmp(dent->d_name, name, strlen(name)) == 0 &&
+                    strstr(dent->d_name, "key") != NULL)
+                {
+                    tmp = realloc(klist->keys, (klist->n + 1) * sizeof(struct key_t));
+                    if (tmp == NULL)
+                        goto fail;
+
+                    id = strrchr(dent->d_name, '-');
+                    if (id != NULL)
+                        id++;
+
+                    klist->keys = tmp;
+                    memset(&klist->keys[klist->n], 0, sizeof(struct key_t));
+
+                    snprintf(path, sizeof path, "%s/%s-key-%s", base, name, id);
+                    if (key_read(path, 32, klist->keys[klist->n].key) != 0)
+                    {
+                        printf("  key file:   %s (ERROR)\n", path);
+                    }
+
+                    snprintf(path, sizeof path, "%s/%s-iv-%s", base, name, id);
+                    if (key_read(path, 16, klist->keys[klist->n].iv) != 0)
+                    {
+                        printf("  iv file:    %s (ERROR)\n", path);
+                    }
+
+                    klist->keys[klist->n].pub_avail  = -1;
+                    klist->keys[klist->n].priv_avail = -1;
+
+                    snprintf(path, sizeof path, "%s/%s-pub-%s", base, name, id);
+                    if (key_read(path, 40, klist->keys[klist->n].pub) == 0)
+                    {
+                        snprintf(path, sizeof path, "%s/%s-ctype-%s", base, name, id);
+                        key_read(path, 4, bfr);
+
+                        klist->keys[klist->n].pub_avail = 1;
+                        klist->keys[klist->n].ctype     = be32(bfr);
+                    }
+                    else
+                    {
+                        printf("  pub file:   %s (ERROR)\n", path);
+                    }
+
+                    snprintf(path, sizeof path, "%s/%s-priv-%s", base, name, id);
+                    if (key_read(path, 21, klist->keys[klist->n].priv) == 0)
+                    {
+                        klist->keys[klist->n].priv_avail = 1;
+                    }
+                    else
+                    {
+                        printf("  priv file:  %s (ERROR)\n", path);
+                    }
+
+                    klist->n++;
+                }
+            }
+        }
+
+        search_dir++;
+    }
 
     return klist;
 
-fail:
-    if (klist != NULL) {
+ fail:
+    if (klist != NULL)
+    {
         if (klist->keys != NULL)
             free(klist->keys);
         free(klist);

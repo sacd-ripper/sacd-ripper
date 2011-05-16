@@ -31,22 +31,22 @@
 # if defined(DEBUG)
 #  include <stdio.h>
 #  include "debug.h"
-#  define malloc(sz)        id3_debug_malloc(sz,       __FILE__, __LINE__)
-#  define calloc(n, sz)     id3_debug_calloc(n, sz,    __FILE__, __LINE__)
-#  define realloc(ptr, sz)  id3_debug_realloc(ptr, sz, __FILE__, __LINE__)
-#  define free(ptr)         id3_debug_free(ptr,        __FILE__, __LINE__)
-#  define release(ptr)      id3_debug_release(ptr,     __FILE__, __LINE__)
+#  define malloc(sz)          id3_debug_malloc(sz, __FILE__, __LINE__)
+#  define calloc(n, sz)       id3_debug_calloc(n, sz, __FILE__, __LINE__)
+#  define realloc(ptr, sz)    id3_debug_realloc(ptr, sz, __FILE__, __LINE__)
+#  define free(ptr)           id3_debug_free(ptr, __FILE__, __LINE__)
+#  define release(ptr)        id3_debug_release(ptr, __FILE__, __LINE__)
 # else
-#  define release(ptr)  (ptr)
+#  define release(ptr)        (ptr)
 # endif
 
 /* conditional features */
 
 # if !defined(HAVE_ASSERT_H)
 #  if defined(NDEBUG)
-#   define assert(x)	/* nothing */
+#   define assert(x)    /* nothing */
 #  else
-#   define assert(x)	do { if (!(x)) abort(); } while (0)
+#   define assert(x)    do { if (!(x)) abort(); } while (0)
 #  endif
 # endif
 

@@ -1,7 +1,7 @@
 /**
  * SACD Ripper - http://code.google.com/p/sacd-ripper/
  *
- * Copyright (c) 2010-2011 by respective authors. 
+ * Copyright (c) 2010-2011 by respective authors.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,20 +17,20 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- */ 
+ */
 
 #ifndef __COMMON_H__
 #define __COMMON_H__
 
 #ifdef __cplusplus
 extern "C" {
-#endif 
+#endif
 
-#define max(a, b)	(((a) > (b))? (a): (b))
-#define min(a, b)	(((a) < (b))? (a): (b))
+#define max(a, b)    (((a) > (b)) ? (a) : (b))
+#define min(a, b)    (((a) < (b)) ? (a) : (b))
 
 #ifdef __cplusplus
 };
-#endif 
+#endif
 
 #endif /* __COMMON_H__ */

@@ -1,7 +1,7 @@
 /**
  * SACD Ripper - http://code.google.com/p/sacd-ripper/
  *
- * Copyright (c) 2010-2011 by respective authors. 
+ * Copyright (c) 2010-2011 by respective authors.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- */ 
- 
+ */
+
 #ifndef SACD_READER_H_INCLUDED
 #define SACD_READER_H_INCLUDED
 
@@ -45,7 +45,7 @@ extern "C" {
 /**
  * Opaque type that is used as a handle for one instance of an opened SACD.
  */
-typedef struct sacd_reader_s sacd_reader_t;
+typedef struct sacd_reader_s   sacd_reader_t;
 
 /**
  * Opens a block device of a SACD-ROM file, or an image file.
@@ -55,7 +55,7 @@ typedef struct sacd_reader_s sacd_reader_t;
  *
  * sacd = sacd_open(path);
  */
-sacd_reader_t *sacd_open( const char * );
+sacd_reader_t *sacd_open(const char *);
 
 /**
  * Closes and cleans up the SACD reader object.
@@ -66,7 +66,7 @@ sacd_reader_t *sacd_open( const char * );
  *
  * sacd_close(sacd);
  */
-void sacd_close( sacd_reader_t * );
+void sacd_close(sacd_reader_t *);
 
 /**
  * Seeks and reads a block from sacd.
@@ -78,7 +78,7 @@ void sacd_close( sacd_reader_t * );
  *
  * sacd_read_block_raw(sacd, lb_number, block_count, data);
  */
-ssize_t sacd_read_block_raw( sacd_reader_t *, uint32_t, size_t, unsigned char * );
+ssize_t sacd_read_block_raw(sacd_reader_t *, uint32_t, size_t, unsigned char *);
 
 #ifdef __cplusplus
 };

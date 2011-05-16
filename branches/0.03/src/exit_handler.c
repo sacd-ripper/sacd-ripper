@@ -1,7 +1,7 @@
 /**
  * SACD Ripper - http://code.google.com/p/sacd-ripper/
  *
- * Copyright (c) 2010-2011 by respective authors. 
+ * Copyright (c) 2010-2011 by respective authors.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- */ 
+ */
 
 #include <sysutil/sysutil.h>
 
@@ -26,40 +26,45 @@
 
 static int receive_exit_request = 0;
 
-static void sysutil_exit_callback(u64 status, u64 param, void *usrdata) {
-	switch(status) {
-		case SYSUTIL_EXIT_GAME:
-			receive_exit_request = 1;
-			break;
-		case SYSUTIL_DRAW_BEGIN:
-		case SYSUTIL_DRAW_END:
-			break;
-		default:
-			break;
-	}
+static void sysutil_exit_callback(u64 status, u64 param, void *usrdata)
+{
+    switch (status)
+    {
+    case SYSUTIL_EXIT_GAME:
+        receive_exit_request = 1;
+        break;
+    case SYSUTIL_DRAW_BEGIN:
+    case SYSUTIL_DRAW_END:
+        break;
+    default:
+        break;
+    }
 }
 
-static void program_exit_callback() {
-	sysUtilUnregisterCallback(SYSUTIL_EVENT_SLOT0);
+static void program_exit_callback()
+{
+    sysUtilUnregisterCallback(SYSUTIL_EVENT_SLOT0);
 
-	gcmSetWaitFlip(context);
-	rsxFinish(context,1);
+    gcmSetWaitFlip(context);
+    rsxFinish(context, 1);
 }
 
-int initialize_exit_handlers() {
-	int ret;	
+int initialize_exit_handlers()
+{
+    int ret;
 
-	ret = atexit(program_exit_callback);
-	if (ret != 0)
-		return ret;
-		
-	ret = sysUtilRegisterCallback(SYSUTIL_EVENT_SLOT0, sysutil_exit_callback, NULL);
-	if (ret != 0)
-		return ret;
+    ret = atexit(program_exit_callback);
+    if (ret != 0)
+        return ret;
 
-	return 0;	
+    ret = sysUtilRegisterCallback(SYSUTIL_EVENT_SLOT0, sysutil_exit_callback, NULL);
+    if (ret != 0)
+        return ret;
+
+    return 0;
 }
 
-int user_requested_exit() {
-	return receive_exit_request;
+int user_requested_exit()
+{
+    return receive_exit_request;
 }

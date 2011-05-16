@@ -1,7 +1,7 @@
 /**
  * SACD Ripper - http://code.google.com/p/sacd-ripper/
  *
- * Copyright (c) 2010-2011 by respective authors. 
+ * Copyright (c) 2010-2011 by respective authors.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,47 +17,47 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- */ 
- 
+ */
+
 #include "scarletbook.h"
 
 const char *album_genre[] =
 {
     "Not used"
-  , "Not defined"
-  , "Adult Contemporary"
-  , "Alternative Rock"
-  , "Children's Music"
-  , "Classical"
-  , "Contemporary Christian"
-  , "Country"
-  , "Dance"
-  , "Easy Listening"
-  , "Erotic"
-  , "Folk"
-  , "Gospel"
-  , "Hip Hop"
-  , "Jazz"
-  , "Latin"
-  , "Musical"
-  , "New Age"
-  , "Opera"
-  , "Operetta"
-  , "Pop Music"
-  , "RAP"
-  , "Reggae"
-  , "Rock Music"
-  , "Rhythm & Blues"
-  , "Sound Effects"
-  , "Sound Track"
-  , "Spoken Word"
-  , "World Music"
-  , "Blues"
+    , "Not defined"
+    , "Adult Contemporary"
+    , "Alternative Rock"
+    , "Children's Music"
+    , "Classical"
+    , "Contemporary Christian"
+    , "Country"
+    , "Dance"
+    , "Easy Listening"
+    , "Erotic"
+    , "Folk"
+    , "Gospel"
+    , "Hip Hop"
+    , "Jazz"
+    , "Latin"
+    , "Musical"
+    , "New Age"
+    , "Opera"
+    , "Operetta"
+    , "Pop Music"
+    , "RAP"
+    , "Reggae"
+    , "Rock Music"
+    , "Rhythm & Blues"
+    , "Sound Effects"
+    , "Sound Track"
+    , "Spoken Word"
+    , "World Music"
+    , "Blues"
 };
 
 const char *album_category[] =
 {
-      "Not used"
+    "Not used"
     , "General"
     , "Japanese"
 };

@@ -37,33 +37,37 @@
  */
 id3_length_t id3_util_unsynchronise(id3_byte_t *data, id3_length_t length)
 {
-  id3_length_t bytes = 0, count;
-  id3_byte_t *end = data + length;
-  id3_byte_t const *ptr;
+    id3_length_t     bytes = 0, count;
+    id3_byte_t       *end  = data + length;
+    id3_byte_t const *ptr;
 
-  if (length == 0)
-    return 0;
+    if (length == 0)
+        return 0;
 
-  for (ptr = data; ptr < end - 1; ++ptr) {
-    if (ptr[0] == 0xff && (ptr[1] == 0x00 || (ptr[1] & 0xe0) == 0xe0))
-      ++bytes;
-  }
-
-  if (bytes) {
-    ptr  = end;
-    end += bytes;
-
-    *--end = *--ptr;
-
-    for (count = bytes; count; *--end = *--ptr) {
-      if (ptr[-1] == 0xff && (ptr[0] == 0x00 || (ptr[0] & 0xe0) == 0xe0)) {
-	*--end = 0x00;
-	--count;
-      }
+    for (ptr = data; ptr < end - 1; ++ptr)
+    {
+        if (ptr[0] == 0xff && (ptr[1] == 0x00 || (ptr[1] & 0xe0) == 0xe0))
+            ++bytes;
     }
-  }
 
-  return length + bytes;
+    if (bytes)
+    {
+        ptr  = end;
+        end += bytes;
+
+        *--end = *--ptr;
+
+        for (count = bytes; count; *--end = *--ptr)
+        {
+            if (ptr[-1] == 0xff && (ptr[0] == 0x00 || (ptr[0] & 0xe0) == 0xe0))
+            {
+                *--end = 0x00;
+                --count;
+            }
+        }
+    }
+
+    return length + bytes;
 }
 
 /*
@@ -72,21 +76,22 @@ id3_length_t id3_util_unsynchronise(id3_byte_t *data, id3_length_t length)
  */
 id3_length_t id3_util_deunsynchronise(id3_byte_t *data, id3_length_t length)
 {
-  id3_byte_t const *old, *end = data + length;
-  id3_byte_t *new;
+    id3_byte_t const *old, *end = data + length;
+    id3_byte_t       *new;
 
-  if (length == 0)
-    return 0;
+    if (length == 0)
+        return 0;
 
-  for (old = new = data; old < end - 1; ++old) {
+    for (old = new = data; old < end - 1; ++old)
+    {
+        *new++ = *old;
+        if (old[0] == 0xff && old[1] == 0x00)
+            ++old;
+    }
+
     *new++ = *old;
-    if (old[0] == 0xff && old[1] == 0x00)
-      ++old;
-  }
 
-  *new++ = *old;
-
-  return new - data;
+    return new - data;
 }
 
 /*
@@ -94,31 +99,34 @@ id3_length_t id3_util_deunsynchronise(id3_byte_t *data, id3_length_t length)
  * DESCRIPTION:	perform zlib deflate method compression
  */
 id3_byte_t *id3_util_compress(id3_byte_t const *data, id3_length_t length,
-			      id3_length_t *newlength)
+                              id3_length_t *newlength)
 {
-  id3_byte_t *compressed;
+    id3_byte_t *compressed;
 
-  *newlength  = length + 12;
-  *newlength += *newlength / 1000;
+    *newlength  = length + 12;
+    *newlength += *newlength / 1000;
 
-  compressed = malloc(*newlength);
-  if (compressed) {
-    if (compress2(compressed, newlength, data, length,
-		  Z_BEST_COMPRESSION) != Z_OK ||
-	*newlength >= length) {
-      free(compressed);
-      compressed = 0;
+    compressed = malloc(*newlength);
+    if (compressed)
+    {
+        if (compress2(compressed, newlength, data, length,
+                      Z_BEST_COMPRESSION) != Z_OK ||
+            *newlength >= length)
+        {
+            free(compressed);
+            compressed = 0;
+        }
+        else
+        {
+            id3_byte_t *resized;
+
+            resized = realloc(compressed, *newlength ? *newlength : 1);
+            if (resized)
+                compressed = resized;
+        }
     }
-    else {
-      id3_byte_t *resized;
 
-      resized = realloc(compressed, *newlength ? *newlength : 1);
-      if (resized)
-	compressed = resized;
-    }
-  }
-
-  return compressed;
+    return compressed;
 }
 
 /*
@@ -126,22 +134,24 @@ id3_byte_t *id3_util_compress(id3_byte_t const *data, id3_length_t length,
  * DESCRIPTION:	undo zlib deflate method compression
  */
 id3_byte_t *id3_util_decompress(id3_byte_t const *data, id3_length_t length,
-				id3_length_t newlength)
+                                id3_length_t newlength)
 {
-  id3_byte_t *decompressed;
+    id3_byte_t *decompressed;
 
-  decompressed = malloc(newlength ? newlength : 1);
-  if (decompressed) {
-    id3_length_t size;
+    decompressed = malloc(newlength ? newlength : 1);
+    if (decompressed)
+    {
+        id3_length_t size;
 
-    size = newlength;
+        size = newlength;
 
-    if (uncompress(decompressed, &size, data, length) != Z_OK ||
-	size != newlength) {
-      free(decompressed);
-      decompressed = 0;
+        if (uncompress(decompressed, &size, data, length) != Z_OK ||
+            size != newlength)
+        {
+            free(decompressed);
+            decompressed = 0;
+        }
     }
-  }
 
-  return decompressed;
+    return decompressed;
 }
