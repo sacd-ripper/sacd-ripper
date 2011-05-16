@@ -88,10 +88,10 @@ static void update_id3_frame(struct id3_tag *tag, const char *frame_name, const 
 int scarletbook_id3_tag_render(scarletbook_handle_t *handle, uint8_t *buffer, int channel, int track)
 {
     const int      sacd_id3_genres[] = {
-        12, 12,  40,  12, 32, 140,   2
-        ,    3,  98,  12, 80,  38,  7,  8, 86, 77
-        ,   10, 103, 104, 13,  15, 16, 17,   14
-        ,   37,  24, 101, 12,   0, 12, 12, 12
+        12,  12,  40, 12, 32, 140,  2,  3,
+        98,  12,  80, 38,  7,   8, 86, 77,
+        10, 103, 104, 13, 15,  16, 17, 14,
+        37,  24, 101, 12,  0,  12, 12, 12
     };
     struct id3_tag *id3tag;
     char           tmp[200];

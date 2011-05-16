@@ -32,7 +32,7 @@ int mm_map_lpar_memory_region(uint64_t lpar_start_addr, uint64_t ea_start_addr, 
 {
     uint32_t i, result;
 
-    for (i = 0; i < size >> page_shift; i++)
+    for (i = 0; i < size > > page_shift; i++)
     {
         result = mm_insert_htab_entry(MM_EA2VA(ea_start_addr), lpar_start_addr, prot, 0);
         if (result != 0)

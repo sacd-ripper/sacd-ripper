@@ -466,7 +466,6 @@ int main(int argc, char *argv[])
  quit:
 
     close_log_files();
-
     unload_modules();
 
     return 0;
