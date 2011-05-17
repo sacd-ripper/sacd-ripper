@@ -383,7 +383,7 @@ static int scarletbook_read_channel_toc(scarletbook_handle_t *handle, int channe
         else if (strncmp((char *) p, "SACD_IGL", 8) == 0)
         {
             handle->channel_isrc[channel_nr] = (channel_isrc_t *) p;
-            p                               += SACD_LSN_SIZE * 2;
+            p += SACD_LSN_SIZE * 2;
         }
         else if (strncmp((char *) p, "SACD_ACC", 8) == 0)
         {
