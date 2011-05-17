@@ -30,13 +30,13 @@ export DEPSDIR		:=	$(DEPS)
 endif
 #---------------------------------------------------------------------------------
 
-LIBRARY		:= $(LIBDIR)/libsacd
+LIBRARY		:= $(LIBDIR)/libcommon
 
 #---------------------------------------------------------------------------------
-DEFINCS		:= -I$(BASEDIR) -I$(PSL1GHT)/ppu/include -I$(BASEDIR)/../libid3tag -I$(BASEDIR)/../libcommon
+DEFINCS		:= -I$(BASEDIR) -I$(PSL1GHT)/ppu/include
 INCLUDES	:=	$(DEFINCS)
 
-CFLAGS		:= -O2 -mregnames -Wall -mcpu=cell $(MACHDEP) -DLIBSACD_INTERNAL $(INCLUDES) -Wa,-mcell -DWITH_PL3
+CFLAGS		:= -O2 -mregnames -Wall -mcpu=cell $(MACHDEP) -DLIBCOMMON_INTERNAL $(INCLUDES) -Wa,-mcell -DWITH_PL3
 ASFLAGS		:=	$(MACHDEP) -mregnames -mcpu=cell -D__ASSEMBLY__ -Wa,-mcell $(INCLUDES)
 
 #---------------------------------------------------------------------------------
@@ -44,15 +44,7 @@ VPATH :=	$(BASEDIR)
 
 #---------------------------------------------------------------------------------
 OBJS		:= \
-			scarletbook.o \
-			dsdiff_writer.o \
-            sacd_input.o \
-            scarletbook_print.o \
-            scarletbook_id3.o \
-            scarletbook_read.o \
-            sac_accessor.o \
-            ioctl.o \
-            sacd_reader.o 
+            log.o 
 all: ppu
 
 #---------------------------------------------------------------------------------

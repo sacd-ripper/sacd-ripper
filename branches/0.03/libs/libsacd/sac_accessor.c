@@ -34,8 +34,8 @@
 #include <string.h>
 #include <malloc.h>
 
+#include <utils.h>
 #include "sac_accessor.h"
-#include "common.h"
 #include "ioctl.h"
 
 #ifdef USE_ISOSELF

@@ -27,7 +27,7 @@ TARGET		:=	$(notdir $(CURDIR))
 BUILD		:=	build
 SOURCES		:=	src
 DATA		:=	
-INCLUDES	:=	src libs/libunself libs/libpatchutils libs/libsacd
+INCLUDES	:=	src libs/libunself libs/libpatchutils libs/libsacd libs/libcommon
 
 #---------------------------------------------------------------------------------
 # options for code generation
@@ -41,13 +41,13 @@ LDFLAGS		=	$(MACHDEP) -Wl,-Map,$(notdir $@).map
 #---------------------------------------------------------------------------------
 # any extra libraries we wish to link with the project
 #---------------------------------------------------------------------------------
-LIBS	:=	-lrsx -lgcm_sys -lio -lsysmodule -lsysutil -lrt -llv2 -lm -lunself -lz -lpatchutils -lsacd -lsysfs
+LIBS	:=	-lrsx -lgcm_sys -lio -lsysmodule -lsysutil -lrt -llv2 -lm -lunself -lz -lpatchutils -lsacd -lsysfs -lcommon
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
 # include and lib
 #---------------------------------------------------------------------------------
-LIBDIRS	:= $(PORTLIBS) ../libs/libunself ../libs/libpatchutils ../libs/libsacd
+LIBDIRS	:= $(PORTLIBS) ../libs/libunself ../libs/libpatchutils ../libs/libsacd ../libs/libcommon
 
 #---------------------------------------------------------------------------------
 # no real need to edit anything past this point unless you need to add additional
