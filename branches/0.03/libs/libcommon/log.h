@@ -44,17 +44,14 @@ extern "C" {
 #endif
 
 /*
-** prlog.h -- Declare interfaces to NSPR's Logging service
-**
-** NSPR provides a logging service that is used by NSPR itself and is
-** available to client programs.
+** log.h -- Declare interfaces to the Logging service
 **
 ** To use the service from a client program, you should create a
 ** PRLogModuleInfo structure by calling PR_NewLogModule(). After
 ** creating the LogModule, you can write to the log using the LOG()
 ** macro.
 **
-** Initialization of the log service is handled by NSPR initialization.
+** Initialization of the log service is handled by log_init().
 **
 ** At execution time, you must enable the log service. To enable the
 ** log service, set the environment variable: LOG_MODULES
@@ -77,21 +74,21 @@ extern "C" {
 **
 ** Note that you must specify the numeric value of LOG_ERROR.
 **
-** Special LogModule names are provided for controlling NSPR's log
+** Special LogModule names are provided for controlling the log
 ** service at execution time. These controls should be set in the
 ** LOG_MODULES environment variable at execution time to affect
-** NSPR's log service for your application.
+** the log service for your application.
 **
 ** The special LogModule "all" enables all LogModules. To enable all
 ** LogModule calls to LOG(), say:
 **
 ** set LOG_MODULES=all:5
 **
-** The special LogModule name "sync" tells the NSPR log service to do
+** The special LogModule name "sync" tells the log service to do
 ** unbuffered logging.
 **
-** The special LogModule name "bufsize:<size>" tells NSPR to set the
-** log buffer to <size>.
+** The special LogModule name "bufsize:<size>" tells the log service 
+** to set the log buffer to <size>.
 **
 ** The environment variable LOG_FILE specifies the log file to use
 ** unless the default of "stderr" is acceptable. For MS Windows
@@ -129,10 +126,6 @@ extern "C" {
 **
 ** When you execute your application, the string "Log this! 1" will be
 ** written to the file "logfile.txt".
-**
-** Note to NSPR engineers: a number of PRLogModuleInfo structures are
-** defined and initialized in prinit.c. See this module for ideas on
-** what to log where.
 **
 */
 

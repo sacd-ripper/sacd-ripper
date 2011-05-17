@@ -156,7 +156,7 @@ void log_init(void)
         {
             if (set_log_file(ev) != 0)
             {
-                fprintf(stderr, "Unable to create nspr log file '%s'\n", ev);
+                fprintf(stderr, "Unable to create log file '%s'\n", ev);
             }
         }
         else
