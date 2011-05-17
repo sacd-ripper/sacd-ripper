@@ -49,7 +49,9 @@
 #include "install.h"
 #include "output_device.h"
 
-#include "debug.h"
+#include <log.h>
+
+log_module_info_t * _main_lm = 0; 
 
 char *substr(const char *pstr, int start, int numchars)
 {
@@ -116,20 +118,20 @@ int file_simple_save(const char *filePath, void *buf, unsigned int fileSize)
 
     if (buf == NULL)
     {
-        LOG_ERROR("buffer is null\n");
+        LOG(_main_lm, LOG_ERROR, ("buffer is null\n"));
     }
 
     ret = sysFsOpen(filePath, SYS_O_WRONLY | SYS_O_CREAT | SYS_O_TRUNC, &fd, NULL, 0);
     if ((ret != 0))        // && (ret != EPERM) ){
     {
-        LOG_ERROR("file %s open error : 0x%x\n", filePath, ret);
+        LOG(_main_lm, LOG_ERROR, ("file %s open error : 0x%x\n", filePath, ret));
         return -1;
     }
 
     ret = sysFsWrite(fd, buf, fileSize, &writelen);
     if (ret != 0 || fileSize != writelen)
     {
-        LOG_ERROR("file %s read error : 0x%x\n", filePath, ret);
+        LOG(_main_lm, LOG_ERROR, ("file %s read error : 0x%x\n", filePath, ret));
         sysFsClose(fd);
         return -1;
     }
@@ -137,7 +139,7 @@ int file_simple_save(const char *filePath, void *buf, unsigned int fileSize)
     ret = sysFsClose(fd);
     if (ret != 0)
     {
-        LOG_ERROR("file %s close error : 0x%x\n", filePath, ret);
+        LOG(_main_lm, LOG_ERROR, ("file %s close error : 0x%x\n", filePath, ret));
         return -1;
     }
 
@@ -209,17 +211,17 @@ void dump_sample_to_output_device(void)
         uint8_t *buffer = (uint8_t *) malloc(1024 * 2048);
 
         ret = sys_storage_open(BD_DEVICE, &fd_in);
-        LOG_INFO("sys storage_open %x %x\n", ret, fd_in);
+        LOG(_main_lm, LOG_DEBUG, ("sys storage_open %x %x\n", ret, fd_in));
         if (ret == 0)
         {
             ret = sys_storage_read(fd_in, 0, 1024, buffer, &sectors_read);
 
-            LOG_INFO("sys storage_read %x %x %x\n", ret, fd_in, sectors_read);
+            LOG(_main_lm, LOG_DEBUG, ("sys storage_read %x %x %x\n", ret, fd_in, sectors_read));
 
             sysFsWrite(fd_out, buffer, 1024 * 2048, &writelen);
 
             ret = sys_storage_close(fd_in);
-            LOG_INFO("sys storage_close %x %x\n", ret, fd_in);
+            LOG(_main_lm, LOG_DEBUG, ("sys storage_close %x %x\n", ret, fd_in));
 
         }
         free(buffer);
@@ -268,9 +270,14 @@ void main_loop(void)
 {
     msgType              dialog_type;
     char                 *message = (char *) malloc(512);
-
     sacd_reader_t        *sacd_reader;
     scarletbook_handle_t *sb_handle = 0;
+
+    if (output_device_changed && output_device) {
+        char file_path[100];
+        sprintf(file_path, "%s/sacd_log.txt", output_device);
+        set_log_file(file_path);
+    }
 
     // did the disc change?
     if (bd_contains_sacd_disc && (output_device_changed || bd_disc_changed))
@@ -370,7 +377,10 @@ int main(int argc, char *argv[])
 
     load_modules();
 
-    open_log_files();
+    setenv("NSLOG_MODULES", "all:5", 0);
+
+    _main_lm = create_log_module("main");
+    log_init();
 
     init_screen(host_addr, HOST_SIZE);
     ioPadInit(7);
@@ -426,7 +436,7 @@ int main(int argc, char *argv[])
 
     // poll for an output_device
     poll_output_devices();
-
+    
     while (1)
     {
         // main loop
@@ -446,7 +456,7 @@ int main(int argc, char *argv[])
 
  quit:
 
-    close_log_files();
+    log_destroy();
     unload_modules();
 
     return 0;

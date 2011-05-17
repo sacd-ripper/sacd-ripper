@@ -19,8 +19,8 @@
  *
  */
 
-#ifndef __COMMON_H__
-#define __COMMON_H__
+#ifndef __UTILS_H__
+#define __UTILS_H__
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,4 +33,4 @@ extern "C" {
 };
 #endif
 
-#endif /* __COMMON_H__ */
+#endif /* __UTILS_H__ */
