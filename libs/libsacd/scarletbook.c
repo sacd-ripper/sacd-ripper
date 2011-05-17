@@ -61,3 +61,45 @@ const char *album_category[] =
     , "General"
     , "Japanese"
 };
+
+char *get_speaker_config_string(channel_toc_t *channel) 
+{
+    if (channel->channel_count == 2 && channel->loudspeaker_config == 0)
+    {
+        return "2ch.";
+    }
+    else if (channel->channel_count == 5 && channel->loudspeaker_config == 3)
+    {
+        return "5ch.";
+    }
+    else if (channel->channel_count == 6 && channel->loudspeaker_config == 4)
+    {
+        return "5.1ch";
+    }
+    else
+    {
+        return "Unknown";
+    }
+}
+
+char *get_encoding_string(channel_toc_t *channel) 
+{
+    if (channel->encoding == ENCODING_DSD_3_IN_14)
+    {
+        return "DSD 3 in 14";
+    }
+    else if (channel->encoding == ENCODING_DSD_3_IN_16)
+    {
+        return "DSD 3 in 16";
+    }
+    else if (channel->encoding == ENCODING_DST)
+    {
+        return "Lossless DST";
+    }
+    else
+    {
+        return "Unknown";
+    }
+}
+
+

@@ -404,6 +404,21 @@ static inline int has_both_channels(scarletbook_handle_t *handle)
     return handle->twoch_idx != -1 && handle->mulch_idx != -1;
 }
 
+static inline channel_toc_t* get_two_channel(scarletbook_handle_t *handle)
+{
+    return (handle->twoch_idx == -1 ? 0 : handle->channel_toc[handle->twoch_idx]);
+}
+
+static inline channel_toc_t* get_multi_channel(scarletbook_handle_t *handle)
+{
+    return (handle->mulch_idx == -1 ? 0 : handle->channel_toc[handle->mulch_idx]);
+}
+
+char *get_speaker_config_string(channel_toc_t *channel);
+
+char *get_encoding_string(channel_toc_t *channel);
+
+
 #if PRAGMA_PACK
 #pragma pack()
 #endif
