@@ -35,6 +35,7 @@
 
 #include <sys/file.h>
 #include <sys/stat.h>
+#include <sys/thread.h> 
 
 #include <sys/storage.h>
 #include <ioctl.h>
@@ -192,8 +193,8 @@ int patch_syscall_864(void)
 
 void dump_sample_to_output_device(void)
 {
-    msgType  dialog_type;
-    int      fd_in, ret, i;
+	msgType  dialog_type;
+    int      fd_in, ret;
     int      fd_out;
     uint32_t sectors_read;
     uint64_t writelen;
@@ -205,37 +206,21 @@ void dump_sample_to_output_device(void)
     ret = sysFsOpen(file_path, SYS_O_WRONLY | SYS_O_CREAT | SYS_O_TRUNC, &fd_out, NULL, 0);
     if (fd_out)
     {
-        uint8_t *buffer = (uint8_t *) malloc(2048);
+        uint8_t *buffer = (uint8_t *) malloc(1024 * 2048);
 
         ret = sys_storage_open(BD_DEVICE, &fd_in);
         LOG_INFO("sys storage_open %x %x\n", ret, fd_in);
         if (ret == 0)
         {
-            dialog_type = MSG_DIALOG_MUTE_ON
-                          | MSG_DIALOG_DISABLE_CANCEL_ON
-                          | MSG_DIALOG_SINGLE_PROGRESSBAR;
+            ret = sys_storage_read(fd_in, 0, 1024, buffer, &sectors_read);
 
-            snprintf(message, 64, "Writing dump analysis to: [%s]", file_path);
-            msgDialogOpen2(dialog_type, message, NULL, NULL, NULL);
+            LOG_INFO("sys storage_read %x %x %x\n", ret, fd_in, sectors_read);
 
-            for (i = 0; i < 1024; i++)
-            {
-                memset(buffer, 0, 2048);
-                ret = sys_storage_read(fd_in, i, 1, buffer, &sectors_read);
+            sysFsWrite(fd_out, buffer, 1024 * 2048, &writelen);
 
-                LOG_INFO("sys storage_read %x %x %x\n", ret, fd_in, sectors_read);
-
-                sysFsWrite(fd_out, buffer, 2048, &writelen);
-
-                msgDialogProgressBarInc(MSG_PROGRESSBAR_INDEX0, (int) i * 100 / 1024);
-
-                sysUtilCheckCallback();
-                flip();
-            }
             ret = sys_storage_close(fd_in);
             LOG_INFO("sys storage_close %x %x\n", ret, fd_in);
 
-            msgDialogAbort();
         }
         free(buffer);
         sysFsClose(fd_out);
@@ -348,7 +333,7 @@ void main_loop(void)
     }
 
     // can we start ripping?
-    dialog_type |= MSG_DIALOG_BTN_TYPE_OK;
+    //dialog_type |= MSG_DIALOG_BTN_TYPE_OK;
 
     msgDialogOpen2(dialog_type, message, dialog_handler, NULL, NULL);
 
@@ -441,8 +426,6 @@ int main(int argc, char *argv[])
 
     // poll for an output_device
     poll_output_devices();
-
-    //dump_sample_to_output_device();
 
     while (1)
     {
