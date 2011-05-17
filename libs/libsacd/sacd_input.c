@@ -41,14 +41,14 @@ struct sacd_input_s
     int fd;
 
 #if defined(__lv2ppu__)
-
+#if 0
 	sys_io_buffer_t  io_buffer;
     sys_io_block_t   io_block;
 
 	sys_event_queue_t queue;
 
 	sys_ppu_thread_t thread_id;
-
+#endif
 #endif
 };
 
@@ -72,9 +72,12 @@ sacd_input_t sacd_input_open(const char *target)
     dev->fd = open(target, O_RDONLY);
 #elif defined(__lv2ppu__)
     {
+#if 0
     	sys_event_queue_attribute_t queue_attr;
+        int tmp;
+#endif
         uint8_t buffer[64];
-        int     ret, tmp;
+        int     ret;
 
         ret = sys_storage_get_device_info(BD_DEVICE, buffer);
         if (ret != 0)
@@ -97,7 +100,7 @@ sacd_input_t sacd_input_open(const char *target)
             }
         }
         sys_storage_get_device_info(BD_DEVICE, buffer);
-
+#if 0
 		queue_attr.attr_protocol = SYS_SYNC_PRIORITY;
 		queue_attr.type = SYS_PPU_QUEUE;
         queue_attr.name[0] = '\0';
@@ -134,8 +137,7 @@ sacd_input_t sacd_input_open(const char *target)
     		//LOG_ERROR("sys_ppu_thread_create\n");
     		return -3;
     	}
-
-
+#endif
 
     }
 #else
