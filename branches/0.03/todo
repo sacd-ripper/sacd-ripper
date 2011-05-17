@@ -1,6 +1,8 @@
 todo:
 
 - start ripping
+    - read disk progress bar
+
 	- ask which channels to rip (in case of multiple channels)
 	- show not enough disc space message
 	- display ripping dual/single progress bar
@@ -9,7 +11,3 @@ todo:
 
 - add splitted iso image support
 - add sony dsf export support
-
-enhancement:
-
-- display more disc information

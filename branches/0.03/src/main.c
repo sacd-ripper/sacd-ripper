@@ -71,6 +71,8 @@ static int bd_disc_changed = -1;
 
 static int loaded_modules = 0;
 
+static int output_format = 0;
+
 static int load_modules(void)
 {
     int ret;
@@ -272,6 +274,7 @@ void main_loop(void)
     char                 *message = (char *) malloc(512);
     sacd_reader_t        *sacd_reader;
     scarletbook_handle_t *sb_handle = 0;
+    int idx = 0;
 
     if (output_device_changed && output_device) {
         char file_path[100];
@@ -290,15 +293,59 @@ void main_loop(void)
             sb_handle = scarletbook_open(sacd_reader, 0);
             if (sb_handle)
             {
+                int i;
                 master_text_t *master_text = sb_handle->master_text[0];
+                master_toc_t *mtoc = sb_handle->master_toc;
 
-                snprintf(message, 512,
-                         "disc status: %d\n"
-                         "title: %s\n"
-                         "device: %s %.2fGB\n"
-                         , bd_contains_sacd_disc
-                         , substr((char *) master_text + master_text->disc_title_position, 0, 60)
-                         , (output_device ? output_device : "no device"), output_device_space);
+                for (i = 0; i < mtoc->text_channel_count; i++)
+                {
+                     if (sb_handle->master_text[i]->album_title_position 
+                      || sb_handle->master_text[i]->album_title_phonetic_position
+                      || sb_handle->master_text[i]->album_artist_position
+                      || sb_handle->master_text[i]->album_artist_phonetic_position
+                      || sb_handle->master_text[i]->album_publisher_position
+                      || sb_handle->master_text[i]->album_publisher_phonetic_position) 
+                     {
+                        master_text = sb_handle->master_text[i];
+                        break;
+                     }
+                }
+
+                // output device
+                if (output_device)
+                    idx = snprintf(message, 35, "Output: %s %.2fGB\n", output_device, output_device_space);
+                else
+                    idx = snprintf(message, 35, "Output: NO DEVICE\n");
+
+                // output format
+                idx += snprintf(message + idx, 20, "Format: %d\n", output_format);
+                idx += snprintf(message + idx, 2, "\n");
+
+                if (master_text->disc_title_position || master_text->disc_title_phonetic_position)
+                    idx += snprintf(message + idx, 60, "Title: %s\n", substr((char *) master_text + (master_text->disc_title_position ? master_text->disc_title_position : master_text->disc_title_phonetic_position), 0, 50));
+
+                if (message[idx - 1] != '\n') { message[idx++] = '\n'; message[idx] = '\0'; } 
+
+                if (master_text->disc_artist_position || master_text->disc_artist_phonetic_position)
+                    idx += snprintf(message + idx, 60, "Artist: %s\n", substr((char *) master_text + (master_text->disc_artist_position ? master_text->disc_artist_position : master_text->disc_artist_phonetic_position), 0, 50));
+
+                if (message[idx - 1] != '\n') { message[idx++] = '\n'; message[idx] = '\0'; } 
+
+                idx += snprintf(message + idx, 20, "Version: %02i.%02i\n", (mtoc->disc_version >> 8) & 0xff, mtoc->disc_version & 0xff);
+                idx += snprintf(message + idx, 25, "Created: %4i-%02i-%02i\n", mtoc->disc_date_year, mtoc->disc_date_month, mtoc->disc_date_day);
+                
+                idx += snprintf(message + idx, 15, "Track 0:\n");
+                idx += snprintf(message + idx, 35, "   Speakers: %s\n", get_speaker_config_string(sb_handle->channel_toc[0]));
+                idx += snprintf(message + idx, 35, "   Encoding: %s\n", get_encoding_string(sb_handle->channel_toc[0]));
+                idx += snprintf(message + idx, 25, "   Tracks: %d (%.2fGB)\n", sb_handle->channel_toc[0]->track_count, ((double) sb_handle->channel_toc[0]->track_length * SACD_LSN_SIZE) / 1073741824.00);
+                if (has_both_channels(sb_handle)) 
+                {
+                    idx += snprintf(message + idx, 2, "\n");
+                    idx += snprintf(message + idx, 15, "Track 1:\n");
+                    idx += snprintf(message + idx, 35, "   Speakers: %s\n", get_speaker_config_string(sb_handle->channel_toc[1]));
+                    idx += snprintf(message + idx, 35, "   Encoding: %s\n", get_encoding_string(sb_handle->channel_toc[1]));
+                    idx += snprintf(message + idx, 25, "   Tracks: %d (%.2fGB)", sb_handle->channel_toc[1]->track_count, ((double) sb_handle->channel_toc[1]->track_length * SACD_LSN_SIZE) / 1073741824.00);
+                }
 
                 scarletbook_close(sb_handle);
                 sb_handle = 0;
@@ -326,12 +373,12 @@ void main_loop(void)
         // was the disc changed since startup?
         if (bd_disc_changed == -1 || !output_device)
         {
-            snprintf(message, 512, "The current disc is empty or not recognized as an SACD, please re-insert.\n\n%s"
+            snprintf(message + idx, 512, "The current disc is empty or not recognized as an SACD, please re-insert.\n\n%s"
                      , (output_device ? "" : "(Also make sure you connect an external fat32 formatted harddisk!)"));
         }
         else
         {
-            snprintf(message, 512, "The containing disc is not recognized as an SACD.\n"
+            snprintf(message + idx, 512, "The containing disc is not recognized as an SACD.\n"
                      "Would you like to RAW dump the first 2Mb to [%s (%.2fGB available)] for analysis?",
                      output_device, output_device_space);
 
@@ -340,7 +387,10 @@ void main_loop(void)
     }
 
     // can we start ripping?
-    //dialog_type |= MSG_DIALOG_BTN_TYPE_OK;
+    if (bd_contains_sacd_disc)
+    {
+        dialog_type = (MSG_DIALOG_NORMAL | MSG_DIALOG_BTN_TYPE_OK);
+    }
 
     msgDialogOpen2(dialog_type, message, dialog_handler, NULL, NULL);
 
@@ -362,7 +412,17 @@ void main_loop(void)
     {
         dump_sample_to_output_device();
 
-        // action is already handled
+        // action is handled
+        dialog_action = 0;
+    } 
+    else if (dialog_action == 2)
+    {
+        output_format += 1;
+
+        // TODO: refactor message handling..
+        bd_disc_changed = 1;
+
+        // action is handled
         dialog_action = 0;
     }
 
@@ -377,7 +437,7 @@ int main(int argc, char *argv[])
 
     load_modules();
 
-    setenv("NSLOG_MODULES", "all:5", 0);
+    setenv("LOG_MODULES", "all:5", 0);
 
     _main_lm = create_log_module("main");
     log_init();
