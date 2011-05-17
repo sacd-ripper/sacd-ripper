@@ -302,9 +302,7 @@ void main_loop(void)
                      if (sb_handle->master_text[i]->album_title_position 
                       || sb_handle->master_text[i]->album_title_phonetic_position
                       || sb_handle->master_text[i]->album_artist_position
-                      || sb_handle->master_text[i]->album_artist_phonetic_position
-                      || sb_handle->master_text[i]->album_publisher_position
-                      || sb_handle->master_text[i]->album_publisher_phonetic_position) 
+                      || sb_handle->master_text[i]->album_artist_phonetic_position)
                      {
                         master_text = sb_handle->master_text[i];
                         break;
@@ -346,6 +344,8 @@ void main_loop(void)
                     idx += snprintf(message + idx, 35, "   Encoding: %s\n", get_encoding_string(sb_handle->channel_toc[1]));
                     idx += snprintf(message + idx, 25, "   Tracks: %d (%.2fGB)", sb_handle->channel_toc[1]->track_count, ((double) sb_handle->channel_toc[1]->track_length * SACD_LSN_SIZE) / 1073741824.00);
                 }
+
+                idx += snprintf(message + idx, 50, "\n\nclick X to start ripping, O to change output");
 
                 scarletbook_close(sb_handle);
                 sb_handle = 0;
