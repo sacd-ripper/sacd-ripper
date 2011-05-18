@@ -40,6 +40,7 @@
 #include <sys/storage.h>
 #include <ioctl.h>
 #include <patch-utils.h>
+#include <utils.h>
 
 #include <scarletbook_read.h>
 #include <sacd_reader.h>
@@ -48,29 +49,16 @@
 #include "exit_handler.h"
 #include "install.h"
 #include "output_device.h"
+#include "ripping.h"
 
 #include <log.h>
 
 log_module_info_t * _main_lm = 0; 
 
-char *substr(const char *pstr, int start, int numchars)
-{
-    static char pnew[255];
-    strncpy(pnew, pstr + start, numchars);
-    pnew[numchars] = '\0';
-    return pnew;
-}
-
 static int dialog_action = 0;
-
-// information about the current disc
-static int bd_contains_sacd_disc = -1;
-
-// when a disc has changed this is set to zero
-static int bd_disc_changed = -1;
-
+static int bd_contains_sacd_disc = -1;      // information about the current disc
+static int bd_disc_changed = -1;            // when a disc has changed this is set to zero
 static int loaded_modules = 0;
-
 static int output_format = 0;
 
 static int load_modules(void)
@@ -345,7 +333,7 @@ void main_loop(void)
                     idx += snprintf(message + idx, 25, "   Tracks: %d (%.2fGB)", sb_handle->channel_toc[1]->track_count, ((double) sb_handle->channel_toc[1]->track_length * SACD_LSN_SIZE) / 1073741824.00);
                 }
 
-                idx += snprintf(message + idx, 50, "\n\nclick X to start ripping, O to change output");
+                idx += snprintf(message + idx, 50, "\nclick X to start ripping, O to change output");
 
                 scarletbook_close(sb_handle);
                 sb_handle = 0;
@@ -415,14 +403,22 @@ void main_loop(void)
         // action is handled
         dialog_action = 0;
     } 
+    // did user request to start the ripping process?
+    else if (dialog_action == 1 && bd_contains_sacd_disc)
+    {
+        start_ripping();
+
+        // action is handled
+        dialog_action = 0;
+        bd_disc_changed = 1;
+    }
     else if (dialog_action == 2)
     {
         output_format += 1;
 
         // TODO: refactor message handling..
-        bd_disc_changed = 1;
-
         // action is handled
+        bd_disc_changed = 1;
         dialog_action = 0;
     }
 
@@ -501,11 +497,6 @@ int main(int argc, char *argv[])
     {
         // main loop
         main_loop();
-
-        // did user request to start the ripping process?
-        if (dialog_action == 1)
-        {
-        }
 
         // break out of the loop when requested
         if (user_requested_exit())
