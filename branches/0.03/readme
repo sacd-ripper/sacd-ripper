@@ -1,0 +1,62 @@
+Installation
+
+Make sure you have a PS3 model with SACD compatible player. For more information
+on what model specifically go to: http://ps3sacd.com/faq.html#_Toc180147566
+
+You need to install a custom firmware to be able to rip SACDs. At this time of
+writing the PS3 firmware has not been cracked for firmware 3.60 and upwards. So
+in order to install the correct firmware you'll have to make sure your firmware
+is lower or equal to 3.55.
+
+The custom firmware that is needed must incorporate a LV1 patch to allow access
+to the System Manager services of GameOS. A firmware which incorporates that is
+the OtherOS++ firmware. More information can be found here:
+http://gitbrew.org/otheros/
+
+Custom Firmware installation steps:
+
+  1: Plug a USB stick into your computer
+  2: Create a folder in the root of the USB stick called PS3
+  3: Create a folder inside the PS3 folder called UPDATE
+  4: Download the 3.55 OtherOS++ firmware (http://gitbrew.org/otheros/)
+  5: Move PS3UPDAT.PUP to the directory UPDATE that you just created on the USB
+     stick
+  6: Plug the USB stick into your PS3
+  7: Navigate to Settings Tab
+  8: Choose System Update
+  9: Choose Update via Storage Media
+ 10: It will say it found Version 3.55
+ 11: Choose OK
+ 12: Accept Conditions and Follow the instructions
+   
+If the steps above did not work for you, then you are probably on 3.55 already.
+You will have to do a recovery menu mode installation:
+
+  1: Plug a USB stick into your computer
+  2: Create a folder in the root of the USB stick called PS3
+  3: Create a folder inside the PS3 folder called UPDATE
+  4: Download the 3.55 OtherOS++ firmware (http://gitbrew.org/otheros/)
+  5: Move PS3UPDAT.PUP to the directory UPDATE that you just created on the USB
+     stick
+  6: Plug the USB stick into your PS3
+  7: Power down the PS3 through the menu
+  8: Now press and HOLD the power button, the system will startup and shutdown
+     again
+  9: Release the power button, then press & HOLD power again, you’ll hear one
+     beep
+     followed by two consecutive beeps
+ 10: Release power then follow the on-screen instructions. You’re now in the
+     recovery menu
+ 11: Connect the USB device and select "System Update."
+ 12: Accept Conditions and Follow the instructions
+
+Instruction
+
+
+
+Big thanks goes to to:
+
+    Graf Chokolo
+    Geoffrey Levand
+    Max
+    vfalks
