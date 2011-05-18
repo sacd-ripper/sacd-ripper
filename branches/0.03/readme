@@ -50,6 +50,12 @@ You will have to do a recovery menu mode installation:
  11: Connect the USB device and select "System Update."
  12: Accept Conditions and Follow the instructions
 
+Note
+
+An OtherOS++ requirement is to have a model with vflash in there. afaik the SACD 
+models do not contain the necessary OtherOS++ vflash. But don't worry you can 
+install this firmware without a hitch although you won't be able to install Linux!
+
 Instructions
 
 Bla bla bla bla..
