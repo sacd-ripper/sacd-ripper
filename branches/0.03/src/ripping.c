@@ -19,11 +19,14 @@
  *
  */
 
+#include <stdio.h>
+#include <string.h>
 #include <sysutil/sysutil.h>
 #include <sysutil/msg.h>
 
 #include <sys/thread.h>
 #include <sys/atomic.h>
+#include <sys/systime.h>
 
 #include "ripping.h"
 #include "output_device.h" 
@@ -32,8 +35,13 @@
 
 static int dialog_action = 0;
 
+// the following variables are only used for smooth progressbar indication
+static char progress_message_upper[2][64];
+static char progress_message_lower[2][64];
+static atomic_t selected_progress_message;
 static atomic_t partial_blocks_processed;
 static atomic_t total_blocks_processed;
+static atomic_t stop_processing;
 static uint32_t total_blocks;
 
 static void dialog_handler(msgButton button, void *usrData)
@@ -54,33 +62,98 @@ static void dialog_handler(msgButton button, void *usrData)
         break;
     }
 }
+
+static void processing_thread(void *arg)
+{
+    uint32_t current_block;
+    
+	while (atomic_read(&stop_processing) == 0) {
+	    
+	    current_block = atomic_add_return(1, &partial_blocks_processed);
+	    
+	    if (current_block % 10)
+	    {
+	        int message_target = (atomic_read(&selected_progress_message) == 0 ? 1 : 0);
+
+	        snprintf(progress_message_upper[message_target], 64, "Upper Status %d..", current_block);
+	        snprintf(progress_message_lower[message_target], 64, "Lower status %d..", current_block);
+	        
+	        atomic_set(&selected_progress_message, message_target);
+	    }
+	    
+        if (atomic_add_return(1, &total_blocks_processed) == total_blocks)
+            break;
+
+        sysUsleep(100000);
+	}
+
+    atomic_set(&stop_processing, 1);
+
+	sysThreadExit(0);
+} 
  
 void start_ripping(void) 
 {
     msgType              dialog_type;
-
+	sys_ppu_thread_t     thread_id; 
+	int                  ret;
+	uint64_t             retval;
+    uint32_t prev_total_blocks_processed = 0;
+    uint32_t prev_partial_blocks_processed = 0;
+	
+    memset(progress_message_upper, 0, sizeof(progress_message_upper));
+    memset(progress_message_lower, 0, sizeof(progress_message_lower));
     atomic_set(&total_blocks_processed, 0);
     atomic_set(&partial_blocks_processed, 0);
+    atomic_set(&stop_processing, 0);
+    atomic_set(&selected_progress_message, 0);
     total_blocks = 0;
 
-    dialog_type = MSG_DIALOG_MUTE_ON | MSG_DIALOG_DOUBLE_PROGRESSBAR;
+	ret = sysThreadCreate(&thread_id, processing_thread, NULL, 1500, 4096, THREAD_JOINABLE, "processing_thread");
 
-    msgDialogOpen2(dialog_type, "Hello World!", dialog_handler, NULL, NULL);
-
-    msgDialogProgressBarSetMsg(MSG_PROGRESSBAR_INDEX0, "Message 1..");
-    msgDialogProgressBarSetMsg(MSG_PROGRESSBAR_INDEX1, "Message 2..");
-    msgDialogProgressBarInc(MSG_PROGRESSBAR_INDEX0, (int) atomic_read(&total_blocks_processed) * 100 / total_blocks);
-    msgDialogProgressBarInc(MSG_PROGRESSBAR_INDEX1, (int) atomic_read(&partial_blocks_processed) * 100 / total_blocks);
+    total_blocks = 100;
 
     dialog_action = 0;
-    while (!user_requested_exit() && dialog_action == 0)
+    dialog_type = MSG_DIALOG_MUTE_ON | MSG_DIALOG_DOUBLE_PROGRESSBAR;
+    msgDialogOpen2(dialog_type, "Copying to:...", dialog_handler, NULL, NULL);
+    while (!user_requested_exit() && dialog_action == 0 && atomic_read(&stop_processing) == 0)
     {
+        
+        msgDialogProgressBarInc(MSG_PROGRESSBAR_INDEX0, (atomic_read(&total_blocks_processed) * 100 / total_blocks) - prev_total_blocks_processed);
+        msgDialogProgressBarInc(MSG_PROGRESSBAR_INDEX1, (atomic_read(&partial_blocks_processed) * 100 / total_blocks) - prev_partial_blocks_processed);
+
+        msgDialogProgressBarSetMsg(MSG_PROGRESSBAR_INDEX0, progress_message_upper[atomic_read(&selected_progress_message)]);
+        msgDialogProgressBarSetMsg(MSG_PROGRESSBAR_INDEX1, progress_message_lower[atomic_read(&selected_progress_message)]);
+
+        prev_total_blocks_processed = atomic_read(&total_blocks_processed);
+        prev_partial_blocks_processed = atomic_read(&partial_blocks_processed);
 
         sysUtilCheckCallback();
         flip();
     }
     msgDialogAbort(); 
     
+    // in case of user intervention we tell our processing thread to stop
+    atomic_set(&stop_processing, 1);
+    
+    // wait for our thread to close
+	ret = sysThreadJoin(thread_id, &retval); 
+
+    // did we complete?
+    if (1) 
+    {	
+        dialog_type = (MSG_DIALOG_NORMAL | MSG_DIALOG_BTN_TYPE_OK | MSG_DIALOG_DISABLE_CANCEL_ON);
+        msgDialogOpen2(dialog_type, "Ripping was successful!", dialog_handler, NULL, NULL);
+    
+        dialog_action = 0;
+        while (!dialog_action && !user_requested_exit())
+        {
+            sysUtilCheckCallback();
+            flip();
+        }
+        msgDialogAbort();
+    }
+	
 } 
  
 #if 0
