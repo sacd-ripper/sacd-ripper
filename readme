@@ -8,10 +8,10 @@ writing the PS3 firmware has not been cracked for firmware 3.60 and upwards. So
 in order to install the correct firmware you'll have to make sure your firmware
 is lower or equal to 3.55.
 
-The custom firmware that is needed must incorporate a LV1 patch to allow access
-to the System Manager services of GameOS. A firmware which incorporates that is
-the OtherOS++ firmware. More information can be found here:
-http://gitbrew.org/otheros/
+The custom firmware that is needed must be 3.55 and should incorporate the ever 
+so important LV1 patch to allow access to the System Manager services of GameOS. 
+A firmware which incorporates that is the OtherOS++ firmware. More information 
+and download links can be found here: http://gitbrew.org/otheros/
 
 Custom Firmware installation steps:
 
