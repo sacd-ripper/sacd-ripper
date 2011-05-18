@@ -1,13 +1,9 @@
 todo:
 
-- start ripping
-    - read disk progress bar
-
-	- ask which channels to rip (in case of multiple channels)
-	- show not enough disc space message
-	- display ripping dual/single progress bar
-	- asynchronous/threaded read & write
-	- add dst decoding
+- write read & write asynchronous threaded pipeline
+- ask which channels to rip (in case of multiple channels)
+- show not enough disc space message (do fstat during ripping)
 
 - add splitted iso image support
+- add dst decoding
 - add sony dsf export support
