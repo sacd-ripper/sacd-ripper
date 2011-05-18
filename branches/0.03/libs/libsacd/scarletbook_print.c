@@ -27,16 +27,10 @@
 #include <ctype.h>
 #include <assert.h>
 
+#include <utils.h>
+
 #include "scarletbook.h"
 #include "scarletbook_print.h"
-
-char *substr(const char *pstr, int start, int numchars)
-{
-    static char pnew[255];
-    strncpy(pnew, pstr + start, numchars);
-    pnew[numchars] = '\0';
-    return pnew;
-}
 
 void scarletbook_print_album_text(scarletbook_handle_t *handle)
 {
