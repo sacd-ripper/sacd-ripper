@@ -1,5 +1,5 @@
 /**
- * SACD Ripper - http://code.google.com/p/sacd-ripper/
+ * SACD Ripper - http://code.google.com/write_ptr/sacd-ripper/
  *
  * Copyright (c) 2010-2011 by respective authors.
  *
@@ -19,20 +19,14 @@
  *
  */
 
-#ifndef __UTILS_H__
-#define __UTILS_H__
+#include <string.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "utils.h"
 
-char *substr(const char *, int, int);
-
-#define max(a, b)    (((a) > (b)) ? (a) : (b))
-#define min(a, b)    (((a) < (b)) ? (a) : (b))
-
-#ifdef __cplusplus
-};
-#endif
-
-#endif /* __UTILS_H__ */
+char *substr(const char *pstr, int start, int numchars)
+{
+    static char pnew[512];
+    strncpy(pnew, pstr + start, numchars);
+    pnew[numchars] = '\0';
+    return pnew;
+}
