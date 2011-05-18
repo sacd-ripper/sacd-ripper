@@ -1,7 +1,10 @@
 /*
  * PowerPC atomic operations
  *
- * Copied from the linux 2.6.x kernel sources
+ * Copied from the linux 2.6.x kernel sources:
+ *  - removed all kernel dependencies
+ *  - removed PPC_ACQUIRE_BARRIER, PPC_RELEASE_BARRIER macros
+ *  - removed PPC405_ERR77 macro
  *
  */
 

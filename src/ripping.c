@@ -22,6 +22,7 @@
 #include <sysutil/sysutil.h>
 #include <sysutil/msg.h>
 
+#include <sys/thread.h>
 #include <sys/atomic.h>
 
 #include "ripping.h"
@@ -58,7 +59,9 @@ void start_ripping(void)
 {
     msgType              dialog_type;
 
-    atomic_set(&blocks_processed, 0);
+    atomic_set(&total_blocks_processed, 0);
+    atomic_set(&partial_blocks_processed, 0);
+    total_blocks = 0;
 
     dialog_type = MSG_DIALOG_MUTE_ON | MSG_DIALOG_DOUBLE_PROGRESSBAR;
 
