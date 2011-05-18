@@ -26,6 +26,7 @@
 #include <sys/thread.h>
 #include <sys/systime.h>
 #include <sys/event_queue.h>
+#include <sys/file.h>
 
 #include <sys/storage.h>
 #include <sys/io_buffer.h>
@@ -41,6 +42,59 @@
  * Note: most of this code (except GUI) need to be moved into libsacd,
  * but at this point I just want to get it done, let it be ugly..
  */
+
+/*
+design comes down to: we try to do as much as possible at once but the pipeline is as fast as the slowest component!!
+
+so we can:
+    - initiate a new read request once a previous write request has finished
+    - do DST processing using multiple SPUs (should be no bottleneck..)
+    - decrypt using multiple SPUs (should be no bottleneck..)
+
+  - open sacd_accessor
+    
+    loop:
+        - create, write, close DSDIFF/ISO/DSF files, write headers, folders, etc..
+        - each read request contains "user_data", like: write destination, offset, conversion format, etc..
+
+        - no outstanding read_request for io_block[0]? 
+            - create sacd_aio_packet_t
+            - read io_block[0] async
+        - no outstanding read_request for io_block[1]? 
+            - create sacd_aio_packet_t
+            - read io_block[1] async
+
+        - lock decryption mutex
+        - wait for condition, x amount of seconds
+            - on fail, stop!
+        - unlock mutex
+        
+        - do we need to stop (user request)?
+        
+        - check which io_block was processed
+
+
+    event thread:
+    
+        - decrypt data using sac_accessor
+
+        - type of conversion? (none, DSD 3 in 14, DSD 3 in 16, DST)
+            - write into write_buffer[x]
+
+        - initiate write request for block [x]
+
+    AIO write callback:
+
+        - mark read_request for io_block[x] as done
+        
+        - destroy sacd_aio_packet_t
+        - lock decryption mutex
+        - signal condition
+        - unlock decryption mutex
+        
+  - close sacd_accessor
+
+*/
 
 extern log_module_info_t * lm_main; 
 
@@ -69,7 +123,28 @@ typedef struct
 	sys_io_buffer_t     io_buffer;
 	sys_io_block_t      io_block[2];
 
+    uint8_t            *write_buffer[2];
+
 } sacd_accessor_t;
+
+enum
+{
+      CONVERT_NOTHING      = 0
+    , CONVERT_DST          = 1
+    , CONVERT_DSD_3_IN_14  = 2
+    , CONVERT_DSD_3_IN_16  = 3
+
+} conversion_t;
+
+typedef struct
+{
+    int                 id;
+    int                 offset;
+    int                 blocks_read;
+    int                 conversion;
+    sysFSAio            aio_write;
+
+} sacd_aio_packet_t;
 
 static void sacd_accessor_event_receive(void *arg) 
 {
@@ -238,60 +313,6 @@ static void processing_thread(void *arg)
 {
     uint32_t current_block;
 
-    //aio.fd = fd; 
-    //aio.offset = 0; 
-    //aio.buf = foo; 
-    //aio.size = 100;
-    //aio.user_data = x;
-
-    // pipeline is as fast as the slowest component!!
-        // - we initiate a new read request once a previous write request has finished
-        // - DST processing could be done using multiple SPUs (should be no bottleneck..)
-        // - decryption could be done using multiple SPUs (should be no bottleneck..)
-
-    // open sacd_reader
-      // open sacd_accessor
-        
-        // loop
-
-            // write DSDIFF headers, filenames, folders, etc..
-            // each read request contains "user_data", like: write destination, offset, format, etc..
-
-            // no outstanding read_request for io_block[0]? 
-                // read io_block[0] async
-            // no outstanding read_request for io_block[1]? 
-                // read io_block[1] async
-
-            // lock decryption mutex
-            // wait for condition, x amount of seconds
-            // unlock mutex
-            
-            // do we need to stop?
-            
-            // check which io_block was processed
-
-
-        // event thread
-        
-            // decrypt data using sac_accessor
-
-            // type of conversion? (none, DSD 3 in 14, DSD 3 in 16, DST)
-                // write into write_buffer[x]
-
-            // initiate write request for block [x]
-
-        // AIO write callback
-
-            // mark read_request for io_block[x] as done
-            
-            // lock decryption mutex
-            // signal condition
-            // unlock decryption mutex
-            
-      // close sacd_accessor
-    // close sacd_reader
-    
-    
     // TODO: - sac_accessor speed test, vs read speed test
     
 	while (atomic_read(&stop_processing) == 0) 

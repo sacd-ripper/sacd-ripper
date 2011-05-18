@@ -1,9 +1,19 @@
 todo:
 
-- write read & write asynchronous threaded pipeline
-- ask which channels to rip (in case of multiple channels)
-- show not enough disc space message (do fstat during ripping)
+  core:
+    - finish ripping pipeline
+    - implement logging into libsacd
+    - write log along each consecutive rip
+
+  interface: 
+    - ask which layers to rip (in case of multiple)
+    - show not enough disc space message (do fstat during ripping)
 
 - add splitted iso image support
 - add dst decoding
 - add sony dsf export support
+
+refactoring:
+
+    - merge ripping logic into libsacd
+    - libsacd: replace name "channel" with track
