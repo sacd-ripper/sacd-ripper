@@ -26,8 +26,10 @@
 #include <sys/thread.h>
 #include <sys/systime.h>
 #include <sys/event_queue.h>
-#include <sys/atomic.h>
 
+#include <sys/storage.h>
+#include <sys/io_buffer.h>
+#include <sys/atomic.h>
 #include <log.h>
 
 #include "ripping.h"
@@ -35,210 +37,265 @@
 #include "exit_handler.h" 
 #include "rsxutil.h"
 
+/**
+ * Note: most of this code (except GUI) need to be moved into libsacd,
+ * but at this point I just want to get it done, let it be ugly..
+ */
+
+extern log_module_info_t * lm_main; 
+
 static int dialog_action = 0;
 
-// the following variables are only used for smooth progressbar indication
-static char progress_message_upper[2][64];
-static char progress_message_lower[2][64];
+// the following atomic are only used for smooth progressbar indication
 static atomic_t selected_progress_message;
 static atomic_t partial_blocks_processed;
 static atomic_t total_blocks_processed;
-static atomic_t stop_processing;            // indicate of the thread needs to stop / stopped
+static atomic_t stop_processing;            // indicates if the thread needs to stop or has stopped
 static uint32_t total_blocks;               // total amount of block to process
+static char progress_message_upper[2][64];
+static char progress_message_lower[2][64];
 
 #define ECANCELED (0x2f)
 #define ESRCH (-17)
 #define SYS_NO_TIMEOUT (0)
+#define SYS_EVENT_QUEUE_DESTROY_FORCE (1)
 
-static void accessor_driver_event_receive(uint64_t arg) {
-	//sac_accessor_driver_t *driver = (sac_accessor_driver_t *) (uintptr_t) arg;
+typedef struct 
+{
+	int                 fd;
+
+	sys_ppu_thread_t    thread_id;
+	sys_event_queue_t   queue;
+	sys_io_buffer_t     io_buffer;
+	sys_io_block_t      io_block[2];
+
+} sacd_accessor_t;
+
+static void sacd_accessor_event_receive(void *arg) 
+{
+	sacd_accessor_t *accessor = (sacd_accessor_t *) arg;
 	sys_event_t event;
 	int ret;
 
-	while (1) {
-		//ret = sysEventQueueReceive(driver->queue, &event, SYS_NO_TIMEOUT);
-		LOG_INFO("received event..\n");
+	while (1) 
+	{
+		ret = sysEventQueueReceive(accessor->queue, &event, SYS_NO_TIMEOUT);
+		LOG(lm_main, LOG_DEBUG, ("received event..\n"));
 
-		if (ret != 0) {
-			if (ret == ECANCELED || ret == ESRCH) {
-				// An expected error when sys_event_queue_cancel is called
+		if (ret != 0) 
+		{
+			if (ret == ECANCELED || ret == ESRCH) 
+			{
+				// An expected error when sysEventQueueDestroy is called
 				break;
-			} else {
+			} 
+			else 
+			{
 				// An unexpected error
-				//LOG_ERROR("accessor_driver_event_receive: sys_event_queue_receive failed (%#x)\n", ret);
-				sys_ppu_thread_exit(-1);
+				LOG(lm_main, LOG_ERROR, ("sacd_accessor_event_receive: sys_event_queue_receive failed (%#x)\n", ret));
+				sysThreadExit(-1);
 				return;
 			}
 		}
-		//LOG_INFO("accessor_driver_event_receive: source = %llx, data1 = %llx, data2 = %llx, data3 = %llx\n",
-		  //       event.source, event.data1, event.data2, event.data3);
+		LOG(lm_main, LOG_DEBUG, ("sacd_accessor_event_receive: source = %llx, data1 = %llx, data2 = %llx, data3 = %llx\n",
+		         event.source, event.data_1, event.data_2, event.data_3));
 
 	}
 
-	//LOG_INFO("accessor_driver_event_receive: Exit\n");
+	LOG(lm_main, LOG_DEBUG, ("sacd_accessor_event_receive: Exit\n"));
 	sysThreadExit(0);
 }
 
-#if 0
-
-int get_device_info(uint64_t device_id) {
+int sacd_accessor_open(sacd_accessor_t *accessor) 
+{
+	sys_event_queue_attr_t queue_attr;
 	uint8_t device_info[64];
-	int ret = sys_storage_get_device_info(device_id, device_info);
-	uint64_t total_sectors = *((uint64_t*) &device_info[40]);
-	uint32_t sector_size = *((uint32_t*) &device_info[48]);
-	//is_writeable = device_info[56];
-	return (ret != CELL_OK || total_sectors == 0 || sector_size != 2048 ? -1 : 0);
-}
+	uint64_t total_sectors = 0;
+	uint32_t sector_size = 0;
+	int ret, tmp;
 
-typedef struct {
-	int fd;
-	uint64_t device_id;
-	sys_ppu_thread_t thread_id;
-	sys_mutex_t read_async_mutex_id;
-	sys_event_queue_t queue;
-	int io_buffer;
-	int io_buffer_piece;
-} sac_accessor_driver_t;
-
-/*
-   void open_storage(void) {
-    int fail_count = 0;
-    int res = storage_open();
-
-    while (res == -1 && fail_count != 5) {
-        sys_timer_usleep(5000000);
-        res = storage_open();
-   ++fail_count;
-    }
-
-    if (res == CELL_OK) {
-        ret = get_device_info(driver->device_id);
-    }
-   }
- */
-
-static void accessor_driver_event_receive(uint64_t arg);
-
-int storage_open(sac_accessor_driver_t *driver) {
-	sys_event_queue_attribute_t queue_attr;
-	sys_mutex_attribute_t mutex_attr;
-	int ret;
-	int tmp;
-
-	ret = get_device_info(driver->device_id);
-	if (ret != CELL_OK) {
-		LOG_ERROR("sys_storage_get_device_info(%llx) failed ! ret = %x\n", driver->device_id, ret);
-		return -1;
+	ret = sys_storage_get_device_info(BD_DEVICE, device_info);
+	if (ret != 0) 
+	{
+	    LOG(lm_main, LOG_ERROR, ("sys_storage_get_device_info[%x]\n", ret));
+		return ret;
 	}
+	total_sectors = *((uint64_t*) &device_info[40]);
+	sector_size = *((uint32_t*) &device_info[48]);
 
-	ret = sys_storage_open(driver->device_id, &driver->fd);
-	if (ret != CELL_OK) {
-		LOG_ERROR("sys_storage_open(%llx) failed ! ret = %x\n", driver->device_id, ret);
+	// Create event
+	queue_attr.attr_protocol = SYS_EVENT_QUEUE_PRIO;
+	queue_attr.type = SYS_EVENT_QUEUE_PPU;
+    queue_attr.name[0] = '\0';
+	ret = sysEventQueueCreate(&accessor->queue, &queue_attr, SYS_EVENT_QUEUE_KEY_LOCAL, 5);
+	if (ret != 0) 
+	{
+		LOG(lm_main, LOG_ERROR, (__FILE__ ":%d:sys_event_queue_create failed\n", __LINE__));
 		return ret;
 	}
 
-	/* Create event */
-	sys_event_queue_attribute_initialize(queue_attr);
-	ret = sys_event_queue_create(&driver->queue, &queue_attr, SYS_EVENT_QUEUE_LOCAL, 5);
-	if (ret != CELL_OK) {
-		LOG_ERROR(__FILE__ ":%d:sys_event_queue_create failed\n", __LINE__);
-		return ret;
+    // allocate space for two 1MB blocks
+    ret = sys_io_buffer_create(2, 1024 * 1024, 1, 512, &accessor->io_buffer);
+	if (ret != 0)
+	{
+	    LOG(lm_main, LOG_ERROR, ("sys_io_buffer_create[%x]\n", ret));
+	    return ret;
+    }
+
+	ret = sys_io_buffer_allocate(accessor->io_buffer, &accessor->io_block[0]);
+	if (ret != 0)
+	{
+	    LOG(lm_main, LOG_ERROR, ("sys_io_buffer_allocate[%x] %x\n", ret, accessor->io_block[0]));
+	    return ret;
 	}
 
+	ret = sys_io_buffer_allocate(accessor->io_buffer, &accessor->io_block[1]);
+	if (ret != 0)
+	{
+	    LOG(lm_main, LOG_ERROR, ("sys_io_buffer_allocate[%x] %x\n", ret, accessor->io_block[1]));
+	    return ret;
+	}
 
-	ret = sys_io_buffer_create(&driver->io_buffer, 10);
-	LOG_INFO("sys_io_buffer_create[%x]\n", ret);
-
-	ret = sys_io_buffer_allocate(driver->io_buffer, &driver->io_buffer_piece);
-	LOG_INFO("sys_io_buffer_allocate[%x] %x\n", ret, driver->io_buffer_piece);
-
-	ret = sys_storage_async_configure(driver->fd, driver->io_buffer, driver->queue, &tmp);
-	if (ret != CELL_OK) {
-		LOG_ERROR("sys_storage_async_configure ret = %x\n", ret);
+	ret = sys_storage_async_configure(accessor->fd, accessor->io_buffer, accessor->queue, &tmp);
+	if (ret != 0) 
+	{
+		LOG(lm_main, LOG_ERROR, ("sys_storage_async_configure ret = %x\n", ret));
 		return -3;
 	}
-	LOG_INFO("sys_storage_async_configure[%x]\n", ret);
+	LOG(lm_main, LOG_DEBUG, ("sys_storage_async_configure[%x]\n", ret));
 
-	sys_mutex_attribute_initialize(mutex_attr);
-	if (sys_mutex_create(&driver->read_async_mutex_id, &mutex_attr) != CELL_OK) {
-		LOG_ERROR("create mmio_mutex failed.\n");
-		return -3;
-	}
-
-	/* Initialze input thread */
-	ret = sys_ppu_thread_create(&driver->thread_id,
-	                            accessor_driver_event_receive,
-	                            (uintptr_t) driver,
-	                            1050,
-	                            8192,
-	                            SYS_PPU_THREAD_CREATE_JOINABLE,
-	                            "accessor_driver_event_receive");
-	if (ret != CELL_OK) {
-		LOG_ERROR("sys_ppu_thread_create\n");
+	// Initialze input thread
+	ret = sysThreadCreate(&accessor->thread_id,
+                          sacd_accessor_event_receive,
+                          (void*) accessor,
+                          1050,
+                          8192,
+                          THREAD_JOINABLE,
+                          "accessor_sacd_accessor_event_receive");
+	if (ret != 0) 
+	{
+		LOG(lm_main, LOG_ERROR, ("sys_ppu_thread_create\n"));
 		return -3;
 	}
 	return ret;
 }
 
-int storage_close(sac_accessor_driver_t *driver) {
+int sacd_accessor_close(sacd_accessor_t *accessor) 
+{
 	uint64_t thr_exit_code;
 	int ret;
 
-	ret = sys_storage_close(driver->fd);
-	if (ret != CELL_OK) {
-		LOG_ERROR("sys_storage_close failed: %x\n", ret);
+	ret = sys_storage_close(accessor->fd);
+	if (ret != 0) 
+	{
+		LOG(lm_main, LOG_ERROR, ("sys_storage_close failed: %x\n", ret));
 		return ret;
 	}
 
 	/*	clean event_queue for spu_printf */
-	ret = sys_event_queue_destroy(driver->queue, SYS_EVENT_QUEUE_DESTROY_FORCE);
-	if (ret) {
-		LOG_ERROR("sys_event_queue_destroy failed %x\n", ret);
+	ret = sysEventQueueDestroy(accessor->queue, SYS_EVENT_QUEUE_DESTROY_FORCE);
+	if (ret) 
+	{
+		LOG(lm_main, LOG_ERROR, ("sys_event_queue_destroy failed %x\n", ret));
 		return ret;
 	}
 
-	ret = sys_io_buffer_free(driver->io_buffer, driver->io_buffer_piece);
-	if (ret != CELL_OK) {
-		LOG_ERROR("sys_io_buffer_free (%#x) %x\n", ret, driver->io_buffer_piece);
-		return ret;
-	}
-	LOG_INFO("sys_io_buffer_free[%x]\n", ret);
-
-	ret = sys_io_buffer_destroy(driver->io_buffer);
-	if (ret != CELL_OK) {
-		LOG_ERROR("sys_io_buffer_destroy (%#x) %x\n", ret, driver->io_buffer);
-		return ret;
-	}
-	LOG_INFO("sys_io_buffer_destroy[%x]\n", ret);
-
-	/**
-	 * Wait until pu_thr exits
-	 * If sys_ppu_thread_join() succeeds, output the exit status.
-	 */
-	LOG_INFO("Wait for the PPU thread %llu exits.\n", driver->thread_id);
-	ret = sys_ppu_thread_join(driver->thread_id, &thr_exit_code);
-	if (ret != CELL_OK) {
-		LOG_ERROR("sys_ppu_thread_join failed (%#x)\n", ret);
+	ret = sys_io_buffer_free(accessor->io_buffer, accessor->io_block[0]);
+	if (ret != 0) 
+    {
+		LOG(lm_main, LOG_ERROR, ("sys_io_buffer_free (%#x) %x\n", ret, accessor->io_block[0]));
 		return ret;
 	}
 
-	ret = sys_mutex_destroy(driver->read_async_mutex_id);
-	if (ret != CELL_OK) {
-		LOG_ERROR("sys_mutex_destroy(au_mutex) failed ! ret = %x\n", ret);
+	ret = sys_io_buffer_free(accessor->io_buffer, accessor->io_block[1]);
+	if (ret != 0) 
+    {
+		LOG(lm_main, LOG_ERROR, ("sys_io_buffer_free (%#x) %x\n", ret, accessor->io_block[1]));
+		return ret;
 	}
 
-	memset(driver, 0, sizeof(sac_accessor_driver_t));
+	ret = sys_io_buffer_destroy(accessor->io_buffer);
+	if (ret != 0) 
+	{
+		LOG(lm_main, LOG_ERROR, ("sys_io_buffer_destroy (%#x) %x\n", ret, accessor->io_buffer));
+		return ret;
+	}
+
+	LOG(lm_main, LOG_DEBUG, ("Wait for the PPU thread %llu exits.\n", accessor->thread_id));
+	ret = sysThreadJoin(accessor->thread_id, &thr_exit_code);
+	if (ret != 0) 
+	{
+		LOG(lm_main, LOG_ERROR, ("sys_ppu_thread_join failed (%#x)\n", ret));
+		return ret;
+	}
+
+	memset(accessor, 0, sizeof(sacd_accessor_t));
 
 	return ret;
 }
 
-#endif
-
 static void processing_thread(void *arg)
 {
     uint32_t current_block;
+
+    //aio.fd = fd; 
+    //aio.offset = 0; 
+    //aio.buf = foo; 
+    //aio.size = 100;
+    //aio.user_data = x;
+
+    // pipeline is as fast as the slowest component!!
+        // - we initiate a new read request once a previous write request has finished
+        // - DST processing could be done using multiple SPUs (should be no bottleneck..)
+        // - decryption could be done using multiple SPUs (should be no bottleneck..)
+
+    // open sacd_reader
+      // open sacd_accessor
+        
+        // loop
+
+            // write DSDIFF headers, filenames, folders, etc..
+            // each read request contains "user_data", like: write destination, offset, format, etc..
+
+            // no outstanding read_request for io_block[0]? 
+                // read io_block[0] async
+            // no outstanding read_request for io_block[1]? 
+                // read io_block[1] async
+
+            // lock decryption mutex
+            // wait for condition, x amount of seconds
+            // unlock mutex
+            
+            // do we need to stop?
+            
+            // check which io_block was processed
+
+
+        // event thread
+        
+            // decrypt data using sac_accessor
+
+            // type of conversion? (none, DSD 3 in 14, DSD 3 in 16, DST)
+                // write into write_buffer[x]
+
+            // initiate write request for block [x]
+
+        // AIO write callback
+
+            // mark read_request for io_block[x] as done
+            
+            // lock decryption mutex
+            // signal condition
+            // unlock decryption mutex
+            
+      // close sacd_accessor
+    // close sacd_reader
     
-	while (atomic_read(&stop_processing) == 0) {
+    
+    // TODO: - sac_accessor speed test, vs read speed test
+    
+	while (atomic_read(&stop_processing) == 0) 
+	{
 	    
 	    current_block = atomic_add_return(1, &partial_blocks_processed);
 	    
@@ -282,7 +339,7 @@ static void dialog_handler(msgButton button, void *user_data)
     }
 }
 
-void start_ripping(void) 
+int start_ripping(void) 
 {
     msgType              dialog_type;
 	sys_ppu_thread_t     thread_id; 
@@ -300,6 +357,11 @@ void start_ripping(void)
     total_blocks = 0;
 
 	ret = sysThreadCreate(&thread_id, processing_thread, NULL, 1500, 4096, THREAD_JOINABLE, "processing_thread");
+	if (ret != 0) 
+	{
+		LOG(lm_main, LOG_ERROR, ("sys_ppu_thread_join failed (%#x)\n", ret));
+		return ret;
+	}
 
     total_blocks = 100;
 
@@ -343,4 +405,5 @@ void start_ripping(void)
         msgDialogAbort();
     }
 	
+    return 0;
 } 

@@ -615,7 +615,6 @@ int sac_exec_key_exchange(int fd)
 
     ret = sac_exec_generate_key_1(buffer, 0xcc, &buffer_size);
     //LOG_INFO("sac_exec_generate_key 0 %x %x\n", buffer_size, ret);
-    //LOG_DATA(key, 256);
     if (ret != 0)
     {
         return ret;

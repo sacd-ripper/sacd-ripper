@@ -53,7 +53,7 @@
 
 #include <log.h>
 
-log_module_info_t * _main_lm = 0; 
+log_module_info_t * lm_main = 0; 
 
 static int dialog_action = 0;
 static int bd_contains_sacd_disc = -1;      // information about the current disc
@@ -108,20 +108,20 @@ int file_simple_save(const char *filePath, void *buf, unsigned int fileSize)
 
     if (buf == NULL)
     {
-        LOG(_main_lm, LOG_ERROR, ("buffer is null\n"));
+        LOG(lm_main, LOG_ERROR, ("buffer is null\n"));
     }
 
     ret = sysFsOpen(filePath, SYS_O_WRONLY | SYS_O_CREAT | SYS_O_TRUNC, &fd, NULL, 0);
     if ((ret != 0))        // && (ret != EPERM) ){
     {
-        LOG(_main_lm, LOG_ERROR, ("file %s open error : 0x%x\n", filePath, ret));
+        LOG(lm_main, LOG_ERROR, ("file %s open error : 0x%x\n", filePath, ret));
         return -1;
     }
 
     ret = sysFsWrite(fd, buf, fileSize, &writelen);
     if (ret != 0 || fileSize != writelen)
     {
-        LOG(_main_lm, LOG_ERROR, ("file %s read error : 0x%x\n", filePath, ret));
+        LOG(lm_main, LOG_ERROR, ("file %s read error : 0x%x\n", filePath, ret));
         sysFsClose(fd);
         return -1;
     }
@@ -129,7 +129,7 @@ int file_simple_save(const char *filePath, void *buf, unsigned int fileSize)
     ret = sysFsClose(fd);
     if (ret != 0)
     {
-        LOG(_main_lm, LOG_ERROR, ("file %s close error : 0x%x\n", filePath, ret));
+        LOG(lm_main, LOG_ERROR, ("file %s close error : 0x%x\n", filePath, ret));
         return -1;
     }
 
@@ -201,17 +201,17 @@ void dump_sample_to_output_device(void)
         uint8_t *buffer = (uint8_t *) malloc(1024 * 2048);
 
         ret = sys_storage_open(BD_DEVICE, &fd_in);
-        LOG(_main_lm, LOG_DEBUG, ("sys storage_open %x %x\n", ret, fd_in));
+        LOG(lm_main, LOG_DEBUG, ("sys storage_open %x %x\n", ret, fd_in));
         if (ret == 0)
         {
             ret = sys_storage_read(fd_in, 0, 1024, buffer, &sectors_read);
 
-            LOG(_main_lm, LOG_DEBUG, ("sys storage_read %x %x %x\n", ret, fd_in, sectors_read));
+            LOG(lm_main, LOG_DEBUG, ("sys storage_read %x %x %x\n", ret, fd_in, sectors_read));
 
             sysFsWrite(fd_out, buffer, 1024 * 2048, &writelen);
 
             ret = sys_storage_close(fd_in);
-            LOG(_main_lm, LOG_DEBUG, ("sys storage_close %x %x\n", ret, fd_in));
+            LOG(lm_main, LOG_DEBUG, ("sys storage_close %x %x\n", ret, fd_in));
 
         }
         free(buffer);
@@ -435,7 +435,7 @@ int main(int argc, char *argv[])
 
     setenv("LOG_MODULES", "all:5", 0);
 
-    _main_lm = create_log_module("main");
+    lm_main = create_log_module("main");
     log_init();
 
     init_screen(host_addr, HOST_SIZE);

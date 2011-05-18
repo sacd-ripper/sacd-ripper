@@ -39,17 +39,6 @@
 struct sacd_input_s
 {
     int fd;
-
-#if defined(__lv2ppu__)
-#if 0
-	sys_io_buffer_t  io_buffer;
-    sys_io_block_t   io_block;
-
-	sys_event_queue_t queue;
-
-	sys_ppu_thread_t thread_id;
-#endif
-#endif
 };
 
 /**
@@ -72,10 +61,6 @@ sacd_input_t sacd_input_open(const char *target)
     dev->fd = open(target, O_RDONLY);
 #elif defined(__lv2ppu__)
     {
-#if 0
-    	sys_event_queue_attribute_t queue_attr;
-        int tmp;
-#endif
         uint8_t buffer[64];
         int     ret;
 
@@ -100,45 +85,6 @@ sacd_input_t sacd_input_open(const char *target)
             }
         }
         sys_storage_get_device_info(BD_DEVICE, buffer);
-#if 0
-		queue_attr.attr_protocol = SYS_SYNC_PRIORITY;
-		queue_attr.type = SYS_PPU_QUEUE;
-        queue_attr.name[0] = '\0';
-    	ret = sys_event_queue_create(&dev->queue, &queue_attr, SYS_EVENT_QUEUE_LOCAL, 5);
-    	if (ret != 0) {
-    		//LOG_ERROR("sys_event_queue_create failed\n", __LINE__);
-    	}
-
-        ret = sys_io_buffer_create(2, 0x10000, 1, 512, &dev->io_buffer)
-    	if (ret != 0) {
-    		//LOG_ERROR("sys_io_buffer_create failed\n", __LINE__);
-    	}
-
-    	ret = sys_io_buffer_allocate(dev->io_buffer, &dev->io_block);
-    	if (ret != 0) {
-    		//LOG_ERROR("sys_io_buffer_create failed\n", __LINE__);
-    	}
-    
-    	ret = sys_storage_async_configure(dev->fd, dev->io_block, dev->queue, &tmp);
-    	if (ret != 0) {
-    		//LOG_ERROR("sys_storage_async_configure ret = %x\n", ret);
-    		return -3;
-    	}
-   
-    	/* Initialze input thread */
-    	ret = sys_ppu_thread_create(&driver->thread_id,
-    	                            accessor_driver_event_receive,
-    	                            (uintptr_t) driver,
-    	                            1050,
-    	                            8192,
-    	                            SYS_PPU_THREAD_CREATE_JOINABLE,
-    	                            "accessor_driver_event_receive");
-    	if (ret != 0) {
-    		//LOG_ERROR("sys_ppu_thread_create\n");
-    		return -3;
-    	}
-#endif
-
     }
 #else
     dev->fd = open(target, O_RDONLY | O_BINARY);
