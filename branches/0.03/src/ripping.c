@@ -27,6 +27,8 @@
 #include <sys/systime.h>
 #include <sys/event_queue.h>
 #include <sys/file.h>
+#include <sys/mutex.h>
+#include <sys/cond.h>
 
 #include <sys/storage.h>
 #include <sys/io_buffer.h>
@@ -134,15 +136,19 @@ typedef struct
 
     uint8_t            *write_buffer;
     sysFSAio            aio_write;
+
 } sacd_aio_packet_t;
 
-typedef struct
+typedef struct sacd_accessor_t
 {
-    sys_ppu_thread_t  thread_id;
-    sys_event_queue_t queue;
-    sys_io_buffer_t   io_buffer;
+    sys_ppu_thread_t        thread_id;
+    sys_event_queue_t       queue;
+    sys_io_buffer_t         io_buffer;
 
-    sacd_aio_packet_t aio_packet[AIO_MAXIO];
+    sys_cond_t              processing_cond;
+    sys_mutex_t             processing_mutex;
+
+    sacd_aio_packet_t       aio_packet[AIO_MAXIO];
 } sacd_accessor_t;
 
 enum
@@ -155,9 +161,12 @@ enum
 
 static void sacd_accessor_event_receive(void *arg)
 {
-    sacd_accessor_t *accessor = (sacd_accessor_t *) arg;
+    sacd_accessor_t   *accessor = (sacd_accessor_t *) arg;
+    sacd_aio_packet_t *packet = 0;
     sys_event_t     event;
     int             ret;
+
+    LOG(lm_main, LOG_DEBUG, ("sacd_accessor_event_receive %p", arg));
 
     while (1)
     {
@@ -179,7 +188,39 @@ static void sacd_accessor_event_receive(void *arg)
                 return;
             }
         }
-        LOG(lm_main, LOG_DEBUG, ("sacd_accessor_event_receive: source = %llx, data1 = %llx, data2 = %llx, data3 = %llx\n", event.source, event.data_1, event.data_2, event.data_3));
+
+        packet = (sacd_aio_packet_t *) event.data_1;
+        if (!packet)
+        {
+            sysThreadExit(-1);
+        }
+
+        LOG(lm_main, LOG_DEBUG, ("sacd_accessor_event_receive: offset = %d, blocks = %d", packet->offset, packet->blocks_read));
+
+        atomic_add(packet->blocks_read, &total_blocks_processed);
+
+        // we are done with processing this packet
+        atomic_set(&packet->processing, 0);
+
+        ret = sysMutexLock(accessor->processing_mutex, 0);
+        if (ret != 0)
+        {
+            sysThreadExit(-1);
+        }
+
+        ret = sysCondSignal(accessor->processing_cond);
+        if (ret != 0)
+        {
+            sysMutexUnlock(accessor->processing_mutex);
+            sysThreadExit(-1);
+        }
+
+        ret = sysMutexUnlock(accessor->processing_mutex);
+        if (ret != 0)
+        {
+            sysThreadExit(-1);
+        }
+
     }
 
     LOG(lm_main, LOG_DEBUG, ("sacd_accessor_event_receive: Exit\n"));
@@ -188,9 +229,11 @@ static void sacd_accessor_event_receive(void *arg)
 
 int sacd_accessor_open(sacd_accessor_t *accessor, sacd_reader_t *reader)
 {
-    sys_event_queue_attr_t queue_attr;
-    int                    ret, tmp, i;
-    
+    sys_cond_attr_t         cond_attr;
+    sys_mutex_attr_t        mutex_attr;
+    sys_event_queue_attr_t  queue_attr;
+    int                     ret, tmp, i;
+
     memset(accessor, 0, sizeof(sacd_accessor_t));
 
     ret = sys_storage_get_device_info(BD_DEVICE, &device_info);
@@ -199,7 +242,7 @@ int sacd_accessor_open(sacd_accessor_t *accessor, sacd_reader_t *reader)
         LOG(lm_main, LOG_ERROR, ("sys_storage_get_device_info[%x]\n", ret));
         return ret;
     }
-    
+
     if (device_info.sector_size != SACD_LSN_SIZE)
     {
         LOG(lm_main, LOG_ERROR, ("incorrect LSN size [%x]\n", device_info.sector_size));
@@ -217,15 +260,15 @@ int sacd_accessor_open(sacd_accessor_t *accessor, sacd_reader_t *reader)
         return ret;
     }
 
-    // allocate space for two 1MB blocks
-    ret = sys_io_buffer_create(AIO_MAXIO, MAX_BLOCK_SIZE * 2048, 1, 512, &accessor->io_buffer);
+    // allocate space for AIO_MAXIO * MAX_BLOCK_SIZE * SACD_LSN_SIZE blocks
+    ret = sys_io_buffer_create(AIO_MAXIO, MAX_BLOCK_SIZE * SACD_LSN_SIZE, 1, 512, &accessor->io_buffer);
     if (ret != 0)
     {
         LOG(lm_main, LOG_ERROR, ("sys_io_buffer_create[%x]\n", ret));
         return ret;
     }
 
-    for (i = 0; i < AIO_MAXIO; i++) 
+    for (i = 0; i < AIO_MAXIO; i++)
     {
         ret = sys_io_buffer_allocate(accessor->io_buffer, &accessor->aio_packet[i].read_buffer);
         if (ret != 0)
@@ -242,6 +285,27 @@ int sacd_accessor_open(sacd_accessor_t *accessor, sacd_reader_t *reader)
         return ret;
     }
     LOG(lm_main, LOG_DEBUG, ("sys_storage_async_configure[%x]\n", ret));
+
+    memset(&cond_attr, 0, sizeof(sys_cond_attr_t));
+    cond_attr.attr_pshared = SYS_COND_ATTR_PSHARED;
+
+    memset(&mutex_attr, 0, sizeof(sys_mutex_attr_t));
+    mutex_attr.attr_protocol  = SYS_MUTEX_PROTOCOL_PRIO;
+    mutex_attr.attr_recursive = SYS_MUTEX_ATTR_NOT_RECURSIVE;
+    mutex_attr.attr_pshared   = SYS_MUTEX_ATTR_PSHARED;
+    mutex_attr.attr_adaptive  = SYS_MUTEX_ATTR_NOT_ADAPTIVE;
+
+    if (sysMutexCreate(&accessor->processing_mutex, &mutex_attr) != 0)
+    {
+        //LOG_ERROR("create processing_mutex failed.\n");
+        return -1;
+    }
+
+    if (sysCondCreate(&accessor->processing_cond, accessor->processing_mutex, &cond_attr) != 0)
+    {
+        //LOG_ERROR("create processing_cond failed.\n");
+        return -1;
+    }
 
     // Initialze input thread
     ret = sysThreadCreate(&accessor->thread_id,
@@ -272,7 +336,7 @@ int sacd_accessor_close(sacd_accessor_t *accessor)
         return ret;
     }
 
-    for (i = 0; i < AIO_MAXIO; i++) 
+    for (i = 0; i < AIO_MAXIO; i++)
     {
         ret = sys_io_buffer_free(accessor->io_buffer, accessor->aio_packet[i].read_buffer);
         if (ret != 0)
@@ -297,6 +361,30 @@ int sacd_accessor_close(sacd_accessor_t *accessor)
         return ret;
     }
 
+    if (accessor->processing_cond != 0)
+    {
+        if ((ret = sysCondDestroy(accessor->processing_cond)) != 0)
+        {
+            //LOG_ERROR("destroy processing_cond failed.\n");
+        }
+        else
+        {
+            accessor->processing_cond = 0;
+        }
+    }
+
+    if (accessor->processing_mutex != 0)
+    {
+        if ((ret = sysMutexDestroy(accessor->processing_mutex)) != 0)
+        {
+            //LOG_ERROR("destroy processing_mutex failed.\n");
+        }
+        else
+        {
+            accessor->processing_mutex = 0;
+        }
+    }
+
     memset(accessor, 0, sizeof(sacd_accessor_t));
 
     return 0;
@@ -314,7 +402,7 @@ static void processing_thread(void *arg)
     int block_size;
 
 	sacd_reader = sacd_open("/dev_bdvd");
-	if (!sacd_reader) 
+	if (!sacd_reader)
 	{
         LOG(lm_main, LOG_ERROR, ("could not open device %llx, error: %#x\n", BD_DEVICE, (uint32_t) (uint64_t) sacd_reader));
         goto close_thread;
@@ -337,22 +425,50 @@ static void processing_thread(void *arg)
     // set total amount of blocks to process
     atomic_set(&total_blocks, (uint32_t) device_info.total_sectors);
 
+    LOG(lm_main, LOG_NOTICE, ("total sectors: %d", (uint32_t) device_info.total_sectors));
+
     while (atomic_read(&stop_processing) == 0 && current_position < device_info.total_sectors)
     {
-        for (i = 0; i < AIO_MAXIO; i++) 
+        for (i = 0; i < AIO_MAXIO; i++)
         {
             block_size = min(device_info.total_sectors - current_position, MAX_BLOCK_SIZE);
-            
+
             if (atomic_cmpxchg(&sacd_accessor.aio_packet[i].processing, 0, 1) == 0)
             {
-                sacd_async_read_block_raw(sacd_reader, current_position, block_size, 
+                sacd_accessor.aio_packet[i].offset = current_position;
+                sacd_accessor.aio_packet[i].blocks_read = block_size;
+
+                LOG(lm_main, LOG_NOTICE, ("triggering async_read %x pos: %d, size: %d", (uint32_t) (uint64_t) &sacd_accessor.aio_packet[i], current_position, block_size));
+
+                ret = sacd_async_read_block_raw(sacd_reader, current_position, block_size,
                                           sacd_accessor.aio_packet[i].read_buffer, (uint64_t) &sacd_accessor.aio_packet[i]);
+
                 current_position += block_size;
             }
         }
 
-        // wait with lock
+        ret = sysMutexLock(sacd_accessor.processing_mutex, 0);
+        if (ret != 0)
+        {
+            LOG(lm_main, LOG_NOTICE, ("error sysMutexLock"));
+            goto close_thread;
+        }
 
+        LOG(lm_main, LOG_NOTICE, ("waiting for async read result (10 sec)"));
+        ret = sysCondWait(sacd_accessor.processing_cond, 10000000);
+        if (ret != 0)
+        {
+            LOG(lm_main, LOG_NOTICE, ("error sysCondWait"));
+            sysMutexUnlock(sacd_accessor.processing_mutex);
+            goto close_thread;
+        }
+
+        ret = sysMutexUnlock(sacd_accessor.processing_mutex);
+        if (ret != 0)
+        {
+            LOG(lm_main, LOG_NOTICE, ("error sysMutexUnlock"));
+            goto close_thread;
+        }
 
         //current_block = atomic_add_return(1, &partial_blocks_processed);
         //
@@ -373,7 +489,7 @@ static void processing_thread(void *arg)
     }
 
 close_thread:
-    
+
     scarletbook_close(sb_handle);
     sacd_close(sacd_reader);
     sacd_accessor_close(&sacd_accessor); // closing accessor comes after closing device
@@ -431,14 +547,17 @@ int start_ripping(void)
     msgDialogOpen2(dialog_type, "Copying to:...", dialog_handler, NULL, NULL);
     while (!user_requested_exit() && dialog_action == 0 && atomic_read(&stop_processing) == 0)
     {
-        msgDialogProgressBarInc(MSG_PROGRESSBAR_INDEX0, (atomic_read(&total_blocks_processed) * 100 / atomic_read(&total_blocks)) - prev_total_blocks_processed);
-        msgDialogProgressBarInc(MSG_PROGRESSBAR_INDEX1, (atomic_read(&partial_blocks_processed) * 100 / atomic_read(&total_blocks)) - prev_partial_blocks_processed);
-
-        msgDialogProgressBarSetMsg(MSG_PROGRESSBAR_INDEX0, progress_message_upper[atomic_read(&selected_progress_message)]);
-        msgDialogProgressBarSetMsg(MSG_PROGRESSBAR_INDEX1, progress_message_lower[atomic_read(&selected_progress_message)]);
-
-        prev_total_blocks_processed   = atomic_read(&total_blocks_processed);
-        prev_partial_blocks_processed = atomic_read(&partial_blocks_processed);
+        if (atomic_read(&total_blocks) != 0)
+        {
+            msgDialogProgressBarInc(MSG_PROGRESSBAR_INDEX0, (atomic_read(&total_blocks_processed) * 100 / atomic_read(&total_blocks)) - prev_total_blocks_processed);
+            msgDialogProgressBarInc(MSG_PROGRESSBAR_INDEX1, (atomic_read(&partial_blocks_processed) * 100 / atomic_read(&total_blocks)) - prev_partial_blocks_processed);
+    
+            msgDialogProgressBarSetMsg(MSG_PROGRESSBAR_INDEX0, progress_message_upper[atomic_read(&selected_progress_message)]);
+            msgDialogProgressBarSetMsg(MSG_PROGRESSBAR_INDEX1, progress_message_lower[atomic_read(&selected_progress_message)]);
+    
+            prev_total_blocks_processed   = atomic_read(&total_blocks_processed);
+            prev_partial_blocks_processed = atomic_read(&partial_blocks_processed);
+        }
 
         sysUtilCheckCallback();
         flip();
