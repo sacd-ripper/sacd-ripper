@@ -32,6 +32,10 @@
 #include <sys/types.h>
 #include <inttypes.h>
 
+#if defined(__lv2ppu__)
+#include <sys/io_buffer.h>
+#endif
+
 /**
  * The SACD access interface.
  *
@@ -79,6 +83,24 @@ void sacd_close(sacd_reader_t *);
  * sacd_read_block_raw(sacd, lb_number, block_count, data);
  */
 ssize_t sacd_read_block_raw(sacd_reader_t *, uint32_t, size_t, unsigned char *);
+
+#if defined(__lv2ppu__)
+/**
+ * Seeks and reads a block asynchrously from sacd.
+ *
+ * @param sacd A read handle that should be closed.
+ * @param lb_number The block number to seek to.
+ * @param block_count The amount of blocks to read.
+ * @param bounce_buf The data pointer to read the block into.
+ * @param user_data User data that is received on callback
+ *
+ * sacd_read_block_raw(sacd, lb_number, block_count, data);
+ */
+inline int sacd_async_read_block_raw(sacd_reader_t *, uint32_t, size_t, sys_io_block_t, uint64_t);
+
+// hack, temporary
+inline int sacd_get_fd(sacd_reader_t *sacd);
+#endif
 
 #ifdef __cplusplus
 };

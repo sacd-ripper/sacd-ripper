@@ -26,7 +26,7 @@
 #include <sys/storage.h>
 #include "ioctl.h"
 
-int ps3rom_lv2_get_configuration(int fd, uint8_t *buffer)
+int ioctl_get_configuration(int fd, uint8_t *buffer)
 {
     int                         res;
     struct lv2_atapi_cmnd_block atapi_cmnd;
@@ -44,7 +44,7 @@ int ps3rom_lv2_get_configuration(int fd, uint8_t *buffer)
     return res;
 }
 
-int ps3rom_lv2_mode_sense(int fd, uint8_t *buffer)
+int ioctl_mode_sense(int fd, uint8_t *buffer)
 {
     int                         res;
     struct lv2_atapi_cmnd_block atapi_cmnd;
@@ -61,7 +61,7 @@ int ps3rom_lv2_mode_sense(int fd, uint8_t *buffer)
     return res;
 }
 
-int ps3rom_lv2_mode_select(int fd)
+int ioctl_mode_select(int fd)
 {
     int                         res;
     struct lv2_atapi_cmnd_block atapi_cmnd;
@@ -86,7 +86,7 @@ int ps3rom_lv2_mode_select(int fd)
     return res;
 }
 
-int ps3rom_lv2_enable_encryption(int fd, uint8_t *buffer, uint32_t lba)
+int ioctl_enable_encryption(int fd, uint8_t *buffer, uint32_t lba)
 {
     int                         res;
     struct lv2_atapi_cmnd_block atapi_cmnd;
@@ -108,7 +108,7 @@ int ps3rom_lv2_enable_encryption(int fd, uint8_t *buffer, uint32_t lba)
     return res;
 }
 
-int ps3rom_lv2_get_event_status_notification(int fd, uint8_t *buffer)
+int ioctl_get_event_status_notification(int fd, uint8_t *buffer)
 {
     int                         res;
     struct lv2_atapi_cmnd_block atapi_cmnd;
@@ -125,7 +125,7 @@ int ps3rom_lv2_get_event_status_notification(int fd, uint8_t *buffer)
     return res;
 }
 
-int ps3rom_lv2_report_key_start(int fd, uint8_t *buffer)
+int ioctl_report_key_start(int fd, uint8_t *buffer)
 {
     int                         res;
     struct lv2_atapi_cmnd_block atapi_cmnd;
@@ -147,7 +147,7 @@ int ps3rom_lv2_report_key_start(int fd, uint8_t *buffer)
     return res;
 }
 
-int ps3rom_lv2_send_key(int fd, uint8_t agid, uint32_t key_size, uint8_t *key, uint8_t sequence)
+int ioctl_send_key(int fd, uint8_t agid, uint32_t key_size, uint8_t *key, uint8_t sequence)
 {
     int                         res;
     struct lv2_atapi_cmnd_block atapi_cmnd;
@@ -191,7 +191,7 @@ int ps3rom_lv2_send_key(int fd, uint8_t agid, uint32_t key_size, uint8_t *key, u
     return res;
 }
 
-int ps3rom_lv2_report_key(int fd, uint8_t agid, uint32_t *key_size, uint8_t *key, uint8_t sequence)
+int ioctl_report_key(int fd, uint8_t agid, uint32_t *key_size, uint8_t *key, uint8_t sequence)
 {
     int                         res;
     struct lv2_atapi_cmnd_block atapi_cmnd;
@@ -231,7 +231,7 @@ int ps3rom_lv2_report_key(int fd, uint8_t agid, uint32_t *key_size, uint8_t *key
     return res;
 }
 
-int ps3rom_lv2_report_key_finish(int fd, uint8_t agid)
+int ioctl_report_key_finish(int fd, uint8_t agid)
 {
     int                         res;
     struct lv2_atapi_cmnd_block atapi_cmnd;
@@ -250,7 +250,7 @@ int ps3rom_lv2_report_key_finish(int fd, uint8_t agid)
 }
 
 
-int ps3rom_lv2_read_toc_header(int fd, uint8_t *buffer)
+int ioctl_read_toc_header(int fd, uint8_t *buffer)
 {
     int                         res;
     struct lv2_atapi_cmnd_block atapi_cmnd;
@@ -266,7 +266,7 @@ int ps3rom_lv2_read_toc_header(int fd, uint8_t *buffer)
     return res;
 }
 
-int ps3rom_lv2_read_toc_entry(int fd, uint8_t *buffer)
+int ioctl_read_toc_entry(int fd, uint8_t *buffer)
 {
     int                         res;
     struct lv2_atapi_cmnd_block atapi_cmnd;
@@ -282,7 +282,7 @@ int ps3rom_lv2_read_toc_entry(int fd, uint8_t *buffer)
     return res;
 }
 
-int ps3rom_lv2_read_track(int fd, uint8_t *buffer, uint8_t track)
+int ioctl_read_track(int fd, uint8_t *buffer, uint8_t track)
 {
     int                         res;
     struct lv2_atapi_cmnd_block atapi_cmnd;

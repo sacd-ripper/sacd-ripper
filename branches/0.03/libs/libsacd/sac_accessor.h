@@ -102,6 +102,9 @@ typedef struct
     sys_interrupt_tag_t           intrtag;
 
     uint32_t                      error_code;
+    
+    uint8_t                     * read_buffer;
+    uint8_t                     * write_buffer;
 } sac_accessor_t;
 
 extern sac_accessor_t *sa;

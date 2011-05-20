@@ -77,6 +77,9 @@ int create_sac_accessor(void)
     sa->buffer = (uint8_t *) memalign(128, DMA_BUFFER_SIZE);
     memset(sa->buffer, 0, DMA_BUFFER_SIZE);
 
+    sa->read_buffer = (uint8_t *) malloc(32 * 1024);
+    sa->write_buffer = (uint8_t *) malloc(32 * 1024);
+
     // Initialize SPUs
     //LOG_INFO("Initializing SPUs\n");
     ret = sysSpuInitialize(MAX_PHYSICAL_SPU, MAX_RAW_SPU);
@@ -300,6 +303,18 @@ int destroy_sac_accessor(void)
     {
         free(sa->buffer);
         sa->buffer = 0;
+    }
+
+    if (sa->read_buffer)
+    {   
+        free(sa->read_buffer);
+        sa->read_buffer = 0;
+    }
+    
+    if (sa->write_buffer)
+    {
+        free(sa->write_buffer);
+        sa->write_buffer = 0;
     }
 
     if (sa->mmio_cond != 0)
@@ -582,16 +597,14 @@ int sac_exec_validate_key_3(uint8_t *key, uint32_t expected_size)
 int sac_exec_decrypt_data(uint8_t *encrypted_buffer, uint32_t expected_size, uint8_t *decrypted_buffer)
 {
     int     ret;
-    uint8_t read_buffer[0x1810];
-    uint8_t write_buffer[0x1804];
 
-    memset(read_buffer, 0, 0x1810);
-    memcpy(read_buffer, &expected_size, 4);
-    memcpy(read_buffer + 0x10, encrypted_buffer, 0x1800);
+    memset(sa->read_buffer, 0, 0x10);
+    memcpy(sa->read_buffer, &expected_size, 4);
+    memcpy(sa->read_buffer + 0x10, encrypted_buffer, 0x1800);
 
-    ret = exchange_data(SAC_CMD_DECRYPT, read_buffer, 0x1810, write_buffer, 0x1804, 5000000);
+    ret = exchange_data(SAC_CMD_DECRYPT, sa->read_buffer, 0x1810, sa->write_buffer, 0x1804, 5000000);
 
-    memcpy(decrypted_buffer, write_buffer + 4, 0x1800);
+    memcpy(decrypted_buffer, sa->write_buffer + 4, 0x1800);
 
     return ret;
 }
@@ -604,8 +617,8 @@ int sac_exec_key_exchange(int fd)
     uint8_t  buffer[256];
     memset(buffer, 0, 256);
 
-    ret = ps3rom_lv2_report_key_start(fd, buffer);
-    //LOG_INFO("ps3rom_lv2_report_key1[%x] %x\n", fd, ret);
+    ret = ioctl_report_key_start(fd, buffer);
+    //LOG_INFO("ioctl_report_key1[%x] %x\n", fd, ret);
     if (ret != 0)
     {
         return ret;
@@ -620,16 +633,16 @@ int sac_exec_key_exchange(int fd)
         return ret;
     }
 
-    ret = ps3rom_lv2_send_key(fd, agid, buffer_size, buffer, 2);
-    //LOG_INFO("ps3rom_lv2_send_key[2] %x %x\n", buffer_size, ret);
+    ret = ioctl_send_key(fd, agid, buffer_size, buffer, 2);
+    //LOG_INFO("ioctl_send_key[2] %x %x\n", buffer_size, ret);
     if (ret != 0)
     {
         return ret;
     }
 
     buffer_size = 0xcc;
-    ret         = ps3rom_lv2_report_key(fd, agid, &buffer_size, buffer, 2);
-    //LOG_INFO("ps3rom_lv2_report_key[2] %x %x\n", buffer_size, ret);
+    ret         = ioctl_report_key(fd, agid, &buffer_size, buffer, 2);
+    //LOG_INFO("ioctl_report_key[2] %x %x\n", buffer_size, ret);
     if (ret != 0)
     {
         return ret;
@@ -652,15 +665,15 @@ int sac_exec_key_exchange(int fd)
         return ret;
     }
 
-    ret = ps3rom_lv2_send_key(fd, agid, buffer_size, buffer, 3);
-    //LOG_INFO("ps3rom_lv2_send_key[3] %x %x\n", buffer_size, ret);
+    ret = ioctl_send_key(fd, agid, buffer_size, buffer, 3);
+    //LOG_INFO("ioctl_send_key[3] %x %x\n", buffer_size, ret);
     if (ret != 0)
     {
         return ret;
     }
 
-    ret = ps3rom_lv2_report_key(fd, agid, &buffer_size, buffer, 3);
-    //LOG_INFO("ps3rom_lv2_report_key[3] %x %x\n", buffer_size, ret);
+    ret = ioctl_report_key(fd, agid, &buffer_size, buffer, 3);
+    //LOG_INFO("ioctl_report_key[3] %x %x\n", buffer_size, ret);
     if (ret != 0)
     {
         return ret;
@@ -677,8 +690,8 @@ int sac_exec_key_exchange(int fd)
     memset(buffer, 0, 256);
 
     buffer_size = 0x30;
-    ret         = ps3rom_lv2_report_key(fd, agid, &buffer_size, buffer, 4);
-    //LOG_INFO("ps3rom_lv2_report_key[4] %x %x\n", buffer_size, ret);
+    ret         = ioctl_report_key(fd, agid, &buffer_size, buffer, 4);
+    //LOG_INFO("ioctl_report_key[4] %x %x\n", buffer_size, ret);
     if (ret != 0)
     {
         return ret;
@@ -691,8 +704,8 @@ int sac_exec_key_exchange(int fd)
         return ret;
     }
 
-    ret = ps3rom_lv2_report_key_finish(fd, agid);
-    //LOG_INFO("ps3rom_lv2_report_finish [0xff] %x\n", ret);
+    ret = ioctl_report_key_finish(fd, agid);
+    //LOG_INFO("ioctl_report_finish [0xff] %x\n", ret);
 
     return ret;
 }

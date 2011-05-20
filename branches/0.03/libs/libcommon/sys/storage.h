@@ -64,6 +64,23 @@ struct lv2_atapi_cmnd_block
     uint32_t unknown;
 } __attribute__((packed));
 
+typedef struct
+{
+    uint8_t     name[7];
+    uint8_t     unknown01;
+    uint32_t    unknown02; // random nr?
+    uint32_t    zero01; 
+    uint32_t    unknown03; // 0x28?
+    uint32_t    unknown04; // 0xd000e990?
+    uint8_t     zero02[16];
+    uint64_t    total_sectors;
+    uint32_t    sector_size;
+    uint32_t    unknown05;
+    uint8_t     writable;
+    uint8_t     unknown06[3];
+    uint32_t    unknown07;
+} __attribute__((packed)) device_info_t;
+
 enum lv2_atapi_proto
 {
     ATAPI_NON_DATA_PROTO     = 0,
@@ -118,9 +135,9 @@ static inline int sys_storage_async_configure(uint32_t fd, sys_io_buffer_t io_bu
     return_to_user_prog(int);
 }
 
-static inline int sys_storage_get_device_info(uint64_t device, uint8_t *buffer)
+static inline int sys_storage_get_device_info(uint64_t device, device_info_t *device_info)
 {
-    lv2syscall2(609, device, (uint64_t) buffer);
+    lv2syscall2(609, device, (uint64_t) device_info);
     return_to_user_prog(int);
 }
 
