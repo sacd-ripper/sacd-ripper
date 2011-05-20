@@ -2,7 +2,9 @@ todo:
 
   core:
     - finish ripping pipeline
-    - implement logging into libsacd
+        - write aio
+        - add decrypt range
+    
     - write log along each consecutive rip
 
   interface: 

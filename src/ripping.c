@@ -47,61 +47,8 @@
 #include "rsxutil.h"
 
 /**
- * Note: most of this code (except GUI) need to be moved into libsacd,
+ * TODO, refactoring: almost all of this code (except GUI) need to be moved into libsacd,
  * but at this point I just want to get it done, let it be ugly..
- */
-
-/*
-   design comes down to: we try to do as much as possible at once but the pipeline is as fast as the slowest component!!
-
-   so we can:
-    - initiate a new read request once a previous write request has finished
-    - do DST processing using multiple SPUs (should be no bottleneck..)
-    - decrypt using multiple SPUs (should be no bottleneck..)
-
-   - open sacd_accessor
-
-    loop:
-        - create, write, close DSDIFF/ISO/DSF files, write headers, folders, etc..
-        - each read request contains "user_data", like: write destination, offset, conversion format, etc..
-
-        - no outstanding read_request for read_buffer[0]?
-            - create sacd_aio_packet_t
-            - read read_buffer[0] async
-        - no outstanding read_request for read_buffer[1]?
-            - create sacd_aio_packet_t
-            - read read_buffer[1] async
-
-        - lock decryption mutex
-        - wait for condition, x amount of seconds
-            - on fail, stop!
-        - unlock mutex
-
-        - do we need to stop (user request)?
-
-        - check which read_buffer was processed
-
-
-    event thread:
-
-        - decrypt data using sac_accessor
-
-        - type of conversion? (none, DSD 3 in 14, DSD 3 in 16, DST)
-            - write into write_buffer[x]
-
-        - initiate write request for block [x]
-
-    AIO write callback:
-
-        - mark read_request for read_buffer[x] as done
-
-        - destroy sacd_aio_packet_t
-        - lock decryption mutex
-        - signal condition
-        - unlock decryption mutex
-
-   - close sacd_accessor
-
  */
 
 extern log_module_info_t * lm_main;
@@ -133,11 +80,16 @@ typedef struct
     int                 blocks_read;        // amount of blocks read
     int                 conversion;         // conversion that needs to take place
 
+    int                 encrypted;          // is this packet encrypted?
+
     atomic_t            processing;         // is this packet being processed?
     sys_io_block_t      read_buffer;
 
     uint8_t            *write_buffer;
     sysFSAio            aio_write;
+    int                 write_id;
+    
+    void*               accessor;
 
 } sacd_aio_packet_t;
 
@@ -155,11 +107,41 @@ typedef struct sacd_accessor_t
 
 enum
 {
-    CONVERT_NOTHING       = 0
-    , CONVERT_DST         = 1
-    , CONVERT_DSD_3_IN_14 = 2
-    , CONVERT_DSD_3_IN_16 = 3
+      CONVERT_NOTHING     = 0 << 0
+    , CONVERT_DST         = 1 << 1
+    , CONVERT_DSD_3_IN_14 = 1 << 2
+    , CONVERT_DSD_3_IN_16 = 1 << 3
 } conversion_t;
+
+static void write_callback(sysFSAio *aio, int err, int id, uint64_t size)
+{
+    int ret;
+    sacd_aio_packet_t *packet = (sacd_aio_packet_t *) aio->usrdata;
+    sacd_accessor_t   *accessor = (sacd_accessor_t *) packet->accessor;
+
+    //atomic_add(packet->blocks_read, &total_blocks_processed);
+    //
+    //// we are done with processing this packet
+    //atomic_set(&packet->processing, 0);
+    //
+    //ret = sysMutexLock(accessor->processing_mutex, 0);
+    //if (ret != 0)
+    //{
+    //}
+    //
+    //ret = sysCondSignal(accessor->processing_cond);
+    //if (ret != 0)
+    //{
+    //    sysMutexUnlock(accessor->processing_mutex);
+    //}
+    //
+    //ret = sysMutexUnlock(accessor->processing_mutex);
+    //if (ret != 0)
+    //{
+    //}
+
+    LOG(lm_main, LOG_DEBUG, ("write_callback exit %p %p", packet, accessor));
+}
 
 static void sacd_accessor_event_receive(void *arg)
 {
@@ -199,45 +181,57 @@ static void sacd_accessor_event_receive(void *arg)
 
         LOG(lm_main, LOG_DEBUG, ("sacd_accessor_event_receive: offset = %d, blocks = %d", packet->offset, packet->blocks_read));
 
-    	block_number = 0;
-    	while(block_number < MAX_BLOCK_SIZE)
+    	if (packet->encrypted)
     	{
-    		int block_size = min(MAX_BLOCK_SIZE - block_number, 3);
-            ret = sac_exec_decrypt_data((uint8_t *) (uint64_t) packet->read_buffer, block_size * SACD_LSN_SIZE, packet->write_buffer);
+            // decrypt the data
+        	block_number = 0;
+        	while(block_number < packet->blocks_read)
+        	{
+        		int block_size = min(packet->blocks_read - block_number, 3);     // SacModule has an internal max of 3*2048 to process
+                ret = sac_exec_decrypt_data((uint8_t *) (uint64_t) packet->read_buffer + block_number * SACD_LSN_SIZE, 
+                                            block_size * SACD_LSN_SIZE, (uint8_t *) (uint64_t) packet->read_buffer + (block_number * SACD_LSN_SIZE));
+                if (ret != 0)
+                {
+                    LOG(lm_main, LOG_ERROR, ("sac_exec_decrypt_data: (%#x)\n", ret));
+                    sysThreadExit(-1);
+               }
+    
+        		block_number += block_size;
+        	}
+        }
+
+        memcpy(packet->write_buffer, (uint8_t *) (uint64_t) packet->read_buffer, packet->blocks_read * SACD_LSN_SIZE);
+
+        {
+        uint64_t nrw;
+        sysFsWrite(packet->aio_write.fd, (uint8_t *) (uint64_t) packet->aio_write.buffer_addr, packet->aio_write.size, &nrw);
+        }
+        {
+            atomic_add(packet->blocks_read, &total_blocks_processed);
+            
+            // we are done with processing this packet
+            atomic_set(&packet->processing, 0);
+            
+            ret = sysMutexLock(accessor->processing_mutex, 0);
             if (ret != 0)
             {
-                LOG(lm_main, LOG_ERROR, ("sac_exec_decrypt_data: (%#x)\n", ret));
                 sysThreadExit(-1);
-                return;
             }
-
-    		block_number += block_size;
-    	}
-
-        atomic_add(packet->blocks_read, &total_blocks_processed);
-
-        // we are done with processing this packet
-        atomic_set(&packet->processing, 0);
-
-        ret = sysMutexLock(accessor->processing_mutex, 0);
-        if (ret != 0)
-        {
-            sysThreadExit(-1);
+            
+            ret = sysCondSignal(accessor->processing_cond);
+            if (ret != 0)
+            {
+                sysMutexUnlock(accessor->processing_mutex);
+                sysThreadExit(-1);
+            }
+            
+            ret = sysMutexUnlock(accessor->processing_mutex);
+            if (ret != 0)
+            {
+                sysThreadExit(-1);
+            }
+            
         }
-
-        ret = sysCondSignal(accessor->processing_cond);
-        if (ret != 0)
-        {
-            sysMutexUnlock(accessor->processing_mutex);
-            sysThreadExit(-1);
-        }
-
-        ret = sysMutexUnlock(accessor->processing_mutex);
-        if (ret != 0)
-        {
-            sysThreadExit(-1);
-        }
-
     }
 
     LOG(lm_main, LOG_DEBUG, ("sacd_accessor_event_receive: Exit\n"));
@@ -446,12 +440,15 @@ int sacd_accessor_close(sacd_accessor_t *accessor)
 
 static void processing_thread(void *arg)
 {
-    int ret, i;
+    int ret, i, fd;
 	sacd_reader_t *sacd_reader = 0;
 	scarletbook_handle_t *sb_handle = 0;
     sacd_accessor_t sacd_accessor;
     uint32_t current_position = 0;
+    uint32_t decrypt_start[2];
+    uint32_t decrypt_end[2];
     int block_size;
+    char path[255];
 
 	sacd_reader = sacd_open("/dev_bdvd");
 	if (!sacd_reader)
@@ -473,22 +470,70 @@ static void processing_thread(void *arg)
         LOG(lm_main, LOG_ERROR, ("could not open accessor (%#x)\n", ret));
         goto close_thread;
     }
+    sacd_accessor.aio_packet->accessor = &sacd_accessor;
+    
+    for (i = 0; i < sb_handle->channel_count; i++)
+    {
+        decrypt_start[i] = sb_handle->channel_toc[i]->track_position;
+        decrypt_end[i] = sb_handle->channel_toc[i]->track_position + sb_handle->channel_toc[i]->track_length;
+    }
 
     // set total amount of blocks to process
     atomic_set(&total_blocks, (uint32_t) device_info.total_sectors);
 
-    LOG(lm_main, LOG_NOTICE, ("total sectors: %d", (uint32_t) device_info.total_sectors));
-
+    snprintf(path, 255, "%s/dump.iso", output_device);
+    ret = sysFsAioInit(output_device);
+    ret = sysFsOpen(path, SYS_O_RDWR|SYS_O_CREAT|SYS_O_TRUNC, &fd, NULL, 0);
+   
     while (atomic_read(&stop_processing) == 0 && current_position < device_info.total_sectors)
     {
         for (i = 0; i < AIO_MAXIO; i++)
         {
-            block_size = min(device_info.total_sectors - current_position, MAX_BLOCK_SIZE);
-
             if (atomic_cmpxchg(&sacd_accessor.aio_packet[i].processing, 0, 1) == 0)
             {
+                sacd_accessor.aio_packet[i].encrypted = 0;
+
+                // check what needs to be decrypted..
+        		if (is_between_inclusive(current_position + MAX_BLOCK_SIZE, decrypt_start[0], decrypt_end[0])
+         		 || is_between_exclusive(current_position, decrypt_start[0], decrypt_end[0])
+        			)
+        		{
+        			if (current_position < decrypt_start[0])
+        			{
+        				block_size = decrypt_start[0] - current_position;
+        			}
+        			else
+        			{
+        				block_size = min(decrypt_end[0] - current_position, MAX_BLOCK_SIZE);
+                        sacd_accessor.aio_packet[i].encrypted = 1;
+        			}
+        		}
+        		else if (is_between_inclusive(current_position + MAX_BLOCK_SIZE, decrypt_start[1], decrypt_end[1])
+        			|| is_between_exclusive(current_position, decrypt_start[1], decrypt_end[1])
+        			)
+        		{
+        			if (current_position < decrypt_start[1])
+        			{
+        				block_size = decrypt_start[1] - current_position;
+        			}
+        			else
+        			{
+        				block_size = min(decrypt_end[1] - current_position, MAX_BLOCK_SIZE);
+                        sacd_accessor.aio_packet[i].encrypted = 1;
+        			}
+        		}
+        		else 
+        		{
+        			 block_size = min(device_info.total_sectors - current_position, MAX_BLOCK_SIZE);
+        		}
+             
                 sacd_accessor.aio_packet[i].offset = current_position;
                 sacd_accessor.aio_packet[i].blocks_read = block_size;
+                sacd_accessor.aio_packet[i].aio_write.fd = fd;
+                sacd_accessor.aio_packet[i].aio_write.offset = current_position * SACD_LSN_SIZE;
+                sacd_accessor.aio_packet[i].aio_write.buffer_addr = (uint64_t) sacd_accessor.aio_packet[i].write_buffer;
+                sacd_accessor.aio_packet[i].aio_write.size = block_size * SACD_LSN_SIZE;
+                sacd_accessor.aio_packet[i].aio_write.usrdata = (uint64_t) &sacd_accessor.aio_packet[i];
 
                 LOG(lm_main, LOG_NOTICE, ("triggering async_read %x pos: %d, size: %d", (uint32_t) (uint64_t) &sacd_accessor.aio_packet[i], current_position, block_size));
 
@@ -541,6 +586,9 @@ static void processing_thread(void *arg)
     }
 
 close_thread:
+
+    ret = sysFsAioFinish(output_device);
+    sysFsClose(fd);
 
     scarletbook_close(sb_handle);
     sacd_close(sacd_reader);
