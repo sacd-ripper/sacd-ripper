@@ -33,20 +33,20 @@
 extern "C" {
 #endif
 
-extern int ps3rom_lv2_init(int fd, uint8_t *buffer);
-extern int ps3rom_lv2_enable_encryption(int fd, uint8_t *buffer, uint32_t lba);
-extern int ps3rom_lv2_get_configuration(int fd, uint8_t *buffer);
-extern int ps3rom_lv2_mode_sense(int fd, uint8_t *buffer);
-extern int ps3rom_lv2_mode_select(int fd);
-extern int ps3rom_lv2_get_event_status_notification(int fd, uint8_t *buffer);
-extern int ps3rom_lv2_read_toc_header(int fd, uint8_t *buffer);
-extern int ps3rom_lv2_read_toc_entry(int fd, uint8_t *buffer);
-extern int ps3rom_lv2_read_track(int fd, uint8_t *buffer, uint8_t track);
-extern int ps3rom_lv2_read_block(int fd, uint8_t *buffer, int lba);
-extern int ps3rom_lv2_report_key_start(int fd, uint8_t *buffer);
-extern int ps3rom_lv2_send_key(int fd, uint8_t agid, uint32_t key_size, uint8_t *key, uint8_t sequence);
-extern int ps3rom_lv2_report_key(int fd, uint8_t agid, uint32_t *key_size, uint8_t *key, uint8_t sequence);
-extern int ps3rom_lv2_report_key_finish(int fd, uint8_t agid);
+extern int ioctl_init(int fd, uint8_t *buffer);
+extern int ioctl_enable_encryption(int fd, uint8_t *buffer, uint32_t lba);
+extern int ioctl_get_configuration(int fd, uint8_t *buffer);
+extern int ioctl_mode_sense(int fd, uint8_t *buffer);
+extern int ioctl_mode_select(int fd);
+extern int ioctl_get_event_status_notification(int fd, uint8_t *buffer);
+extern int ioctl_read_toc_header(int fd, uint8_t *buffer);
+extern int ioctl_read_toc_entry(int fd, uint8_t *buffer);
+extern int ioctl_read_track(int fd, uint8_t *buffer, uint8_t track);
+extern int ioctl_read_block(int fd, uint8_t *buffer, int lba);
+extern int ioctl_report_key_start(int fd, uint8_t *buffer);
+extern int ioctl_send_key(int fd, uint8_t agid, uint32_t key_size, uint8_t *key, uint8_t sequence);
+extern int ioctl_report_key(int fd, uint8_t agid, uint32_t *key_size, uint8_t *key, uint8_t sequence);
+extern int ioctl_report_key_finish(int fd, uint8_t agid);
 
 #ifdef __cplusplus
 };

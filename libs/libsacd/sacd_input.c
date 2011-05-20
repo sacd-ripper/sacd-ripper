@@ -61,10 +61,11 @@ sacd_input_t sacd_input_open(const char *target)
     dev->fd = open(target, O_RDONLY);
 #elif defined(__lv2ppu__)
     {
-        uint8_t buffer[64];
-        int     ret;
+        device_info_t   device_info;
+        uint8_t         buffer[64];
+        int             ret;
 
-        ret = sys_storage_get_device_info(BD_DEVICE, buffer);
+        ret = sys_storage_get_device_info(BD_DEVICE, &device_info);
         if (ret != 0)
         {
             dev->fd = -1;
@@ -75,16 +76,16 @@ sacd_input_t sacd_input_open(const char *target)
             dev->fd = -1;
         }
 
-        ps3rom_lv2_get_configuration(dev->fd, buffer);
+        ioctl_get_configuration(dev->fd, buffer);
         if ((buffer[0] & 1) != 0)
         {
-            ps3rom_lv2_mode_sense(dev->fd, buffer);
+            ioctl_mode_sense(dev->fd, buffer);
             if (buffer[11] == 2)
             {
-                ps3rom_lv2_mode_select(dev->fd);
+                ioctl_mode_select(dev->fd);
             }
         }
-        sys_storage_get_device_info(BD_DEVICE, buffer);
+        sys_storage_get_device_info(BD_DEVICE, &device_info);
     }
 #else
     dev->fd = open(target, O_RDONLY | O_BINARY);
@@ -107,6 +108,21 @@ char *sacd_input_error(sacd_input_t dev)
     /* use strerror(errno)? */
     return (char *) "unknown error";
 }
+
+/**
+ * read data asynchronously from the device.
+ */
+#if defined(__lv2ppu__)
+inline int sacd_input_async_read(sacd_input_t dev, int pos, int blocks, sys_io_block_t bounce_buf, uint64_t user_data)
+{
+    return sys_storage_async_read(dev->fd, pos, blocks, bounce_buf, user_data);
+}
+
+inline int sacd_input_get_fd(sacd_input_t dev)
+{
+    return dev->fd;
+}
+#endif    
 
 /**
  * read data from the device.
