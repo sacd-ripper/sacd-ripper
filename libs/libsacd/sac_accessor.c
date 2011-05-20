@@ -26,7 +26,6 @@
 #include <ppu-lv2.h>
 #include <sys/spu.h>
 #include <sys/mutex.h>
-#include <sys/spu.h>
 #include <sys/cond.h>
 #include <sys/thread.h>
 #include <sys/file.h>
