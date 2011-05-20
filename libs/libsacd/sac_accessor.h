@@ -63,7 +63,7 @@ extern "C" {
 #define PRIMARY_PPU_THREAD_PRIO        (1001)
 #define PRIMARY_PPU_STACK_SIZE         (0x2000)
 
-#define DMA_BUFFER_SIZE                (0x2000)
+#define DMA_BUFFER_SIZE                (4 * 2048)
 #define EXIT_SAC_CMD                   (0xFEFEFEFF)
 
 #ifdef USE_ISOSELF
