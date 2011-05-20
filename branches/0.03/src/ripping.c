@@ -29,6 +29,7 @@
 #include <sys/file.h>
 #include <sys/mutex.h>
 #include <sys/cond.h>
+#include <ppu-asm.h>
 
 #include <sys/storage.h>
 #include <sys/io_buffer.h>
@@ -38,6 +39,7 @@
 
 #include <sacd_reader.h>
 #include <scarletbook_read.h>
+#include <sac_accessor.h>
 
 #include "ripping.h"
 #include "output_device.h"
@@ -164,7 +166,7 @@ static void sacd_accessor_event_receive(void *arg)
     sacd_accessor_t   *accessor = (sacd_accessor_t *) arg;
     sacd_aio_packet_t *packet = 0;
     sys_event_t     event;
-    int             ret;
+    int             ret, block_number;
 
     LOG(lm_main, LOG_DEBUG, ("sacd_accessor_event_receive %p", arg));
 
@@ -196,6 +198,21 @@ static void sacd_accessor_event_receive(void *arg)
         }
 
         LOG(lm_main, LOG_DEBUG, ("sacd_accessor_event_receive: offset = %d, blocks = %d", packet->offset, packet->blocks_read));
+
+    	block_number = 0;
+    	while(block_number < MAX_BLOCK_SIZE)
+    	{
+    		int block_size = min(MAX_BLOCK_SIZE - block_number, 3);
+            ret = sac_exec_decrypt_data((uint8_t *) (uint64_t) packet->read_buffer, block_size * SACD_LSN_SIZE, packet->write_buffer);
+            if (ret != 0)
+            {
+                LOG(lm_main, LOG_ERROR, ("sac_exec_decrypt_data: (%#x)\n", ret));
+                sysThreadExit(-1);
+                return;
+            }
+
+    		block_number += block_size;
+    	}
 
         atomic_add(packet->blocks_read, &total_blocks_processed);
 
@@ -249,6 +266,27 @@ int sacd_accessor_open(sacd_accessor_t *accessor, sacd_reader_t *reader)
         return -1;
     }
 
+	ret = create_sac_accessor();
+    if (ret != 0)
+    {
+        LOG(lm_main, LOG_ERROR, ("create_sac_accessor (%#x)\n", ret));
+        return ret;
+    }
+  
+    ret = sac_exec_initialize();
+    if (ret != 0)
+    {
+        LOG(lm_main, LOG_ERROR, ("sac_exec_initialize (%#x)\n", ret));
+        return ret;
+    }
+
+    ret = sac_exec_key_exchange(sacd_get_fd(reader));
+    if (ret != 0)
+    {
+        LOG(lm_main, LOG_ERROR, ("sac_exec_key_exchange (%#x)\n", ret));
+        return ret;
+    }
+
     // Create event
     queue_attr.attr_protocol = SYS_EVENT_QUEUE_PRIO;
     queue_attr.type          = SYS_EVENT_QUEUE_PPU;
@@ -270,6 +308,7 @@ int sacd_accessor_open(sacd_accessor_t *accessor, sacd_reader_t *reader)
 
     for (i = 0; i < AIO_MAXIO; i++)
     {
+        accessor->aio_packet[i].write_buffer = (uint8_t *) malloc(2 * MAX_BLOCK_SIZE * SACD_LSN_SIZE);
         ret = sys_io_buffer_allocate(accessor->io_buffer, &accessor->aio_packet[i].read_buffer);
         if (ret != 0)
         {
@@ -338,6 +377,7 @@ int sacd_accessor_close(sacd_accessor_t *accessor)
 
     for (i = 0; i < AIO_MAXIO; i++)
     {
+        free(accessor->aio_packet[i].write_buffer);
         ret = sys_io_buffer_free(accessor->io_buffer, accessor->aio_packet[i].read_buffer);
         if (ret != 0)
         {
@@ -387,6 +427,18 @@ int sacd_accessor_close(sacd_accessor_t *accessor)
 
     memset(accessor, 0, sizeof(sacd_accessor_t));
 
+    ret = sac_exec_exit();
+    if (ret != 0)
+    {
+        LOG(lm_main, LOG_ERROR, ("sac_exec_exit (%#x)\n", ret));
+    }
+
+    ret = destroy_sac_accessor();
+    if (ret != 0)
+    {
+        LOG(lm_main, LOG_ERROR, ("destroy_sac_accessor (%#x)\n", ret));
+    }
+    
     return 0;
 }
 
@@ -524,8 +576,13 @@ int start_ripping(void)
     sys_ppu_thread_t thread_id;
     int              ret;
     uint64_t         retval;
-    uint32_t         prev_total_blocks_processed   = 0;
-    uint32_t         prev_partial_blocks_processed = 0;
+
+	uint32_t prev_upper_progress = 0;
+	uint32_t prev_lower_progress = 0;
+	uint32_t delta;
+
+    uint32_t prev_total_blocks_processed = 0;
+    uint64_t tb_start, tb_freq;
 
     memset(progress_message_upper, 0, sizeof(progress_message_upper));
     memset(progress_message_lower, 0, sizeof(progress_message_lower));
@@ -542,21 +599,30 @@ int start_ripping(void)
         return ret;
     }
 
+    tb_freq = sysGetTimebaseFrequency();
+    tb_start = __gettime(); 
+
     dialog_action = 0;
     dialog_type   = MSG_DIALOG_MUTE_ON | MSG_DIALOG_DOUBLE_PROGRESSBAR;
     msgDialogOpen2(dialog_type, "Copying to:...", dialog_handler, NULL, NULL);
     while (!user_requested_exit() && dialog_action == 0 && atomic_read(&stop_processing) == 0)
     {
-        if (atomic_read(&total_blocks) != 0)
+        uint32_t tmp_total_blocks_processed = atomic_read(&total_blocks_processed);
+        uint32_t tmp_total_blocks = atomic_read(&total_blocks);
+        if (tmp_total_blocks != 0 && prev_total_blocks_processed != tmp_total_blocks_processed)
         {
-            msgDialogProgressBarInc(MSG_PROGRESSBAR_INDEX0, (atomic_read(&total_blocks_processed) * 100 / atomic_read(&total_blocks)) - prev_total_blocks_processed);
-            msgDialogProgressBarInc(MSG_PROGRESSBAR_INDEX1, (atomic_read(&partial_blocks_processed) * 100 / atomic_read(&total_blocks)) - prev_partial_blocks_processed);
-    
-            msgDialogProgressBarSetMsg(MSG_PROGRESSBAR_INDEX0, progress_message_upper[atomic_read(&selected_progress_message)]);
-            msgDialogProgressBarSetMsg(MSG_PROGRESSBAR_INDEX1, progress_message_lower[atomic_read(&selected_progress_message)]);
-    
-            prev_total_blocks_processed   = atomic_read(&total_blocks_processed);
-            prev_partial_blocks_processed = atomic_read(&partial_blocks_processed);
+            //msgDialogProgressBarInc(MSG_PROGRESSBAR_INDEX0, delta);
+
+    		delta = (tmp_total_blocks_processed + (tmp_total_blocks_processed - prev_total_blocks_processed)) * 100 / tmp_total_blocks - prev_lower_progress;
+    		prev_lower_progress += delta;
+            msgDialogProgressBarInc(MSG_PROGRESSBAR_INDEX1, delta);
+
+            snprintf(progress_message_lower[0], 64, "transfer rate: (%8.3f MB/sec)", (float)((float) tmp_total_blocks_processed * SACD_LSN_SIZE / 1048576.00) / (float)((__gettime() - tb_start) / (float)(tb_freq)));
+            
+            //msgDialogProgressBarSetMsg(MSG_PROGRESSBAR_INDEX0, progress_message_upper[atomic_read(&selected_progress_message)]);
+            msgDialogProgressBarSetMsg(MSG_PROGRESSBAR_INDEX1, progress_message_lower[0]);
+            
+            prev_total_blocks_processed = tmp_total_blocks_processed;
         }
 
         sysUtilCheckCallback();

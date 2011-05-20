@@ -34,8 +34,11 @@
 #include <malloc.h>
 
 #include <utils.h>
+#include <log.h>
 #include "sac_accessor.h"
 #include "ioctl.h"
+
+extern log_module_info_t * lm_main;
 
 #ifdef USE_ISOSELF
 int file_alloc_load(const char *, uint8_t **, unsigned int *);
@@ -68,7 +71,7 @@ int create_sac_accessor(void)
     sa = malloc(sizeof(sac_accessor_t));
     if (sa == NULL)
     {
-        //LOG_ERROR("sac_accessor_t malloc failed\n");
+        LOG(lm_main, LOG_ERROR, ("sac_accessor_t malloc failed\n"));
         return -1;
     }
     memset(sa, 0, sizeof(sac_accessor_t));
@@ -76,15 +79,15 @@ int create_sac_accessor(void)
     sa->buffer = (uint8_t *) memalign(128, DMA_BUFFER_SIZE);
     memset(sa->buffer, 0, DMA_BUFFER_SIZE);
 
-    sa->read_buffer = (uint8_t *) malloc(32 * 1024);
-    sa->write_buffer = (uint8_t *) malloc(32 * 1024);
+    sa->read_buffer = (uint8_t *) malloc(DMA_BUFFER_SIZE);
+    sa->write_buffer = (uint8_t *) malloc(DMA_BUFFER_SIZE);
 
     // Initialize SPUs
-    //LOG_INFO("Initializing SPUs\n");
+    LOG(lm_main, LOG_DEBUG, ("Initializing SPUs\n"));
     ret = sysSpuInitialize(MAX_PHYSICAL_SPU, MAX_RAW_SPU);
     if (ret != 0)
     {
-        //LOG_ERROR("sysSpuInitialize failed: %d\n", ret);
+        LOG(lm_main, LOG_ERROR, ("sysSpuInitialize failed: %d\n", ret));
         return ret;
     }
 
@@ -92,52 +95,52 @@ int create_sac_accessor(void)
     ret = file_alloc_load(SAC_MODULE_LOCATION, &sa->module_buffer, &sa->module_size);
     if (ret != 0)
     {
-        //LOG_ERROR("cannot load file: " SAC_MODULE_LOCATION "0x%x\n", ret);
+        LOG(lm_main, LOG_ERROR, ("cannot load file: " SAC_MODULE_LOCATION "0x%x\n", ret));
         return 0;
     }
 
     ret = sys_isoself_spu_create(&sa->id, sa->module_buffer);
     if (ret != 0)
     {
-        //LOG_ERROR("sys_isoself_spu_create : 0x%x\n", ret);
+        LOG(lm_main, LOG_ERROR, ("sys_isoself_spu_create : 0x%x\n", ret));
         return 0;
     }
 #else
-    //LOG_INFO("syscall sys_raw_spu_create...");
+    LOG(lm_main, LOG_DEBUG, ("syscall sys_raw_spu_create..."));
     ret = sysSpuRawCreate(&sa->id, NULL);
     if (ret)
     {
-        //LOG_ERROR("sys_raw_spu_create failed %d\n", ret);
+        LOG(lm_main, LOG_ERROR, ("sys_raw_spu_create failed %d\n", ret));
         return ret;
     }
-    //LOG_INFO("succeeded. raw_spu number is %d\n", sa->id);
+    LOG(lm_main, LOG_DEBUG, ("succeeded. raw_spu number is %d\n", sa->id));
 
     // Reset all pending interrupts before starting.
     sysSpuRawSetIntStat(sa->id, 2, 0xfUL);
     sysSpuRawSetIntStat(sa->id, 0, 0xfUL);
 
-    //LOG_INFO("syscall sys_raw_spu_load...");
+    LOG(lm_main, LOG_DEBUG, ("syscall sys_raw_spu_load: " SAC_MODULE_LOCATION));
     ret = sysSpuRawLoad(sa->id, SAC_MODULE_LOCATION, &entry);
     if (ret)
     {
-        //LOG_ERROR("raw_spu_load failed %d\n", ret);
+        LOG(lm_main, LOG_ERROR, ("raw_spu_load failed %d\n", ret));
         return ret;
     }
-    //LOG_INFO("succeeded. entry %x\n", entry);
+    LOG(lm_main, LOG_DEBUG, ("succeeded. entry %x\n", entry));
 #endif
 
 #ifdef USE_ISOSELF
     ret = sys_isoself_spu_set_int_mask(sa->id, SPU_INTR_CLASS_2, INTR_PPU_MB_MASK | INTR_STOP_MASK | INTR_HALT_MASK);
     if (ret != 0)
     {
-        //LOG_ERROR("sys_isoself_spu_set_int_mask : 0x%x\n", ret);
+        LOG(lm_main, LOG_ERROR, ("sys_isoself_spu_set_int_mask : 0x%x\n", ret));
         return 0;
     }
 #else
     ret = sysSpuRawSetIntMask(sa->id, SPU_INTR_CLASS_2, INTR_PPU_MB_MASK | INTR_STOP_MASK | INTR_HALT_MASK);
     if (ret != 0)
     {
-        //LOG_ERROR("sys_raw_spu_set_int_mask : 0x%x\n", ret);
+        LOG(lm_main, LOG_ERROR, ("sys_raw_spu_set_int_mask : 0x%x\n", ret));
         return ret;
     }
 #endif
@@ -153,13 +156,13 @@ int create_sac_accessor(void)
 
     if (sysMutexCreate(&sa->mmio_mutex, &mutex_attr) != 0)
     {
-        //LOG_ERROR("create mmio_mutex failed.\n");
+        LOG(lm_main, LOG_ERROR, ("create mmio_mutex failed.\n"));
         return -1;
     }
 
     if (sysCondCreate(&sa->mmio_cond, sa->mmio_mutex, &cond_attr) != 0)
     {
-        //LOG_ERROR("create mmio_cond failed.\n");
+        LOG(lm_main, LOG_ERROR, ("create mmio_cond failed.\n"));
         return -1;
     }
 
@@ -168,7 +171,7 @@ int create_sac_accessor(void)
                                THREAD_INTERRUPT, (char *) "SEL Interrupt PPU Thread"))
         != 0)
     {
-        //LOG_ERROR("ppu_thread_create returned %d\n", ret);
+        LOG(lm_main, LOG_ERROR, ("ppu_thread_create returned %d\n", ret));
         return ret;
     }
 
@@ -176,24 +179,24 @@ int create_sac_accessor(void)
     ret = sys_isoself_spu_create_interrupt_tag(sa->id, SPU_INTR_CLASS_2, SYS_HW_THREAD_ANY, &sa->intrtag);
     if (ret != 0)
     {
-        //LOG_ERROR("sys_isoself_spu_create_interrupt_tag : 0x%x\n", ret);
+        LOG(lm_main, LOG_ERROR, ("sys_isoself_spu_create_interrupt_tag : 0x%x\n", ret));
         return 0;
     }
 #else
     ret = sysSpuRawCreateInterrupTag(sa->id, SPU_INTR_CLASS_2, SYS_HW_THREAD_ANY, &sa->intrtag);
     if (ret != 0)
     {
-        //LOG_ERROR("sys_raw_spu_create_interrupt_tag : 0x%x\n", ret);
+        LOG(lm_main, LOG_ERROR, ("sys_raw_spu_create_interrupt_tag : 0x%x\n", ret));
         return ret;
     }
 #endif
 
     // Establishing the interrupt tag on the interrupt PPU thread.
-    //LOG_INFO("Establishing the interrupt tag on the interrupt PPU thread.\n");
+    LOG(lm_main, LOG_DEBUG, ("Establishing the interrupt tag on the interrupt PPU thread.\n"));
     if ((ret = sysInterruptThreadEstablish(&sa->ih, sa->intrtag, sa->handler,
                                            sa->id)) != 0)
     {
-        //LOG_ERROR("sys_interrupt_thread_establish returned %d\n", ret);
+        LOG(lm_main, LOG_ERROR, ("sys_interrupt_thread_establish returned %d\n", ret));
         return ret;
     }
 
@@ -201,21 +204,21 @@ int create_sac_accessor(void)
     ret = sys_isoself_spu_set_int_mask(sa->id, SPU_INTR_CLASS_2, INTR_PPU_MB_MASK);
     if (ret != 0)
     {
-        //LOG_ERROR("sys_isoself_spu_set_int_mask : 0x%x\n", ret);
+        LOG(lm_main, LOG_ERROR, ("sys_isoself_spu_set_int_mask : 0x%x\n", ret));
         return 0;
     }
 
     ret = sys_isoself_spu_start(sa->id);
     if (ret != 0)
     {
-        //LOG_ERROR("sys_isoself_spu_start : 0x%x\n", ret);
+        LOG(lm_main, LOG_ERROR, ("sys_isoself_spu_start : 0x%x\n", ret));
         return 0;
     }
 #else
     ret = sysSpuRawSetIntMask(sa->id, SPU_INTR_CLASS_2, INTR_PPU_MB_MASK);
     if (ret != 0)
     {
-        //LOG_ERROR("sys_raw_spu_set_int_mask : 0x%x\n", ret);
+        LOG(lm_main, LOG_ERROR, ("sys_raw_spu_set_int_mask : 0x%x\n", ret));
         return ret;
     }
 
@@ -253,7 +256,7 @@ int destroy_sac_accessor(void)
 
         if (ret & 0x1)
         {
-            //LOG_INFO("sysSpuRawWriteProblemStorage 0x%x\n", EXIT_SAC_CMD);
+            LOG(lm_main, LOG_DEBUG, ("sysSpuRawWriteProblemStorage 0x%x\n", EXIT_SAC_CMD));
             sysSpuRawWriteProblemStorage(sa->id, SPU_In_MBox, EXIT_SAC_CMD);
             EIEIO;
         }
@@ -263,7 +266,7 @@ int destroy_sac_accessor(void)
     {
         if ((ret = sysInterruptThreadDisestablish(sa->ih)) != 0)
         {
-            //LOG_ERROR("sysInterruptThreadDisestablish returned %d\n", ret);
+            LOG(lm_main, LOG_ERROR, ("sysInterruptThreadDisestablish returned %d\n", ret));
         }
         else
         {
@@ -275,7 +278,7 @@ int destroy_sac_accessor(void)
     {
         if ((ret = sysInterruptTagDestroy(sa->intrtag)) != 0)
         {
-            //LOG_ERROR("sys_interrupt_tag_destroy returned %d\n", ret);
+            LOG(lm_main, LOG_ERROR, ("sys_interrupt_tag_destroy returned %d\n", ret));
         }
         else
         {
@@ -288,12 +291,12 @@ int destroy_sac_accessor(void)
 #ifdef USE_ISOSELF
         if ((ret = sys_isoself_spu_destroy(sa->id)) != 0)
         {
-            //LOG_ERROR("sys_isoself_spu_destroy returned %d\n", ret);
+            LOG(lm_main, LOG_ERROR, ("sys_isoself_spu_destroy returned %d\n", ret));
         }
 #else
         if ((ret = sysSpuRawDestroy(sa->id)) != 0)
         {
-            //LOG_ERROR("sys_raw_spu_destroy returned %d\n", ret);
+            LOG(lm_main, LOG_ERROR, ("sys_raw_spu_destroy returned %d\n", ret));
         }
 #endif
     }
@@ -320,7 +323,7 @@ int destroy_sac_accessor(void)
     {
         if ((ret = sysCondDestroy(sa->mmio_cond)) != 0)
         {
-            //LOG_ERROR("destroy mmio_cond failed.\n");
+            LOG(lm_main, LOG_ERROR, ("destroy mmio_cond failed.\n"));
         }
         else
         {
@@ -332,7 +335,7 @@ int destroy_sac_accessor(void)
     {
         if ((ret = sysMutexDestroy(sa->mmio_mutex)) != 0)
         {
-            //LOG_ERROR("destroy mmio_mutex failed.\n");
+            LOG(lm_main, LOG_ERROR, ("destroy mmio_mutex failed.\n"));
         }
         else
         {
@@ -357,14 +360,14 @@ void handle_interrupt(void *arg)
     ret = sys_isoself_spu_get_int_stat(sa->id, SPU_INTR_CLASS_2, &stat);
     if (ret != 0)
     {
-        //LOG_ERROR("sys_isoself_spu_get_int_stat failed %d\n", ret);
+        LOG(lm_main, LOG_ERROR, ("sys_isoself_spu_get_int_stat failed %d\n", ret));
         sysInterruptThreadEOI();
     }
 #else
     ret = sysSpuRawGetIntStat(sa->id, SPU_INTR_CLASS_2, &stat);
     if (ret != 0)
     {
-        //LOG_ERROR("sys_raw_spu_get_int_stat failed %d\n", ret);
+        LOG(lm_main, LOG_ERROR, ("sys_raw_spu_get_int_stat failed %d\n", ret));
         sysInterruptThreadEOI();
     }
 #endif
@@ -376,7 +379,7 @@ void handle_interrupt(void *arg)
         ret = sys_isoself_spu_read_puint_mb(sa->id, &sa->error_code);
         if (ret != 0)
         {
-            //LOG_ERROR("sys_isoself_spu_read_puint_mb failed %d\n", ret);
+            LOG(lm_main, LOG_ERROR, ("sys_isoself_spu_read_puint_mb failed %d\n", ret));
             sysMutexUnlock(sa->mmio_mutex);
             sysInterruptThreadEOI();
         }
@@ -385,7 +388,7 @@ void handle_interrupt(void *arg)
         ret = sys_isoself_spu_set_int_stat(sa->id, SPU_INTR_CLASS_2, INTR_PPU_MB_MASK);
         if (ret != 0)
         {
-            //LOG_ERROR("sys_isoself_spu_set_int_stat failed %d\n", ret);
+            LOG(lm_main, LOG_ERROR, ("sys_isoself_spu_set_int_stat failed %d\n", ret));
             sysMutexUnlock(sa->mmio_mutex);
             sysInterruptThreadEOI();
         }
@@ -393,7 +396,7 @@ void handle_interrupt(void *arg)
         ret = sysSpuRawReadPuintMb(sa->id, &sa->error_code);
         if (ret != 0)
         {
-            //LOG_ERROR("sys_raw_spu_read_puint_mb failed %d\n", ret);
+            LOG(lm_main, LOG_ERROR, ("sys_raw_spu_read_puint_mb failed %d\n", ret));
             sysMutexUnlock(sa->mmio_mutex);
             sysInterruptThreadEOI();
         }
@@ -402,7 +405,7 @@ void handle_interrupt(void *arg)
         ret = sysSpuRawSetIntStat(sa->id, SPU_INTR_CLASS_2, INTR_PPU_MB_MASK);
         if (ret != 0)
         {
-            //LOG_ERROR("sys_raw_spu_set_int_stat failed %d\n", ret);
+            LOG(lm_main, LOG_ERROR, ("sys_raw_spu_set_int_stat failed %d\n", ret));
             sysMutexUnlock(sa->mmio_mutex);
             sysInterruptThreadEOI();
         }
@@ -411,7 +414,7 @@ void handle_interrupt(void *arg)
         ret = sysMutexLock(sa->mmio_mutex, 0);
         if (ret != 0)
         {
-            //LOG_ERROR("sysMutexLock() failed. (%d)\n", ret);
+            LOG(lm_main, LOG_ERROR, ("sysMutexLock() failed. (%d)\n", ret));
             sysInterruptThreadEOI();
         }
 
@@ -445,28 +448,24 @@ int exchange_data(int func_nr
         memcpy(sa->buffer, write_buffer, min(write_count, DMA_BUFFER_SIZE));
     }
 
-    //LOG_INFO("exchange_data: [sysMutexLock]\n");
     ret = sysMutexLock(sa->mmio_mutex, 0);
     if (ret != 0)
     {
-        //LOG_ERROR("sysMutexLock() failed. (%d)\n", ret);
+        LOG(lm_main, LOG_ERROR, ("sysMutexLock() failed. (%d)\n", ret));
         return ret;
     }
 
-    //LOG_INFO("exchange_data: [writing func %d for amount %d..]\n", func_nr, read_count);
     sysSpuRawWriteProblemStorage(sa->id, SPU_In_MBox, func_nr);
     sysSpuRawWriteProblemStorage(sa->id, SPU_In_MBox, read_count);
 
-    //LOG_INFO("exchange_data: [sysCondWait]\n");
     ret = sysCondWait(sa->mmio_cond, timeout);
     if (ret != 0)
     {
-        //LOG_ERROR("exchange_data: [sysCondWait timeout]\n");
+        LOG(lm_main, LOG_ERROR, ("exchange_data: [sysCondWait timeout]\n"));
         sysMutexUnlock(sa->mmio_mutex);
         return ret;
     }
 
-    //LOG_INFO("exchange_data: [sysMutexUnlock]\n");
     ret = sysMutexUnlock(sa->mmio_mutex);
     if (ret != 0)
     {
@@ -599,11 +598,11 @@ int sac_exec_decrypt_data(uint8_t *encrypted_buffer, uint32_t expected_size, uin
 
     memset(sa->read_buffer, 0, 0x10);
     memcpy(sa->read_buffer, &expected_size, 4);
-    memcpy(sa->read_buffer + 0x10, encrypted_buffer, 0x1800);
+    memcpy(sa->read_buffer + 0x10, encrypted_buffer, expected_size);
 
-    ret = exchange_data(SAC_CMD_DECRYPT, sa->read_buffer, 0x1810, sa->write_buffer, 0x1804, 5000000);
+    ret = exchange_data(SAC_CMD_DECRYPT, sa->read_buffer, expected_size + 0x10, sa->write_buffer, expected_size + 4, 5000000);
 
-    memcpy(decrypted_buffer, sa->write_buffer + 4, 0x1800);
+    memcpy(decrypted_buffer, sa->write_buffer + 4, expected_size);
 
     return ret;
 }
@@ -617,7 +616,7 @@ int sac_exec_key_exchange(int fd)
     memset(buffer, 0, 256);
 
     ret = ioctl_report_key_start(fd, buffer);
-    //LOG_INFO("ioctl_report_key1[%x] %x\n", fd, ret);
+    LOG(lm_main, LOG_DEBUG, ("ioctl_report_key1[%x] %x\n", fd, ret));
     if (ret != 0)
     {
         return ret;
@@ -626,14 +625,14 @@ int sac_exec_key_exchange(int fd)
     agid = buffer[7];
 
     ret = sac_exec_generate_key_1(buffer, 0xcc, &buffer_size);
-    //LOG_INFO("sac_exec_generate_key 0 %x %x\n", buffer_size, ret);
+    LOG(lm_main, LOG_DEBUG, ("sac_exec_generate_key 0 %x %x\n", buffer_size, ret));
     if (ret != 0)
     {
         return ret;
     }
 
     ret = ioctl_send_key(fd, agid, buffer_size, buffer, 2);
-    //LOG_INFO("ioctl_send_key[2] %x %x\n", buffer_size, ret);
+    LOG(lm_main, LOG_DEBUG, ("ioctl_send_key[2] %x %x\n", buffer_size, ret));
     if (ret != 0)
     {
         return ret;
@@ -641,14 +640,14 @@ int sac_exec_key_exchange(int fd)
 
     buffer_size = 0xcc;
     ret         = ioctl_report_key(fd, agid, &buffer_size, buffer, 2);
-    //LOG_INFO("ioctl_report_key[2] %x %x\n", buffer_size, ret);
+    LOG(lm_main, LOG_DEBUG, ("ioctl_report_key[2] %x %x\n", buffer_size, ret));
     if (ret != 0)
     {
         return ret;
     }
 
     ret = sac_exec_validate_key_1(buffer, 0xc5);
-    //LOG_INFO("sac_exec_validate_key_1[%x]\n", ret);
+    LOG(lm_main, LOG_DEBUG, ("sac_exec_validate_key_1[%x]\n", ret));
     if (ret != 0)
     {
         return ret;
@@ -658,28 +657,28 @@ int sac_exec_key_exchange(int fd)
     memset(buffer, 0, 256);
 
     ret = sac_exec_generate_key_2(buffer, 0xb0, &buffer_size);
-    //LOG_INFO("sac_exec_generate_key_2[%x] %x\n", buffer_size, ret);
+    LOG(lm_main, LOG_DEBUG, ("sac_exec_generate_key_2[%x] %x\n", buffer_size, ret));
     if (ret != 0)
     {
         return ret;
     }
 
     ret = ioctl_send_key(fd, agid, buffer_size, buffer, 3);
-    //LOG_INFO("ioctl_send_key[3] %x %x\n", buffer_size, ret);
+    LOG(lm_main, LOG_DEBUG, ("ioctl_send_key[3] %x %x\n", buffer_size, ret));
     if (ret != 0)
     {
         return ret;
     }
 
     ret = ioctl_report_key(fd, agid, &buffer_size, buffer, 3);
-    //LOG_INFO("ioctl_report_key[3] %x %x\n", buffer_size, ret);
+    LOG(lm_main, LOG_DEBUG, ("ioctl_report_key[3] %x %x\n", buffer_size, ret));
     if (ret != 0)
     {
         return ret;
     }
 
     ret = sac_exec_validate_key_2(buffer, 0xae);
-    //LOG_INFO("sac_exec_validate_key_2[%x]\n", ret);
+    LOG(lm_main, LOG_DEBUG, ("sac_exec_validate_key_2[%x]\n", ret));
     if (ret != 0)
     {
         return ret;
@@ -690,21 +689,21 @@ int sac_exec_key_exchange(int fd)
 
     buffer_size = 0x30;
     ret         = ioctl_report_key(fd, agid, &buffer_size, buffer, 4);
-    //LOG_INFO("ioctl_report_key[4] %x %x\n", buffer_size, ret);
+    LOG(lm_main, LOG_DEBUG, ("ioctl_report_key[4] %x %x\n", buffer_size, ret));
     if (ret != 0)
     {
         return ret;
     }
 
     ret = sac_exec_validate_key_3(buffer, 0x30);
-    //LOG_INFO("sac_exec_validate_key_3[%x]\n", ret);
+    LOG(lm_main, LOG_DEBUG, ("sac_exec_validate_key_3[%x]\n", ret));
     if (ret != 0)
     {
         return ret;
     }
 
     ret = ioctl_report_key_finish(fd, agid);
-    //LOG_INFO("ioctl_report_finish [0xff] %x\n", ret);
+    LOG(lm_main, LOG_DEBUG, ("ioctl_report_finish [0xff] %x\n", ret));
 
     return ret;
 }
@@ -720,14 +719,14 @@ int file_alloc_load(const char *file_path, uint8_t **buf, unsigned int *size)
     ret = sysFsOpen(file_path, SYS_O_RDONLY, &fd, 0, 0);
     if (ret != 0)
     {
-        //LOG_ERROR("file %s open error : 0x%x\n", file_path, ret);
+        LOG(lm_main, LOG_ERROR, ("file %s open error : 0x%x\n", file_path, ret));
         return -1;
     }
 
     ret = sysFsFStat(fd, &status);
     if (ret != 0)
     {
-        //LOG_ERROR("file %s get stat error : 0x%x\n", file_path, ret);
+        LOG(lm_main, LOG_ERROR, ("file %s get stat error : 0x%x\n", file_path, ret));
         sysFsClose(fd);
         return -1;
     }
@@ -735,7 +734,7 @@ int file_alloc_load(const char *file_path, uint8_t **buf, unsigned int *size)
     *buf = malloc(status.st_size);
     if (*buf == NULL)
     {
-        //LOG_ERROR("alloc failed\n");
+        LOG(lm_main, LOG_ERROR, ("alloc failed\n"));
         sysFsClose(fd);
         return -1;
     }
@@ -743,7 +742,7 @@ int file_alloc_load(const char *file_path, uint8_t **buf, unsigned int *size)
     ret = sysFsRead(fd, *buf, status.st_size, &read_length);
     if (ret != 0 || status.st_size != read_length)
     {
-        //LOG_ERROR("file %s read error : 0x%x\n", file_path, ret);
+        LOG(lm_main, LOG_ERROR, ("file %s read error : 0x%x\n", file_path, ret));
         sysFsClose(fd);
         free(*buf);
         *buf = NULL;
@@ -753,7 +752,7 @@ int file_alloc_load(const char *file_path, uint8_t **buf, unsigned int *size)
     ret = sysFsClose(fd);
     if (ret != 0)
     {
-        //LOG_ERROR("file %s close error : 0x%x\n", file_path, ret);
+        LOG(lm_main, LOG_ERROR, ("file %s close error : 0x%x\n", file_path, ret));
         free(*buf);
         *buf = NULL;
         return -1;
