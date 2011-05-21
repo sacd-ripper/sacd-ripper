@@ -260,8 +260,8 @@ static int scarletbook_read_channel_toc(scarletbook_handle_t *handle, int channe
     SWAP16(channel_toc->version);
     SWAP16(channel_toc->size);
     SWAP16(channel_toc->track_count);
-    SWAP32(channel_toc->track_position);
-    SWAP32(channel_toc->track_length);
+    SWAP32(channel_toc->track_start);
+    SWAP32(channel_toc->track_end);
     SWAP16(channel_toc->area_description_offset);
     SWAP16(channel_toc->copyright_offset);
     SWAP16(channel_toc->area_description_phonetic_offset);
