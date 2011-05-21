@@ -276,8 +276,8 @@ typedef struct
     uint32_t       unknown_02;
     uint16_t       track_count;
     uint16_t       zero_04;
-    uint32_t       track_position;
-    uint32_t       track_length;
+    uint32_t       track_start;
+    uint32_t       track_end;
     uint8_t        text_channel_count;
     uint8_t        zero_05[7];
     locale_table_t languages[10];

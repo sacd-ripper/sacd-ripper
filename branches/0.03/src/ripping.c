@@ -56,6 +56,7 @@ extern log_module_info_t * lm_main;
 static int               dialog_action = 0;
 
 // the following atomics are used for smooth progressbar indication
+static atomic_t outstanding_read_requests;
 static atomic_t selected_progress_message;
 static atomic_t partial_blocks_processed;
 static atomic_t total_blocks_processed;
@@ -76,19 +77,18 @@ device_info_t          device_info;
 
 typedef struct
 {
-    int                 offset;             // current read offset
-    int                 blocks_read;        // amount of blocks read
-    int                 conversion;         // conversion that needs to take place
+    int                 read_position;      // current read position
+    int                 read_size;          // amount of blocks read (in LSN)
+    sys_io_block_t      read_buffer;
 
+    int                 write_fd;
+    uint8_t            *write_buffer;
+
+    int                 conversion;         // conversion that needs to take place
     int                 encrypted;          // is this packet encrypted?
 
     atomic_t            processing;         // is this packet being processed?
-    sys_io_block_t      read_buffer;
 
-    uint8_t            *write_buffer;
-    sysFSAio            aio_write;
-    int                 write_id;
-    
     void*               accessor;
 
 } sacd_aio_packet_t;
@@ -113,42 +113,13 @@ enum
     , CONVERT_DSD_3_IN_16 = 1 << 3
 } conversion_t;
 
-static void write_callback(sysFSAio *aio, int err, int id, uint64_t size)
-{
-    int ret;
-    sacd_aio_packet_t *packet = (sacd_aio_packet_t *) aio->usrdata;
-    sacd_accessor_t   *accessor = (sacd_accessor_t *) packet->accessor;
-
-    //atomic_add(packet->blocks_read, &total_blocks_processed);
-    //
-    //// we are done with processing this packet
-    //atomic_set(&packet->processing, 0);
-    //
-    //ret = sysMutexLock(accessor->processing_mutex, 0);
-    //if (ret != 0)
-    //{
-    //}
-    //
-    //ret = sysCondSignal(accessor->processing_cond);
-    //if (ret != 0)
-    //{
-    //    sysMutexUnlock(accessor->processing_mutex);
-    //}
-    //
-    //ret = sysMutexUnlock(accessor->processing_mutex);
-    //if (ret != 0)
-    //{
-    //}
-
-    LOG(lm_main, LOG_DEBUG, ("write_callback exit %p %p", packet, accessor));
-}
-
 static void sacd_accessor_event_receive(void *arg)
 {
-    sacd_accessor_t   *accessor = (sacd_accessor_t *) arg;
-    sacd_aio_packet_t *packet = 0;
-    sys_event_t     event;
-    int             ret, block_number;
+    sacd_accessor_t     *accessor = (sacd_accessor_t *) arg;
+    sacd_aio_packet_t   *packet = 0;
+    sys_event_t         event;
+    int                 ret, block_number;
+    uint64_t            nrw;
 
     LOG(lm_main, LOG_DEBUG, ("sacd_accessor_event_receive %p", arg));
 
@@ -179,15 +150,15 @@ static void sacd_accessor_event_receive(void *arg)
             sysThreadExit(-1);
         }
 
-        LOG(lm_main, LOG_DEBUG, ("sacd_accessor_event_receive: offset = %d, blocks = %d", packet->offset, packet->blocks_read));
+        LOG(lm_main, LOG_DEBUG, ("sacd_accessor_event_receive: offset = %d, blocks = %d", packet->read_position, packet->read_size));
 
     	if (packet->encrypted)
     	{
             // decrypt the data
         	block_number = 0;
-        	while(block_number < packet->blocks_read)
+        	while(block_number < packet->read_size)
         	{
-        		int block_size = min(packet->blocks_read - block_number, 3);     // SacModule has an internal max of 3*2048 to process
+        		int block_size = min(packet->read_size - block_number, 3);     // SacModule has an internal max of 3*2048 to process
                 ret = sac_exec_decrypt_data((uint8_t *) (uint64_t) packet->read_buffer + block_number * SACD_LSN_SIZE, 
                                             block_size * SACD_LSN_SIZE, (uint8_t *) (uint64_t) packet->read_buffer + (block_number * SACD_LSN_SIZE));
                 if (ret != 0)
@@ -200,37 +171,34 @@ static void sacd_accessor_event_receive(void *arg)
         	}
         }
 
-        memcpy(packet->write_buffer, (uint8_t *) (uint64_t) packet->read_buffer, packet->blocks_read * SACD_LSN_SIZE);
+        memcpy(packet->write_buffer, (uint8_t *) (uint64_t) packet->read_buffer, packet->read_size * SACD_LSN_SIZE);
 
+        sysFsWrite(packet->write_fd, (uint8_t *) packet->write_buffer, packet->read_size * SACD_LSN_SIZE, &nrw);
+
+        atomic_dec(&outstanding_read_requests);
+
+        atomic_add(packet->read_size, &total_blocks_processed);
+
+        // we are done with processing this packet
+        atomic_set(&packet->processing, 0);
+        
+        ret = sysMutexLock(accessor->processing_mutex, 0);
+        if (ret != 0)
         {
-        uint64_t nrw;
-        sysFsWrite(packet->aio_write.fd, (uint8_t *) (uint64_t) packet->aio_write.buffer_addr, packet->aio_write.size, &nrw);
+            sysThreadExit(-1);
         }
+        
+        ret = sysCondSignal(accessor->processing_cond);
+        if (ret != 0)
         {
-            atomic_add(packet->blocks_read, &total_blocks_processed);
-            
-            // we are done with processing this packet
-            atomic_set(&packet->processing, 0);
-            
-            ret = sysMutexLock(accessor->processing_mutex, 0);
-            if (ret != 0)
-            {
-                sysThreadExit(-1);
-            }
-            
-            ret = sysCondSignal(accessor->processing_cond);
-            if (ret != 0)
-            {
-                sysMutexUnlock(accessor->processing_mutex);
-                sysThreadExit(-1);
-            }
-            
-            ret = sysMutexUnlock(accessor->processing_mutex);
-            if (ret != 0)
-            {
-                sysThreadExit(-1);
-            }
-            
+            sysMutexUnlock(accessor->processing_mutex);
+            sysThreadExit(-1);
+        }
+        
+        ret = sysMutexUnlock(accessor->processing_mutex);
+        if (ret != 0)
+        {
+            sysThreadExit(-1);
         }
     }
 
@@ -330,13 +298,13 @@ int sacd_accessor_open(sacd_accessor_t *accessor, sacd_reader_t *reader)
 
     if (sysMutexCreate(&accessor->processing_mutex, &mutex_attr) != 0)
     {
-        //LOG_ERROR("create processing_mutex failed.\n");
+        LOG(lm_main, LOG_ERROR, "create processing_mutex failed."));
         return -1;
     }
 
     if (sysCondCreate(&accessor->processing_cond, accessor->processing_mutex, &cond_attr) != 0)
     {
-        //LOG_ERROR("create processing_cond failed.\n");
+        LOG(lm_main, LOG_ERROR ("create processing_cond failed."));
         return -1;
     }
 
@@ -399,7 +367,7 @@ int sacd_accessor_close(sacd_accessor_t *accessor)
     {
         if ((ret = sysCondDestroy(accessor->processing_cond)) != 0)
         {
-            //LOG_ERROR("destroy processing_cond failed.\n");
+            LOG(lm_main, LOG_ERROR, ("destroy processing_cond failed."));
         }
         else
         {
@@ -411,7 +379,7 @@ int sacd_accessor_close(sacd_accessor_t *accessor)
     {
         if ((ret = sysMutexDestroy(accessor->processing_mutex)) != 0)
         {
-            //LOG_ERROR("destroy processing_mutex failed.\n");
+            LOG(lm_main, LOG_ERROR, ("destroy processing_mutex failed."));
         }
         else
         {
@@ -435,8 +403,6 @@ int sacd_accessor_close(sacd_accessor_t *accessor)
     
     return 0;
 }
-
-// TODO: - sac_accessor speed test, vs read speed test
 
 static void processing_thread(void *arg)
 {
@@ -474,9 +440,11 @@ static void processing_thread(void *arg)
     
     for (i = 0; i < sb_handle->channel_count; i++)
     {
-        decrypt_start[i] = sb_handle->channel_toc[i]->track_position;
-        decrypt_end[i] = sb_handle->channel_toc[i]->track_position + sb_handle->channel_toc[i]->track_length;
+        decrypt_start[i] = sb_handle->channel_toc[i]->track_start;
+        decrypt_end[i] = sb_handle->channel_toc[i]->track_end;
     }
+
+    atomic_set(&outstanding_read_requests, 0);
 
     // set total amount of blocks to process
     atomic_set(&total_blocks, (uint32_t) device_info.total_sectors);
@@ -485,63 +453,76 @@ static void processing_thread(void *arg)
     ret = sysFsAioInit(output_device);
     ret = sysFsOpen(path, SYS_O_RDWR|SYS_O_CREAT|SYS_O_TRUNC, &fd, NULL, 0);
    
-    while (atomic_read(&stop_processing) == 0 && current_position < device_info.total_sectors)
+    while (atomic_read(&stop_processing) == 0)
     {
-        for (i = 0; i < AIO_MAXIO; i++)
+        // are we still within the boundaries of the disc?
+        if (current_position < device_info.total_sectors)
         {
-            if (atomic_cmpxchg(&sacd_accessor.aio_packet[i].processing, 0, 1) == 0)
+            for (i = 0; i < AIO_MAXIO; i++)
             {
-                sacd_accessor.aio_packet[i].encrypted = 0;
+                if (atomic_cmpxchg(&sacd_accessor.aio_packet[i].processing, 0, 1) == 0)
+                {
+                    sacd_accessor.aio_packet[i].encrypted = 0;
+    
+                    // check what parts need to be decrypted..
+            		if (is_between_inclusive(current_position + MAX_BLOCK_SIZE, decrypt_start[0], decrypt_end[0])
+             		 || is_between_exclusive(current_position, decrypt_start[0], decrypt_end[0])
+            			)
+            		{
+            			if (current_position < decrypt_start[0])
+            			{
+            				block_size = decrypt_start[0] - current_position;
+            			}
+            			else
+            			{
+            				block_size = min(decrypt_end[0] - current_position + 1, MAX_BLOCK_SIZE);
+                            sacd_accessor.aio_packet[i].encrypted = 1;
+            			}
+            		}
+            		else if (is_between_inclusive(current_position + MAX_BLOCK_SIZE, decrypt_start[1], decrypt_end[1])
+            			|| is_between_exclusive(current_position, decrypt_start[1], decrypt_end[1])
+            			)
+            		{
+            			if (current_position < decrypt_start[1])
+            			{
+            				block_size = decrypt_start[1] - current_position;
+            			}
+            			else
+            			{
+            				block_size = min(decrypt_end[1] - current_position + 1, MAX_BLOCK_SIZE);
+                            sacd_accessor.aio_packet[i].encrypted = 1;
+            			}
+            		}
+            		else 
+            		{
+            			 block_size = min(device_info.total_sectors - current_position, MAX_BLOCK_SIZE);
+            		}
+                 
+                    sacd_accessor.aio_packet[i].read_position = current_position;
+                    sacd_accessor.aio_packet[i].read_size = block_size;
+                    sacd_accessor.aio_packet[i].write_fd = fd;
+    
+                    LOG(lm_main, LOG_NOTICE, ("triggering async_read %x pos: %d, size: %d", (uint32_t) (uint64_t) &sacd_accessor.aio_packet[i], current_position, block_size));
 
-                // check what needs to be decrypted..
-        		if (is_between_inclusive(current_position + MAX_BLOCK_SIZE, decrypt_start[0], decrypt_end[0])
-         		 || is_between_exclusive(current_position, decrypt_start[0], decrypt_end[0])
-        			)
-        		{
-        			if (current_position < decrypt_start[0])
-        			{
-        				block_size = decrypt_start[0] - current_position;
-        			}
-        			else
-        			{
-        				block_size = min(decrypt_end[0] - current_position, MAX_BLOCK_SIZE);
-                        sacd_accessor.aio_packet[i].encrypted = 1;
-        			}
-        		}
-        		else if (is_between_inclusive(current_position + MAX_BLOCK_SIZE, decrypt_start[1], decrypt_end[1])
-        			|| is_between_exclusive(current_position, decrypt_start[1], decrypt_end[1])
-        			)
-        		{
-        			if (current_position < decrypt_start[1])
-        			{
-        				block_size = decrypt_start[1] - current_position;
-        			}
-        			else
-        			{
-        				block_size = min(decrypt_end[1] - current_position, MAX_BLOCK_SIZE);
-                        sacd_accessor.aio_packet[i].encrypted = 1;
-        			}
-        		}
-        		else 
-        		{
-        			 block_size = min(device_info.total_sectors - current_position, MAX_BLOCK_SIZE);
-        		}
-             
-                sacd_accessor.aio_packet[i].offset = current_position;
-                sacd_accessor.aio_packet[i].blocks_read = block_size;
-                sacd_accessor.aio_packet[i].aio_write.fd = fd;
-                sacd_accessor.aio_packet[i].aio_write.offset = current_position * SACD_LSN_SIZE;
-                sacd_accessor.aio_packet[i].aio_write.buffer_addr = (uint64_t) sacd_accessor.aio_packet[i].write_buffer;
-                sacd_accessor.aio_packet[i].aio_write.size = block_size * SACD_LSN_SIZE;
-                sacd_accessor.aio_packet[i].aio_write.usrdata = (uint64_t) &sacd_accessor.aio_packet[i];
-
-                LOG(lm_main, LOG_NOTICE, ("triggering async_read %x pos: %d, size: %d", (uint32_t) (uint64_t) &sacd_accessor.aio_packet[i], current_position, block_size));
-
-                ret = sacd_async_read_block_raw(sacd_reader, current_position, block_size,
-                                          sacd_accessor.aio_packet[i].read_buffer, (uint64_t) &sacd_accessor.aio_packet[i]);
-
-                current_position += block_size;
+                    ret = sacd_async_read_block_raw(sacd_reader, current_position, block_size,
+                                              sacd_accessor.aio_packet[i].read_buffer, (uint64_t) &sacd_accessor.aio_packet[i]);
+                    if (ret != 0)
+                    {
+                        break;
+                    }
+                    else
+                    {
+                         atomic_inc(&outstanding_read_requests);
+                    }
+    
+                    current_position += block_size;
+                }
             }
+        }
+        else if (atomic_read(&outstanding_read_requests) == 0)
+        {
+            // we are done!
+            break;
         }
 
         ret = sysMutexLock(sacd_accessor.processing_mutex, 0);
@@ -552,7 +533,7 @@ static void processing_thread(void *arg)
         }
 
         LOG(lm_main, LOG_NOTICE, ("waiting for async read result (10 sec)"));
-        ret = sysCondWait(sacd_accessor.processing_cond, 10000000);
+        ret = sysCondWait(sacd_accessor.processing_cond, 6000000);
         if (ret != 0)
         {
             LOG(lm_main, LOG_NOTICE, ("error sysCondWait"));
@@ -566,23 +547,6 @@ static void processing_thread(void *arg)
             LOG(lm_main, LOG_NOTICE, ("error sysMutexUnlock"));
             goto close_thread;
         }
-
-        //current_block = atomic_add_return(1, &partial_blocks_processed);
-        //
-        //if (current_block % 10)
-        //{
-        //    int message_target = (atomic_read(&selected_progress_message) == 0 ? 1 : 0);
-        //
-        //    snprintf(progress_message_upper[message_target], 64, "Upper Status %d..", current_block);
-        //    snprintf(progress_message_lower[message_target], 64, "Lower status %d..", current_block);
-        //
-        //    atomic_set(&selected_progress_message, message_target);
-        //}
-        //
-        //if (atomic_add_return(1, &total_blocks_processed) == total_blocks)
-        //    break;
-        //
-        //sysUsleep(100000);
     }
 
 close_thread:
