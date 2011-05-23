@@ -79,14 +79,14 @@ scarletbook_handle_t *scarletbook_open(sacd_reader_t *sacd, int title)
 
     if (sb->master_toc->area_1_toc_1_start)
     {
-        sb->area_data[sb->area_count] = malloc(sb->master_toc->area_1_toc_size * SACD_LSN_SIZE);
-        if (!sb->area_data[sb->area_count])
+        sb->area[sb->area_count].area_data = malloc(sb->master_toc->area_1_toc_size * SACD_LSN_SIZE);
+        if (!sb->area[sb->area_count].area_data)
         {
             scarletbook_close(sb);
             return 0;
         }
 
-        if (!sacd_read_block_raw(sacd, sb->master_toc->area_1_toc_1_start, sb->master_toc->area_1_toc_size, sb->area_data[sb->area_count]))
+        if (!sacd_read_block_raw(sacd, sb->master_toc->area_1_toc_1_start, sb->master_toc->area_1_toc_size, sb->area[sb->area_count].area_data))
             return 0;
 
         if (!scarletbook_read_area_toc(sb, sb->area_count))
@@ -98,14 +98,14 @@ scarletbook_handle_t *scarletbook_open(sacd_reader_t *sacd, int title)
     }
     if (sb->master_toc->area_2_toc_1_start)
     {
-        sb->area_data[sb->area_count] = malloc(sb->master_toc->area_2_toc_size * SACD_LSN_SIZE);
-        if (!sb->area_data[sb->area_count])
+        sb->area[sb->area_count].area_data = malloc(sb->master_toc->area_2_toc_size * SACD_LSN_SIZE);
+        if (!sb->area[sb->area_count].area_data)
         {
             scarletbook_close(sb);
             return 0;
         }
 
-        if (!sacd_read_block_raw(sacd, sb->master_toc->area_2_toc_1_start, sb->master_toc->area_2_toc_size, sb->area_data[sb->area_count]))
+        if (!sacd_read_block_raw(sacd, sb->master_toc->area_2_toc_1_start, sb->master_toc->area_2_toc_size, sb->area[sb->area_count].area_data))
             return 0;
 
         if (!scarletbook_read_area_toc(sb, sb->area_count))
@@ -128,11 +128,11 @@ void scarletbook_close(scarletbook_handle_t *handle)
     if (handle->master_data)
         free(handle->master_data);
 
-    if (handle->area_data[0])
-        free(handle->area_data[0]);
+    if (handle->area[0].area_data)
+        free(handle->area[0].area_data);
 
-    if (handle->area_data[1])
-        free(handle->area_data[1]);
+    if (handle->area[1].area_data)
+        free(handle->area[1].area_data);
 
     memset(handle, 0, sizeof(scarletbook_handle_t));
 
@@ -241,15 +241,16 @@ static int scarletbook_read_master_toc(scarletbook_handle_t *handle)
     return 1;
 }
 
-static int scarletbook_read_area_toc(scarletbook_handle_t *handle, int area)
+static int scarletbook_read_area_toc(scarletbook_handle_t *handle, int area_idx)
 {
     int           i, j;
     area_toc_t *area_toc;
     uint8_t       *area_data;
     uint8_t       *p;
+    area_t        *area = &handle->area[area_idx];
 
-    p           = area_data = handle->area_data[area];
-    area_toc = handle->area_toc[area] = (area_toc_t *) area_data;
+    p = area_data = area->area_data;
+    area_toc = area->area_toc = (area_toc_t *) area_data;
 
     if (strncmp("TWOCHTOC", area_toc->id, 8) != 0 && strncmp("MULCHTOC", area_toc->id, 8) != 0)
     {
@@ -259,7 +260,6 @@ static int scarletbook_read_area_toc(scarletbook_handle_t *handle, int area)
 
     SWAP16(area_toc->version);
     SWAP16(area_toc->size);
-    SWAP16(area_toc->track_count);
     SWAP32(area_toc->track_start);
     SWAP32(area_toc->track_end);
     SWAP16(area_toc->area_description_offset);
@@ -289,11 +289,11 @@ static int scarletbook_read_area_toc(scarletbook_handle_t *handle, int area)
     // is this the 2 channel?
     if (area_toc->channel_count == 2 && area_toc->loudspeaker_config == 0)
     {
-        handle->twoch_area_idx = area;
+        handle->twoch_area_idx = area_idx;
     }
     else
     {
-        handle->mulch_area_idx = area;
+        handle->mulch_area_idx = area_idx;
     }
 
     // Area TOC size is SACD_LSN_SIZE
@@ -308,7 +308,7 @@ static int scarletbook_read_area_toc(scarletbook_handle_t *handle, int area)
                 area_text_t *area_text;
                 uint8_t        track_type, track_amount;
                 char           *track_ptr;
-                area_text = handle->area_text[area] = (area_text_t *) p;
+                area_text = area->area_text = (area_text_t *) p;
                 SWAP16(area_text->track_text_position[i]);
                 if (area_text->track_text_position[i] > 0)
                 {
@@ -325,46 +325,46 @@ static int scarletbook_read_area_toc(scarletbook_handle_t *handle, int area)
                             switch (track_type)
                             {
                             case TRACK_TYPE_TITLE:
-                                handle->area_track_text[area][i].track_type_title = track_ptr;
+                                area->area_track_text[i].track_type_title = track_ptr;
                                 break;
                             case TRACK_TYPE_PERFORMER:
-                                handle->area_track_text[area][i].track_type_performer = track_ptr;
+                                area->area_track_text[i].track_type_performer = track_ptr;
                                 break;
                             case TRACK_TYPE_SONGWRITER:
-                                handle->area_track_text[area][i].track_type_songwriter = track_ptr;
+                                area->area_track_text[i].track_type_songwriter = track_ptr;
                                 break;
                             case TRACK_TYPE_COMPOSER:
-                                handle->area_track_text[area][i].track_type_composer = track_ptr;
+                                area->area_track_text[i].track_type_composer = track_ptr;
                                 break;
                             case TRACK_TYPE_ARRANGER:
-                                handle->area_track_text[area][i].track_type_arranger = track_ptr;
+                                area->area_track_text[i].track_type_arranger = track_ptr;
                                 break;
                             case TRACK_TYPE_MESSAGE:
-                                handle->area_track_text[area][i].track_type_message = track_ptr;
+                                area->area_track_text[i].track_type_message = track_ptr;
                                 break;
                             case TRACK_TYPE_EXTRA_MESSAGE:
-                                handle->area_track_text[area][i].track_type_extra_message = track_ptr;
+                                area->area_track_text[i].track_type_extra_message = track_ptr;
                                 break;
                             case TRACK_TYPE_TITLE_PHONETIC:
-                                handle->area_track_text[area][i].track_type_title_phonetic = track_ptr;
+                                area->area_track_text[i].track_type_title_phonetic = track_ptr;
                                 break;
                             case TRACK_TYPE_PERFORMER_PHONETIC:
-                                handle->area_track_text[area][i].track_type_performer_phonetic = track_ptr;
+                                area->area_track_text[i].track_type_performer_phonetic = track_ptr;
                                 break;
                             case TRACK_TYPE_SONGWRITER_PHONETIC:
-                                handle->area_track_text[area][i].track_type_songwriter_phonetic = track_ptr;
+                                area->area_track_text[i].track_type_songwriter_phonetic = track_ptr;
                                 break;
                             case TRACK_TYPE_COMPOSER_PHONETIC:
-                                handle->area_track_text[area][i].track_type_composer_phonetic = track_ptr;
+                                area->area_track_text[i].track_type_composer_phonetic = track_ptr;
                                 break;
                             case TRACK_TYPE_ARRANGER_PHONETIC:
-                                handle->area_track_text[area][i].track_type_arranger_phonetic = track_ptr;
+                                area->area_track_text[i].track_type_arranger_phonetic = track_ptr;
                                 break;
                             case TRACK_TYPE_MESSAGE_PHONETIC:
-                                handle->area_track_text[area][i].track_type_message_phonetic = track_ptr;
+                                area->area_track_text[i].track_type_message_phonetic = track_ptr;
                                 break;
                             case TRACK_TYPE_EXTRA_MESSAGE_PHONETIC:
-                                handle->area_track_text[area][i].track_type_extra_message_phonetic = track_ptr;
+                                area->area_track_text[i].track_type_extra_message_phonetic = track_ptr;
                                 break;
                             }
                         }
@@ -383,7 +383,7 @@ static int scarletbook_read_area_toc(scarletbook_handle_t *handle, int area)
         }
         else if (strncmp((char *) p, "SACD_IGL", 8) == 0)
         {
-            handle->area_isrc_genre[area] = (area_isrc_genre_t *) p;
+            area->area_isrc_genre = (area_isrc_genre_t *) p;
             p += SACD_LSN_SIZE * 2;
         }
         else if (strncmp((char *) p, "SACD_ACC", 8) == 0)
@@ -394,7 +394,7 @@ static int scarletbook_read_area_toc(scarletbook_handle_t *handle, int area)
         else if (strncmp((char *) p, "SACDTRL1", 8) == 0)
         {
             area_tracklist_offset_t *tracklist;
-            tracklist = handle->area_tracklist_offset[area] = (area_tracklist_offset_t *) p;
+            tracklist = area->area_tracklist_offset = (area_tracklist_offset_t *) p;
             for (i = 0; i < area_toc->track_count; i++)
             {
                 SWAP32(tracklist->track_start_lsn[i]);
@@ -405,7 +405,7 @@ static int scarletbook_read_area_toc(scarletbook_handle_t *handle, int area)
         else if (strncmp((char *) p, "SACDTRL2", 8) == 0)
         {
             area_tracklist_time_t *tracklist;
-            tracklist = handle->area_tracklist_time[area] = (area_tracklist_time_t *) p;
+            tracklist = area->area_tracklist_time = (area_tracklist_time_t *) p;
             p += SACD_LSN_SIZE;
         }
         else

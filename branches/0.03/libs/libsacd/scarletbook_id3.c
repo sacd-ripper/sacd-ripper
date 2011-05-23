@@ -107,17 +107,17 @@ int scarletbook_id3_tag_render(scarletbook_handle_t *handle, uint8_t *buffer, in
 
     memset(tmp, 0, sizeof(tmp));
 
-    if (handle->area_track_text[area]->track_type_title)
-        update_id3_frame(id3tag, ID3_FRAME_TITLE, handle->area_track_text[area]->track_type_title);
-    if (handle->area_track_text[area]->track_type_performer)
-        update_id3_frame(id3tag, ID3_FRAME_ARTIST, handle->area_track_text[area]->track_type_performer);
+    if (handle->area[area].area_track_text->track_type_title)
+        update_id3_frame(id3tag, ID3_FRAME_TITLE, handle->area[area].area_track_text->track_type_title);
+    if (handle->area[area].area_track_text->track_type_performer)
+        update_id3_frame(id3tag, ID3_FRAME_ARTIST, handle->area[area].area_track_text->track_type_performer);
     if (handle->master_text[0]->album_title_position)
     {
         snprintf(tmp, 200, "%s", (char *) handle->master_text[0] + handle->master_text[0]->album_title_position);
         update_id3_frame(id3tag, ID3_FRAME_ALBUM, tmp);
     }
-    if (handle->area_track_text[area]->track_type_message)
-        update_id3_frame(id3tag, ID3_FRAME_COMMENT, handle->area_track_text[area]->track_type_message);
+    if (handle->area[area].area_track_text->track_type_message)
+        update_id3_frame(id3tag, ID3_FRAME_COMMENT, handle->area[area].area_track_text->track_type_message);
 
     snprintf(tmp, 200, "%04d", handle->master_toc->disc_date_year);
     update_id3_frame(id3tag, ID3_FRAME_YEAR, tmp);
@@ -125,7 +125,7 @@ int scarletbook_id3_tag_render(scarletbook_handle_t *handle, uint8_t *buffer, in
     snprintf(tmp, 200, "%d", track + 1);     // internally tracks start from 0
     update_id3_frame(id3tag, ID3_FRAME_TRACK, tmp);
 
-    snprintf(tmp, 200, "%d", sacd_id3_genres[handle->area_isrc_genre[area]->track_genre[track].genre & 0x1f]);
+    snprintf(tmp, 200, "%d", sacd_id3_genres[handle->area[area].area_isrc_genre->track_genre[track].genre & 0x1f]);
     update_id3_frame(id3tag, ID3_FRAME_GENRE, tmp);
 
     len = id3_tag_render(id3tag, buffer);
