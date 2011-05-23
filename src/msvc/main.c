@@ -204,19 +204,19 @@ int main(int argc, char* argv[]) {
 				int area = 0;
 				ebunch_t *dst_decoder = 0;
 
-				for (i = 0; i < handle->area_toc[area]->track_count; i++) {
+				for (i = 0; i < handle->[area].area_toc->track_count; i++) {
 					dsdiff_handle = dsdiff_open(handle, generate_trackname(i + 1), area, i, opts.convert_dst);
 					if (!dsdiff_handle) {
 						break;
 					}
 
-					dst_decoder = open_dst_decoder(handle->area_toc[area]->area_count);
+					dst_decoder = open_dst_decoder(handle->area[area].area_toc->area_count);
 
-					sacd_seek_block(sacd_reader, handle->area_tracklist_offset[area]->track_pos_lsn[i]);
-					block_count = handle->area_tracklist_offset[area]->track_length_lsn[i];
+					sacd_seek_block(sacd_reader, handle->area[area].area_tracklist_offset->track_pos_lsn[i]);
+					block_count = handle->area[area].area_tracklist_offset->track_length_lsn[i];
 					while (--block_count) {
 						sacd_read_block(sacd_reader, 1, buffer);
-						switch (handle->area_toc[area]->encoding) {
+						switch (handle->area[area].area_toc->encoding) {
 							case ENCODING_DSD_3_IN_14:
 								write(dsdiff_handle->fd, buffer + 32, SACD_LSN_SIZE - 32);
 								break;

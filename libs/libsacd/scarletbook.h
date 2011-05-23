@@ -393,9 +393,9 @@ ATTRIBUTE_PACKED area_tracklist_offset_t;
 
 typedef struct
 {
-    uint8_t hour;
-    uint8_t minute;
-    uint8_t second;
+    uint8_t minutes;
+    uint8_t seconds;
+    uint8_t frames;
 #if defined(__BIG_ENDIAN__)
     uint8_t extra_use : 3;
     uint8_t reserved : 5;
@@ -408,9 +408,9 @@ ATTRIBUTE_PACKED start_time_t;
 
 typedef struct
 {
-    uint8_t hour;
-    uint8_t minute;
-    uint8_t second;
+    uint8_t minutes;
+    uint8_t seconds;
+    uint8_t frames;
 #if defined(__BIG_ENDIAN__)
     uint8_t track_flags_ilp : 1;
     uint8_t track_flags_tmf4 : 1;
@@ -525,13 +525,7 @@ typedef struct
     int                        mulch_area_idx;
 	int                        area_count;
 
-	uint8_t                    * area_data[2];
-    area_toc_t              * area_toc[2];
-    area_tracklist_offset_t * area_tracklist_offset[2];
-    area_tracklist_time_t   * area_tracklist_time[2];
-    area_text_t             * area_text[2];
-    area_track_text_t       area_track_text[2][255];                      // max of 255 supported tracks
-    area_isrc_genre_t             * area_isrc_genre[2];
+    area_t                     area[2];
 } 
 scarletbook_handle_t;
 

@@ -132,7 +132,7 @@ dsdiff_handle_t *dsdiff_create(scarletbook_handle_t *sb_handle, char *filename, 
     // The Channels Chunk is required and may appear only once in the Property Chunk.
     {
         int              i;
-        uint8_t          channel_count    = sb_handle->area_toc[area]->channel_count;
+        uint8_t          channel_count    = sb_handle->area[area].area_toc->channel_count;
         channels_chunk_t * channels_chunk = (channels_chunk_t *) write_ptr;
         channels_chunk->chunk_id        = CHNL_MARKER;
         channels_chunk->chunk_data_size = CALC_CHUNK_SIZE(CHANNELS_CHUNK_SIZE - CHUNK_HEADER_SIZE + channel_count * sizeof(uint32_t));
@@ -204,7 +204,7 @@ dsdiff_handle_t *dsdiff_create(scarletbook_handle_t *sb_handle, char *filename, 
     // The Loudspeaker Configuration Chunk is optional but if used it may appear only once in
     // the Property Chunk.
     {
-        uint8_t                    channel_count             = sb_handle->area_toc[area]->channel_count;
+        uint8_t                    channel_count             = sb_handle->area[area].area_toc->channel_count;
         loudspeaker_config_chunk_t *loudspeaker_config_chunk = (loudspeaker_config_chunk_t *) write_ptr;
         loudspeaker_config_chunk->chunk_id        = LSCO_MARKER;
         loudspeaker_config_chunk->chunk_data_size = CALC_CHUNK_SIZE(LOADSPEAKER_CONFIG_CHUNK_SIZE - CHUNK_HEADER_SIZE);
@@ -244,8 +244,8 @@ dsdiff_handle_t *dsdiff_create(scarletbook_handle_t *sb_handle, char *filename, 
     // all properties have been written, now set the property chunk size
     property_chunk->chunk_data_size = CALC_CHUNK_SIZE(write_ptr - prop_ptr - CHUNK_HEADER_SIZE);
 
-    track_size = sb_handle->area_tracklist_offset[area]->track_length_lsn[track] - 1;
-    switch (sb_handle->area_toc[0]->frame_format)
+    track_size = sb_handle->area[area].area_tracklist_offset->track_length_lsn[track] - 1;
+    switch (sb_handle->area[area].area_toc->frame_format)
     {
     case FRAME_FORMAT_DSD_3_IN_14:
         track_size *= (SACD_LSN_SIZE - 32);

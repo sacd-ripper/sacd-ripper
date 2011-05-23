@@ -142,13 +142,13 @@ void scarletbook_print_master_toc(scarletbook_handle_t *handle)
     scarletbook_print_album_text(handle);
 }
 
-void scarletbook_print_area_text(scarletbook_handle_t *handle, int area)
+void scarletbook_print_area_text(scarletbook_handle_t *handle, int area_idx)
 {
     int i;
-    fprintf(stdout, "\tTrack list [%d]:\n", area);
-    for (i = 0; i < handle->area_toc[area]->track_count; i++)
+    fprintf(stdout, "\tTrack list [%d]:\n", area_idx);
+    for (i = 0; i < handle->area[area_idx].area_toc->track_count; i++)
     {
-        area_track_text_t *track_text = &handle->area_track_text[area][i];
+        area_track_text_t *track_text = &handle->area[area_idx].area_track_text[i];
         if (track_text->track_type_title)
             fprintf(stdout, "\t\tTitle[%d]: %s\n", i, substr(track_text->track_type_title, 0, 48));
         if (track_text->track_type_title_phonetic)
@@ -180,18 +180,18 @@ void scarletbook_print_area_text(scarletbook_handle_t *handle, int area)
     }
 }
 
-void scarletbook_print_area_toc(scarletbook_handle_t *handle, int area)
+void scarletbook_print_area_toc(scarletbook_handle_t *handle, int area_idx)
 {
     int                        i;
     area_isrc_genre_t             *area_isrc_genre;
     area_tracklist_offset_t *area_tracklist_offset;
     area_tracklist_time_t   *area_tracklist_time;
-    area_toc_t              *area_toc = handle->area_toc[area];
-    area_isrc_genre   = handle->area_isrc_genre[area];
-    area_tracklist_offset = handle->area_tracklist_offset[area];
-    area_tracklist_time   = handle->area_tracklist_time[area];
+    area_toc_t              *area_toc = handle->area[area_idx].area_toc;
+    area_isrc_genre   = handle->area[area_idx].area_isrc_genre;
+    area_tracklist_offset = handle->area[area_idx].area_tracklist_offset;
+    area_tracklist_time   = handle->area[area_idx].area_tracklist_time;
 
-    fprintf(stdout, "\tArea Information [%i]:\n\n", area);
+    fprintf(stdout, "\tArea Information [%i]:\n\n", area_idx);
     fprintf(stdout, "\tVersion: %2i.%02i\n", (area_toc->version >> 8) & 0xff, area_toc->version & 0xff);
 
     if (area_toc->copyright_offset)
@@ -205,15 +205,15 @@ void scarletbook_print_area_toc(scarletbook_handle_t *handle, int area)
 
     fprintf(stdout, "\tTrack Count: %i\n", area_toc->track_count);
     fprintf(stdout, "\tSpeaker config: ");
-    if (area_toc->channel_count == 2 && area_toc->loudspeaker_config == 0)
+    if (area_toc->channel_count == 2 && area_toc->extra_settings == 0)
     {
         fprintf(stdout, "2 Channel\n");
     }
-    else if (area_toc->channel_count == 5 && area_toc->loudspeaker_config == 3)
+    else if (area_toc->channel_count == 5 && area_toc->extra_settings == 3)
     {
         fprintf(stdout, "5 Channel\n");
     }
-    else if (area_toc->channel_count == 6 && area_toc->loudspeaker_config == 4)
+    else if (area_toc->channel_count == 6 && area_toc->extra_settings == 4)
     {
         fprintf(stdout, "6 Channel\n");
     }
@@ -222,7 +222,7 @@ void scarletbook_print_area_toc(scarletbook_handle_t *handle, int area)
         fprintf(stdout, "Unknown\n");
     }
 
-    scarletbook_print_area_text(handle, area);
+    scarletbook_print_area_text(handle, area_idx);
 
     for (i = 0; i < area_toc->track_count; i++)
     {

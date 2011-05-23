@@ -446,8 +446,8 @@ static void processing_thread(void *arg)
     
     for (i = 0; i < sb_handle->area_count; i++)
     {
-        decrypt_start[i] = sb_handle->area_toc[i]->track_start;
-        decrypt_end[i] = sb_handle->area_toc[i]->track_end;
+        decrypt_start[i] = sb_handle->area[i].area_toc->track_start;
+        decrypt_end[i] = sb_handle->area[i].area_toc->track_end;
     }
 
     atomic_set(&outstanding_read_requests, 0);
