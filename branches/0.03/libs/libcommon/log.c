@@ -69,17 +69,17 @@ static char            *log_buf = NULL;
 static char            *logp;
 static char            *log_endp;
 static FILE            *log_file        = NULL;
-static int	           output_time_stamp = 0;
+static int             output_time_stamp = 0;
 
 #define LINE_BUF_SIZE       512
 #define DEFAULT_BUF_SIZE    16384
 
 void log_init(void)
 {
-	char             *ev = 0;
+    char             *ev = 0;
 
 #ifdef __lv2ppu__
-	sys_mutex_attr_t mutex_attr;
+    sys_mutex_attr_t mutex_attr;
     memset(&mutex_attr, 0, sizeof(sys_mutex_attr_t));
     mutex_attr.attr_protocol  = SYS_MUTEX_PROTOCOL_PRIO;
     mutex_attr.attr_recursive = SYS_MUTEX_ATTR_NOT_RECURSIVE;
@@ -260,7 +260,7 @@ int set_log_file(const char *file)
     _LOCK_LOG();
     new_log_file = fopen(file, "w");
     if (!new_log_file) {
-		_UNLOCK_LOG();
+        _UNLOCK_LOG();
         return -1;
     }
 
@@ -295,11 +295,11 @@ void log_print(const char *fmt, ...)
     char             *line_long = NULL;
     uint32_t         nb_tid     = 0, nb;
 #ifdef __lv2ppu__
-	sys_ppu_thread_t me        = 0;
+    sys_ppu_thread_t me        = 0;
 #else
-	int			     me		= 0;
+    int              me     = 0;
 #endif
-	time_t           now;
+    time_t           now;
     struct tm        ts;
 
     if (!log_file)
@@ -321,7 +321,7 @@ void log_print(const char *fmt, ...)
 #ifdef __lv2ppu__
     sysThreadGetId(&me);
 #endif
-	nb_tid += snprintf(line + nb_tid, sizeof(line) - nb_tid - 1, "%ld[%p]: ", me, (void *) me);
+    nb_tid += snprintf(line + nb_tid, sizeof(line) - nb_tid - 1, "%ld[%p]: ", me, (void *) me);
 
     va_start(ap, fmt);
     nb = nb_tid + vsnprintf(line + nb_tid, sizeof(line) - nb_tid - 1, fmt, ap);

@@ -183,7 +183,7 @@ int ioctl_send_key(int fd, uint8_t agid, uint32_t key_size, uint8_t *key, uint8_
     memcpy(buffer + 4, key, key_size);
 
     //if (buffer_align != 0) {
-    //	memset(buffer + key_size + 4, 0, buffer_align);
+    //  memset(buffer + key_size + 4, 0, buffer_align);
     //}
 
     res = sys_storage_send_atapi_command(fd, &atapi_cmnd, buffer);

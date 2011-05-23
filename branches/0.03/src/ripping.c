@@ -150,13 +150,13 @@ static void sacd_accessor_handle_read(void *arg)
         }
 
         LOG(lm_main, LOG_DEBUG, ("sacd_accessor_handle_read: offset = %d, blocks = %d", packet->read_position, packet->read_size));
-    	if (packet->encrypted)
-    	{
+        if (packet->encrypted)
+        {
             // decrypt the data
-        	block_number = 0;
-        	while(block_number < packet->read_size)
-        	{
-        		int block_size = min(packet->read_size - block_number, 3);     // SacModule has an internal max of 3*2048 to process
+            block_number = 0;
+            while(block_number < packet->read_size)
+            {
+                int block_size = min(packet->read_size - block_number, 3);     // SacModule has an internal max of 3*2048 to process
                 ret = sac_exec_decrypt_data((uint8_t *) (uint64_t) packet->read_buffer + block_number * SACD_LSN_SIZE, 
                                             block_size * SACD_LSN_SIZE, (uint8_t *) (uint64_t) packet->read_buffer + (block_number * SACD_LSN_SIZE));
                 if (ret != 0)
@@ -165,8 +165,8 @@ static void sacd_accessor_handle_read(void *arg)
                     sysThreadExit(-1);
                }
     
-        		block_number += block_size;
-        	}
+                block_number += block_size;
+            }
         }
 
         // copy read into write buffer
@@ -231,7 +231,7 @@ int sacd_accessor_open(sacd_accessor_t *accessor, sacd_reader_t *reader)
         return -1;
     }
 
-	ret = create_sac_accessor();
+    ret = create_sac_accessor();
     if (ret != 0)
     {
         LOG(lm_main, LOG_ERROR, ("create_sac_accessor (%#x)\n", ret));
@@ -332,7 +332,7 @@ int sacd_accessor_close(sacd_accessor_t *accessor)
     uint64_t thr_exit_code;
     int      ret, i;
 
-    /*	clean event_queue for spu_printf */
+    /*  clean event_queue for spu_printf */
     ret = sysEventQueueDestroy(accessor->queue, SYS_EVENT_QUEUE_DESTROY_FORCE);
     if (ret)
     {
@@ -410,8 +410,8 @@ int sacd_accessor_close(sacd_accessor_t *accessor)
 static void processing_thread(void *arg)
 {
     int ret, i, fd;
-	sacd_reader_t *sacd_reader = 0;
-	scarletbook_handle_t *sb_handle = 0;
+    sacd_reader_t *sacd_reader = 0;
+    scarletbook_handle_t *sb_handle = 0;
     sacd_accessor_t *accessor = 0;
     uint32_t current_position = 0;
     uint32_t decrypt_start[2];
@@ -419,19 +419,19 @@ static void processing_thread(void *arg)
     int block_size;
     char file_path[255];
 
-	sacd_reader = sacd_open("/dev_bdvd");
-	if (!sacd_reader)
-	{
+    sacd_reader = sacd_open("/dev_bdvd");
+    if (!sacd_reader)
+    {
         LOG(lm_main, LOG_ERROR, ("could not open device %llx, error: %#x\n", BD_DEVICE, (uint32_t) (uint64_t) sacd_reader));
         goto close_thread;
-	}
+    }
 
-	sb_handle = scarletbook_open(sacd_reader, 0);
-	if (!sb_handle)
-	{
+    sb_handle = scarletbook_open(sacd_reader, 0);
+    if (!sb_handle)
+    {
         LOG(lm_main, LOG_ERROR, ("could not open scarletbook (%#x)\n", (uint32_t) (uint64_t) sb_handle));
         goto close_thread;
-	}
+    }
 
     accessor = (sacd_accessor_t *) malloc(sizeof(sacd_accessor_t));
     memset(accessor, 0, sizeof(sacd_accessor_t));
@@ -457,8 +457,8 @@ static void processing_thread(void *arg)
 
     snprintf(file_path, 255, "%s/dump.iso", output_device);
     ret = sysFsOpen(file_path, SYS_O_WRONLY|SYS_O_CREAT|SYS_O_TRUNC, &fd, NULL, 0);
-	sysFsChmod(file_path, S_IFMT | 0777); 
-				   
+    sysFsChmod(file_path, S_IFMT | 0777); 
+                   
     while (atomic_read(&stop_processing) == 0)
     {
 
@@ -482,38 +482,38 @@ static void processing_thread(void *arg)
                     accessor->aio_packet[i].encrypted = 0;
     
                     // check what parts are encrypted..
-            		if (is_between_inclusive(current_position + MAX_BLOCK_SIZE, decrypt_start[0], decrypt_end[0])
-             		 || is_between_exclusive(current_position, decrypt_start[0], decrypt_end[0])
-            			)
-            		{
-            			if (current_position < decrypt_start[0])
-            			{
-            				block_size = decrypt_start[0] - current_position;
-            			}
-            			else
-            			{
-            				block_size = min(decrypt_end[0] - current_position + 1, MAX_BLOCK_SIZE);
+                    if (is_between_inclusive(current_position + MAX_BLOCK_SIZE, decrypt_start[0], decrypt_end[0])
+                     || is_between_exclusive(current_position, decrypt_start[0], decrypt_end[0])
+                        )
+                    {
+                        if (current_position < decrypt_start[0])
+                        {
+                            block_size = decrypt_start[0] - current_position;
+                        }
+                        else
+                        {
+                            block_size = min(decrypt_end[0] - current_position + 1, MAX_BLOCK_SIZE);
                             accessor->aio_packet[i].encrypted = 1;
-            			}
-            		}
-            		else if (is_between_inclusive(current_position + MAX_BLOCK_SIZE, decrypt_start[1], decrypt_end[1])
-            			|| is_between_exclusive(current_position, decrypt_start[1], decrypt_end[1])
-            			)
-            		{
-            			if (current_position < decrypt_start[1])
-            			{
-            				block_size = decrypt_start[1] - current_position;
-            			}
-            			else
-            			{
-            				block_size = min(decrypt_end[1] - current_position + 1, MAX_BLOCK_SIZE);
+                        }
+                    }
+                    else if (is_between_inclusive(current_position + MAX_BLOCK_SIZE, decrypt_start[1], decrypt_end[1])
+                        || is_between_exclusive(current_position, decrypt_start[1], decrypt_end[1])
+                        )
+                    {
+                        if (current_position < decrypt_start[1])
+                        {
+                            block_size = decrypt_start[1] - current_position;
+                        }
+                        else
+                        {
+                            block_size = min(decrypt_end[1] - current_position + 1, MAX_BLOCK_SIZE);
                             accessor->aio_packet[i].encrypted = 1;
-            			}
-            		}
-            		else 
-            		{
-            			 block_size = min(device_info.total_sectors - current_position, MAX_BLOCK_SIZE);
-            		}
+                        }
+                    }
+                    else 
+                    {
+                         block_size = min(device_info.total_sectors - current_position, MAX_BLOCK_SIZE);
+                    }
                  
                     accessor->aio_packet[i].read_position = current_position;
                     accessor->aio_packet[i].read_size = block_size;
@@ -608,9 +608,9 @@ int start_ripping(void)
     int              ret;
     uint64_t         retval;
 
-	uint32_t prev_upper_progress = 0;
-	uint32_t prev_lower_progress = 0;
-	uint32_t delta;
+    uint32_t prev_upper_progress = 0;
+    uint32_t prev_lower_progress = 0;
+    uint32_t delta;
 
     uint32_t prev_total_blocks_processed = 0;
     uint64_t tb_start, tb_freq;
@@ -644,8 +644,8 @@ int start_ripping(void)
         {
             //msgDialogProgressBarInc(MSG_PROGRESSBAR_INDEX0, delta);
 
-    		delta = (tmp_total_blocks_processed + (tmp_total_blocks_processed - prev_total_blocks_processed)) * 100 / tmp_total_blocks - prev_lower_progress;
-    		prev_lower_progress += delta;
+            delta = (tmp_total_blocks_processed + (tmp_total_blocks_processed - prev_total_blocks_processed)) * 100 / tmp_total_blocks - prev_lower_progress;
+            prev_lower_progress += delta;
             msgDialogProgressBarInc(MSG_PROGRESSBAR_INDEX1, delta);
 
             snprintf(progress_message_lower[0], 64, "transfer rate: (%8.3f MB/sec)", (float)((float) tmp_total_blocks_processed * SACD_LSN_SIZE / 1048576.00) / (float)((__gettime() - tb_start) / (float)(tb_freq)));

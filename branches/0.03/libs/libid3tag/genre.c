@@ -34,8 +34,8 @@
 # define NGENRES    (sizeof(genre_table) / sizeof(genre_table[0]))
 
 /*
- * NAME:	genre->index()
- * DESCRIPTION:	return an ID3v1 genre string indexed by number
+ * NAME:    genre->index()
+ * DESCRIPTION: return an ID3v1 genre string indexed by number
  */
 id3_ucs4_t const *id3_genre_index(unsigned int index)
 {
@@ -43,8 +43,8 @@ id3_ucs4_t const *id3_genre_index(unsigned int index)
 }
 
 /*
- * NAME:	genre->name()
- * DESCRIPTION:	translate an ID3v2 genre number/keyword to its full name
+ * NAME:    genre->name()
+ * DESCRIPTION: translate an ID3v2 genre number/keyword to its full name
  */
 id3_ucs4_t const *id3_genre_name(id3_ucs4_t const *string)
 {
@@ -73,8 +73,8 @@ id3_ucs4_t const *id3_genre_name(id3_ucs4_t const *string)
 }
 
 /*
- * NAME:	translate()
- * DESCRIPTION:	return a canonicalized character for testing genre equivalence
+ * NAME:    translate()
+ * DESCRIPTION: return a canonicalized character for testing genre equivalence
  */
 static
 id3_ucs4_t translate(id3_ucs4_t ch)
@@ -92,8 +92,8 @@ id3_ucs4_t translate(id3_ucs4_t ch)
 }
 
 /*
- * NAME:	compare()
- * DESCRIPTION:	test two ucs4 genre strings for equivalence
+ * NAME:    compare()
+ * DESCRIPTION: test two ucs4 genre strings for equivalence
  */
 static
 int compare(id3_ucs4_t const *str1, id3_ucs4_t const *str2)
@@ -118,8 +118,8 @@ int compare(id3_ucs4_t const *str1, id3_ucs4_t const *str2)
 }
 
 /*
- * NAME:	genre->number()
- * DESCRIPTION:	translate an ID3v2 genre name/number to its ID3v1 index number
+ * NAME:    genre->number()
+ * DESCRIPTION: translate an ID3v2 genre name/number to its ID3v1 index number
  */
 int id3_genre_number(id3_ucs4_t const *string)
 {

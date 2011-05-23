@@ -185,7 +185,7 @@ int patch_syscall_864(void)
 
 void dump_sample_to_output_device(void)
 {
-	msgType  dialog_type;
+    msgType  dialog_type;
     int      fd_in, ret;
     int      fd_out;
     uint32_t sectors_read;

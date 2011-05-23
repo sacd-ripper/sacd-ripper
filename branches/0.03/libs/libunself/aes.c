@@ -909,7 +909,7 @@ void AES_encrypt(const uint8_t *in, uint8_t *out,
     int            r;
 #endif /* ?FULL_UNROLL */
 
-    //	assert(in && out && key);
+    //  assert(in && out && key);
     rk = key->rd_key;
 
     /*
@@ -1104,7 +1104,7 @@ void AES_decrypt(const uint8_t *in, uint8_t *out,
     int            r;
 #endif /* ?FULL_UNROLL */
 
-    //	assert(in && out && key);
+    //  assert(in && out && key);
     rk = key->rd_key;
 
     /*

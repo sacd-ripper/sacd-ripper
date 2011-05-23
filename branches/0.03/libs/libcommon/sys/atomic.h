@@ -174,32 +174,32 @@ static inline uint32_t atomic_dec_return(atomic_t *v)
  */
 static inline uint32_t __xchg_u32(volatile void *p, uint32_t val)
 {
-	uint32_t prev;
+    uint32_t prev;
 
-	__asm__ volatile(
-"1:	lwarx	%0,0,%2 \n"
-"	stwcx.	%3,0,%2 \n\
-	bne-	1b"
-	: "=&r" (prev), "+m" (*(volatile unsigned int *)p)
-	: "r" (p), "r" (val)
-	: "cc", "memory");
+    __asm__ volatile(
+"1: lwarx   %0,0,%2 \n"
+"   stwcx.  %3,0,%2 \n\
+    bne-    1b"
+    : "=&r" (prev), "+m" (*(volatile unsigned int *)p)
+    : "r" (p), "r" (val)
+    : "cc", "memory");
 
-	return prev;
+    return prev;
 }
 
 static inline uint32_t __xchg_u64(volatile void *p, uint32_t val)
 {
-	uint32_t prev;
+    uint32_t prev;
 
-	__asm__ volatile(
-"1:	ldarx	%0,0,%2 \n"
-"	stdcx.	%3,0,%2 \n\
-	bne-	1b"
-	: "=&r" (prev), "+m" (*(volatile uint32_t *)p)
-	: "r" (p), "r" (val)
-	: "cc", "memory");
+    __asm__ volatile(
+"1: ldarx   %0,0,%2 \n"
+"   stdcx.  %3,0,%2 \n\
+    bne-    1b"
+    : "=&r" (prev), "+m" (*(volatile uint32_t *)p)
+    : "r" (p), "r" (val)
+    : "cc", "memory");
 
-	return prev;
+    return prev;
 }
 
 /*
@@ -210,19 +210,19 @@ extern void __xchg_called_with_bad_pointer(void);
 
 static inline uint32_t __xchg(volatile void *ptr, uint32_t x, unsigned int size)
 {
-	switch (size) {
-	case 4:
-		return __xchg_u32(ptr, x);
-	case 8:
-		return __xchg_u64(ptr, x);
-	}
-	__xchg_called_with_bad_pointer();
-	return x;
+    switch (size) {
+    case 4:
+        return __xchg_u32(ptr, x);
+    case 8:
+        return __xchg_u64(ptr, x);
+    }
+    __xchg_called_with_bad_pointer();
+    return x;
 }
 
-#define xchg(ptr,x)							     \
-  ({									         \
-     __typeof__(*(ptr)) _x_ = (x);				 \
+#define xchg(ptr,x)                              \
+  ({                                             \
+     __typeof__(*(ptr)) _x_ = (x);               \
      (__typeof__(*(ptr))) __xchg((ptr), (uint32_t)_x_, sizeof(*(ptr))); \
   })
 
@@ -233,41 +233,41 @@ static inline uint32_t __xchg(volatile void *ptr, uint32_t x, unsigned int size)
 static inline uint64_t
 __cmpxchg_u32(volatile unsigned int *p, uint64_t old, uint64_t new)
 {
-	unsigned int prev;
+    unsigned int prev;
 
-	__asm__ volatile (
-"1:	lwarx	%0,0,%2		# __cmpxchg_u32\n\
-	cmpw	0,%0,%3\n\
-	bne-	2f\n"
-"	stwcx.	%4,0,%2\n\
-	bne-	1b"
-	"\n\
+    __asm__ volatile (
+"1: lwarx   %0,0,%2     # __cmpxchg_u32\n\
+    cmpw    0,%0,%3\n\
+    bne-    2f\n"
+"   stwcx.  %4,0,%2\n\
+    bne-    1b"
+    "\n\
 2:"
-	: "=&r" (prev), "+m" (*p)
-	: "r" (p), "r" (old), "r" (new)
-	: "cc", "memory");
+    : "=&r" (prev), "+m" (*p)
+    : "r" (p), "r" (old), "r" (new)
+    : "cc", "memory");
 
-	return prev;
+    return prev;
 }
 
 static inline uint64_t
 __cmpxchg_u64(volatile uint64_t *p, uint64_t old, uint64_t new)
 {
-	uint64_t prev;
+    uint64_t prev;
 
-	__asm__ volatile (
-"1:	ldarx	%0,0,%2		# __cmpxchg_u64\n\
-	cmpd	0,%0,%3\n\
-	bne-	2f\n\
-	stdcx.	%4,0,%2\n\
-	bne-	1b"
-	"\n\
+    __asm__ volatile (
+"1: ldarx   %0,0,%2     # __cmpxchg_u64\n\
+    cmpd    0,%0,%3\n\
+    bne-    2f\n\
+    stdcx.  %4,0,%2\n\
+    bne-    1b"
+    "\n\
 2:"
-	: "=&r" (prev), "+m" (*p)
-	: "r" (p), "r" (old), "r" (new)
-	: "cc", "memory");
+    : "=&r" (prev), "+m" (*p)
+    : "r" (p), "r" (old), "r" (new)
+    : "cc", "memory");
 
-	return prev;
+    return prev;
 }
 
 /* This function doesn't exist, so you'll get a linker error
@@ -276,24 +276,24 @@ extern void __cmpxchg_called_with_bad_pointer(void);
 
 static inline uint64_t
 __cmpxchg(volatile void *ptr, uint64_t old, uint64_t new,
-	  unsigned int size)
+      unsigned int size)
 {
-	switch (size) {
-	case 4:
-		return __cmpxchg_u32(ptr, old, new);
-	case 8:
-		return __cmpxchg_u64(ptr, old, new);
-	}
-	__cmpxchg_called_with_bad_pointer();
-	return old;
+    switch (size) {
+    case 4:
+        return __cmpxchg_u32(ptr, old, new);
+    case 8:
+        return __cmpxchg_u64(ptr, old, new);
+    }
+    __cmpxchg_called_with_bad_pointer();
+    return old;
 }
 
-#define cmpxchg(ptr, o, n)						 \
-  ({									 \
-     __typeof__(*(ptr)) _o_ = (o);					 \
-     __typeof__(*(ptr)) _n_ = (n);					 \
-     (__typeof__(*(ptr))) __cmpxchg((ptr), (uint64_t)_o_,		 \
-				    (uint64_t)_n_, sizeof(*(ptr))); \
+#define cmpxchg(ptr, o, n)                       \
+  ({                                     \
+     __typeof__(*(ptr)) _o_ = (o);                   \
+     __typeof__(*(ptr)) _n_ = (n);                   \
+     (__typeof__(*(ptr))) __cmpxchg((ptr), (uint64_t)_o_,        \
+                    (uint64_t)_n_, sizeof(*(ptr))); \
   })
 
 #define atomic_cmpxchg(v, o, n) (cmpxchg(&((v)->counter), (o), (n)))

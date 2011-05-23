@@ -48,8 +48,8 @@ int valid_idchar(char c)
 }
 
 /*
- * NAME:	frame->validid()
- * DESCRIPTION:	return true if the parameter string is a legal frame ID
+ * NAME:    frame->validid()
+ * DESCRIPTION: return true if the parameter string is a legal frame ID
  */
 int id3_frame_validid(char const *id)
 {
@@ -61,8 +61,8 @@ int id3_frame_validid(char const *id)
 }
 
 /*
- * NAME:	frame->new()
- * DESCRIPTION:	allocate and return a new frame
+ * NAME:    frame->new()
+ * DESCRIPTION: allocate and return a new frame
  */
 struct id3_frame *id3_frame_new(char const *id)
 {
@@ -146,8 +146,8 @@ void id3_frame_delete(struct id3_frame *frame)
 }
 
 /*
- * NAME:	frame->addref()
- * DESCRIPTION:	add an external reference to a frame
+ * NAME:    frame->addref()
+ * DESCRIPTION: add an external reference to a frame
  */
 void id3_frame_addref(struct id3_frame *frame)
 {
@@ -157,8 +157,8 @@ void id3_frame_addref(struct id3_frame *frame)
 }
 
 /*
- * NAME:	frame->delref()
- * DESCRIPTION:	remove an external reference to a frame
+ * NAME:    frame->delref()
+ * DESCRIPTION: remove an external reference to a frame
  */
 void id3_frame_delref(struct id3_frame *frame)
 {
@@ -168,8 +168,8 @@ void id3_frame_delref(struct id3_frame *frame)
 }
 
 /*
- * NAME:	frame->field()
- * DESCRIPTION:	return a pointer to a field in a frame
+ * NAME:    frame->field()
+ * DESCRIPTION: return a pointer to a field in a frame
  */
 union id3_field *id3_frame_field(struct id3_frame const *frame,
                                  unsigned int index)
@@ -267,8 +267,8 @@ int parse_data(struct id3_frame *frame,
 }
 
 /*
- * NAME:	frame->parse()
- * DESCRIPTION:	parse raw frame data according to the specified ID3 tag version
+ * NAME:    frame->parse()
+ * DESCRIPTION: parse raw frame data according to the specified ID3 tag version
  */
 struct id3_frame *id3_frame_parse(id3_byte_t const **ptr, id3_length_t length,
                                   unsigned int version)
@@ -529,8 +529,8 @@ id3_length_t render_data(id3_byte_t **ptr,
 }
 
 /*
- * NAME:	frame->render()
- * DESCRIPTION:	render a single, complete frame
+ * NAME:    frame->render()
+ * DESCRIPTION: render a single, complete frame
  */
 id3_length_t id3_frame_render(struct id3_frame const *frame,
                               id3_byte_t **ptr, int options)

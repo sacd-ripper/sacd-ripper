@@ -41,8 +41,8 @@
 # include "parse.h"
 
 /*
- * NAME:	field->init()
- * DESCRIPTION:	initialize a field to a default value for the given type
+ * NAME:    field->init()
+ * DESCRIPTION: initialize a field to a default value for the given type
  */
 void id3_field_init(union id3_field *field, enum id3_field_type type)
 {
@@ -98,8 +98,8 @@ void id3_field_init(union id3_field *field, enum id3_field_type type)
 }
 
 /*
- * NAME:	field->finish()
- * DESCRIPTION:	reset a field, deallocating memory if necessary
+ * NAME:    field->finish()
+ * DESCRIPTION: reset a field, deallocating memory if necessary
  */
 void id3_field_finish(union id3_field *field)
 {
@@ -158,8 +158,8 @@ void id3_field_finish(union id3_field *field)
 }
 
 /*
- * NAME:	field->type()
- * DESCRIPTION:	return the value type of a field
+ * NAME:    field->type()
+ * DESCRIPTION: return the value type of a field
  */
 enum id3_field_type id3_field_type(union id3_field const *field)
 {
@@ -169,8 +169,8 @@ enum id3_field_type id3_field_type(union id3_field const *field)
 }
 
 /*
- * NAME:	field->parse()
- * DESCRIPTION:	parse a field value
+ * NAME:    field->parse()
+ * DESCRIPTION: parse a field value
  */
 int id3_field_parse(union id3_field *field, id3_byte_t const **ptr,
                     id3_length_t length, enum id3_field_textencoding *encoding)
@@ -338,8 +338,8 @@ int id3_field_parse(union id3_field *field, id3_byte_t const **ptr,
 }
 
 /*
- * NAME:	field->render()
- * DESCRIPTION:	render a field value
+ * NAME:    field->render()
+ * DESCRIPTION: render a field value
  */
 id3_length_t id3_field_render(union id3_field const *field, id3_byte_t **ptr,
                               enum id3_field_textencoding *encoding,
@@ -412,8 +412,8 @@ id3_length_t id3_field_render(union id3_field const *field, id3_byte_t **ptr,
 }
 
 /*
- * NAME:	field->setint()
- * DESCRIPTION:	set the value of an int field
+ * NAME:    field->setint()
+ * DESCRIPTION: set the value of an int field
  */
 int id3_field_setint(union id3_field *field, signed long number)
 {
@@ -453,8 +453,8 @@ int id3_field_setint(union id3_field *field, signed long number)
 }
 
 /*
- * NAME:	field->settextencoding()
- * DESCRIPTION:	set the value of a textencoding field
+ * NAME:    field->settextencoding()
+ * DESCRIPTION: set the value of a textencoding field
  */
 int id3_field_settextencoding(union id3_field *field,
                               enum id3_field_textencoding encoding)
@@ -491,8 +491,8 @@ int set_latin1(union id3_field *field, id3_latin1_t const *latin1)
 }
 
 /*
- * NAME:	field->setlatin1()
- * DESCRIPTION:	set the value of a latin1 field
+ * NAME:    field->setlatin1()
+ * DESCRIPTION: set the value of a latin1 field
  */
 int id3_field_setlatin1(union id3_field *field, id3_latin1_t const *latin1)
 {
@@ -518,8 +518,8 @@ int id3_field_setlatin1(union id3_field *field, id3_latin1_t const *latin1)
 }
 
 /*
- * NAME:	field->setfulllatin1()
- * DESCRIPTION:	set the value of a full latin1 field
+ * NAME:    field->setfulllatin1()
+ * DESCRIPTION: set the value of a full latin1 field
  */
 int id3_field_setfulllatin1(union id3_field *field, id3_latin1_t const *latin1)
 {
@@ -553,8 +553,8 @@ int set_string(union id3_field *field, id3_ucs4_t const *string)
 }
 
 /*
- * NAME:	field->setstring()
- * DESCRIPTION:	set the value of a string field
+ * NAME:    field->setstring()
+ * DESCRIPTION: set the value of a string field
  */
 int id3_field_setstring(union id3_field *field, id3_ucs4_t const *string)
 {
@@ -580,8 +580,8 @@ int id3_field_setstring(union id3_field *field, id3_ucs4_t const *string)
 }
 
 /*
- * NAME:	field->setfullstring()
- * DESCRIPTION:	set the value of a full string field
+ * NAME:    field->setfullstring()
+ * DESCRIPTION: set the value of a full string field
  */
 int id3_field_setfullstring(union id3_field *field, id3_ucs4_t const *string)
 {
@@ -596,8 +596,8 @@ int id3_field_setfullstring(union id3_field *field, id3_ucs4_t const *string)
 }
 
 /*
- * NAME:	field->setstrings()
- * DESCRIPTION:	set the value of a stringlist field
+ * NAME:    field->setstrings()
+ * DESCRIPTION: set the value of a stringlist field
  */
 int id3_field_setstrings(union id3_field *field,
                          unsigned int length, id3_ucs4_t **ptrs)
@@ -639,8 +639,8 @@ int id3_field_setstrings(union id3_field *field,
 }
 
 /*
- * NAME:	field->addstring()
- * DESCRIPTION:	add a string to a stringlist field
+ * NAME:    field->addstring()
+ * DESCRIPTION: add a string to a stringlist field
  */
 int id3_field_addstring(union id3_field *field, id3_ucs4_t const *string)
 {
@@ -673,8 +673,8 @@ int id3_field_addstring(union id3_field *field, id3_ucs4_t const *string)
 }
 
 /*
- * NAME:	field->setlanguage()
- * DESCRIPTION:	set the value of a language field
+ * NAME:    field->setlanguage()
+ * DESCRIPTION: set the value of a language field
  */
 int id3_field_setlanguage(union id3_field *field, char const *language)
 {
@@ -697,8 +697,8 @@ int id3_field_setlanguage(union id3_field *field, char const *language)
 }
 
 /*
- * NAME:	field->setframeid()
- * DESCRIPTION:	set the value of a frameid field
+ * NAME:    field->setframeid()
+ * DESCRIPTION: set the value of a frameid field
  */
 int id3_field_setframeid(union id3_field *field, char const *id)
 {
@@ -720,8 +720,8 @@ int id3_field_setframeid(union id3_field *field, char const *id)
 }
 
 /*
- * NAME:	field->setbinarydata()
- * DESCRIPTION:	set the value of a binarydata field
+ * NAME:    field->setbinarydata()
+ * DESCRIPTION: set the value of a binarydata field
  */
 int id3_field_setbinarydata(union id3_field *field,
                             id3_byte_t const *data, id3_length_t length)
@@ -755,8 +755,8 @@ int id3_field_setbinarydata(union id3_field *field,
 }
 
 /*
- * NAME:	field->getint()
- * DESCRIPTION:	return the value of an integer field
+ * NAME:    field->getint()
+ * DESCRIPTION: return the value of an integer field
  */
 signed long id3_field_getint(union id3_field const *field)
 {
@@ -772,8 +772,8 @@ signed long id3_field_getint(union id3_field const *field)
 }
 
 /*
- * NAME:	field->gettextencoding()
- * DESCRIPTION:	return the value of a text encoding field
+ * NAME:    field->gettextencoding()
+ * DESCRIPTION: return the value of a text encoding field
  */
 enum id3_field_textencoding
 id3_field_gettextencoding(union id3_field const *field)
@@ -787,8 +787,8 @@ id3_field_gettextencoding(union id3_field const *field)
 }
 
 /*
- * NAME:	field->getlatin1()
- * DESCRIPTION:	return the value of a latin1 field
+ * NAME:    field->getlatin1()
+ * DESCRIPTION: return the value of a latin1 field
  */
 id3_latin1_t const *id3_field_getlatin1(union id3_field const *field)
 {
@@ -801,8 +801,8 @@ id3_latin1_t const *id3_field_getlatin1(union id3_field const *field)
 }
 
 /*
- * NAME:	field->getfulllatin1()
- * DESCRIPTION:	return the value of a full latin1 field
+ * NAME:    field->getfulllatin1()
+ * DESCRIPTION: return the value of a full latin1 field
  */
 id3_latin1_t const *id3_field_getfulllatin1(union id3_field const *field)
 {
@@ -815,8 +815,8 @@ id3_latin1_t const *id3_field_getfulllatin1(union id3_field const *field)
 }
 
 /*
- * NAME:	field->getstring()
- * DESCRIPTION:	return the value of a string field
+ * NAME:    field->getstring()
+ * DESCRIPTION: return the value of a string field
  */
 id3_ucs4_t const *id3_field_getstring(union id3_field const *field)
 {
@@ -829,8 +829,8 @@ id3_ucs4_t const *id3_field_getstring(union id3_field const *field)
 }
 
 /*
- * NAME:	field->getfullstring()
- * DESCRIPTION:	return the value of a fullstring field
+ * NAME:    field->getfullstring()
+ * DESCRIPTION: return the value of a fullstring field
  */
 id3_ucs4_t const *id3_field_getfullstring(union id3_field const *field)
 {
@@ -843,8 +843,8 @@ id3_ucs4_t const *id3_field_getfullstring(union id3_field const *field)
 }
 
 /*
- * NAME:	field->getnstrings()
- * DESCRIPTION:	return the number of strings in a stringlist field
+ * NAME:    field->getnstrings()
+ * DESCRIPTION: return the number of strings in a stringlist field
  */
 unsigned int id3_field_getnstrings(union id3_field const *field)
 {
@@ -857,8 +857,8 @@ unsigned int id3_field_getnstrings(union id3_field const *field)
 }
 
 /*
- * NAME:	field->getstrings()
- * DESCRIPTION:	return one value of a stringlist field
+ * NAME:    field->getstrings()
+ * DESCRIPTION: return one value of a stringlist field
  */
 id3_ucs4_t const *id3_field_getstrings(union id3_field const *field,
                                        unsigned int index)
@@ -877,8 +877,8 @@ id3_ucs4_t const *id3_field_getstrings(union id3_field const *field,
 }
 
 /*
- * NAME:	field->getframeid()
- * DESCRIPTION:	return the value of a frameid field
+ * NAME:    field->getframeid()
+ * DESCRIPTION: return the value of a frameid field
  */
 char const *id3_field_getframeid(union id3_field const *field)
 {
@@ -891,8 +891,8 @@ char const *id3_field_getframeid(union id3_field const *field)
 }
 
 /*
- * NAME:	field->getbinarydata()
- * DESCRIPTION:	return the value of a binarydata field
+ * NAME:    field->getbinarydata()
+ * DESCRIPTION: return the value of a binarydata field
  */
 id3_byte_t const *id3_field_getbinarydata(union id3_field const *field,
                                           id3_length_t *length)

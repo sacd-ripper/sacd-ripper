@@ -37,18 +37,18 @@
 
 #define inline __inline
 
-#define mkdir( A, B )	_mkdir( A )
-#define lstat			stat
+#define mkdir( A, B )   _mkdir( A )
+#define lstat           stat
 
 #ifndef S_ISDIR
-#define S_ISDIR(A)		( S_IFDIR & A )
+#define S_ISDIR(A)      ( S_IFDIR & A )
 #endif
 
-#define S_IXUSR			S_IEXEC
-#define S_IXGRP			S_IEXEC
-#define S_IXOTH			S_IEXEC
+#define S_IXUSR         S_IEXEC
+#define S_IXGRP         S_IEXEC
+#define S_IXOTH         S_IEXEC
 
-#define  M_PI			3.14159265358979323846  /* pi */
+#define  M_PI           3.14159265358979323846  /* pi */
 
 #define bzero( A, B ) memset( A, 0, B )
 

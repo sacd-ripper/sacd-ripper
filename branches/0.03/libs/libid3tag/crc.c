@@ -104,8 +104,8 @@ unsigned long const crc_table[256] = {
 };
 
 /*
- * NAME:	crc->compute()
- * DESCRIPTION:	calculate CRC-32 value (ISO 3309)
+ * NAME:    crc->compute()
+ * DESCRIPTION: calculate CRC-32 value (ISO 3309)
  */
 unsigned long id3_crc_compute(id3_byte_t const *data, id3_length_t length)
 {

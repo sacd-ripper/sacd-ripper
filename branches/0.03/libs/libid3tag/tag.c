@@ -46,8 +46,8 @@
 # include "util.h"
 
 /*
- * NAME:	tag->new()
- * DESCRIPTION:	allocate and return a new, empty tag
+ * NAME:    tag->new()
+ * DESCRIPTION: allocate and return a new, empty tag
  */
 struct id3_tag *id3_tag_new(void)
 {
@@ -72,8 +72,8 @@ struct id3_tag *id3_tag_new(void)
 }
 
 /*
- * NAME:	tag->delete()
- * DESCRIPTION:	destroy a tag and deallocate all associated memory
+ * NAME:    tag->delete()
+ * DESCRIPTION: destroy a tag and deallocate all associated memory
  */
 void id3_tag_delete(struct id3_tag *tag)
 {
@@ -91,8 +91,8 @@ void id3_tag_delete(struct id3_tag *tag)
 }
 
 /*
- * NAME:	tag->addref()
- * DESCRIPTION:	add an external reference to a tag
+ * NAME:    tag->addref()
+ * DESCRIPTION: add an external reference to a tag
  */
 void id3_tag_addref(struct id3_tag *tag)
 {
@@ -102,8 +102,8 @@ void id3_tag_addref(struct id3_tag *tag)
 }
 
 /*
- * NAME:	tag->delref()
- * DESCRIPTION:	remove an external reference to a tag
+ * NAME:    tag->delref()
+ * DESCRIPTION: remove an external reference to a tag
  */
 void id3_tag_delref(struct id3_tag *tag)
 {
@@ -113,8 +113,8 @@ void id3_tag_delref(struct id3_tag *tag)
 }
 
 /*
- * NAME:	tag->version()
- * DESCRIPTION:	return the tag's original ID3 version number
+ * NAME:    tag->version()
+ * DESCRIPTION: return the tag's original ID3 version number
  */
 unsigned int id3_tag_version(struct id3_tag const *tag)
 {
@@ -124,8 +124,8 @@ unsigned int id3_tag_version(struct id3_tag const *tag)
 }
 
 /*
- * NAME:	tag->options()
- * DESCRIPTION:	get or set tag options
+ * NAME:    tag->options()
+ * DESCRIPTION: get or set tag options
  */
 int id3_tag_options(struct id3_tag *tag, int mask, int values)
 {
@@ -138,8 +138,8 @@ int id3_tag_options(struct id3_tag *tag, int mask, int values)
 }
 
 /*
- * NAME:	tag->setlength()
- * DESCRIPTION:	set the minimum rendered tag size
+ * NAME:    tag->setlength()
+ * DESCRIPTION: set the minimum rendered tag size
  */
 void id3_tag_setlength(struct id3_tag *tag, id3_length_t length)
 {
@@ -149,8 +149,8 @@ void id3_tag_setlength(struct id3_tag *tag, id3_length_t length)
 }
 
 /*
- * NAME:	tag->clearframes()
- * DESCRIPTION:	detach and delete all frames associated with a tag
+ * NAME:    tag->clearframes()
+ * DESCRIPTION: detach and delete all frames associated with a tag
  */
 void id3_tag_clearframes(struct id3_tag *tag)
 {
@@ -168,8 +168,8 @@ void id3_tag_clearframes(struct id3_tag *tag)
 }
 
 /*
- * NAME:	tag->attachframe()
- * DESCRIPTION:	attach a frame to a tag
+ * NAME:    tag->attachframe()
+ * DESCRIPTION: attach a frame to a tag
  */
 int id3_tag_attachframe(struct id3_tag *tag, struct id3_frame *frame)
 {
@@ -190,8 +190,8 @@ int id3_tag_attachframe(struct id3_tag *tag, struct id3_frame *frame)
 }
 
 /*
- * NAME:	tag->detachframe()
- * DESCRIPTION:	detach (but don't delete) a frame from a tag
+ * NAME:    tag->detachframe()
+ * DESCRIPTION: detach (but don't delete) a frame from a tag
  */
 int id3_tag_detachframe(struct id3_tag *tag, struct id3_frame *frame)
 {
@@ -218,8 +218,8 @@ int id3_tag_detachframe(struct id3_tag *tag, struct id3_frame *frame)
 }
 
 /*
- * NAME:	tag->findframe()
- * DESCRIPTION:	find in a tag the nth (0-based) frame with the given frame ID
+ * NAME:    tag->findframe()
+ * DESCRIPTION: find in a tag the nth (0-based) frame with the given frame ID
  */
 struct id3_frame *id3_tag_findframe(struct id3_tag const *tag,
                                     char const *id, unsigned int index)
@@ -291,8 +291,8 @@ void parse_header(id3_byte_t const **ptr,
 }
 
 /*
- * NAME:	tag->query()
- * DESCRIPTION:	if a tag begins at the given location, return its size
+ * NAME:    tag->query()
+ * DESCRIPTION: if a tag begins at the given location, return its size
  */
 signed long id3_tag_query(id3_byte_t const *data, id3_length_t length)
 {
@@ -657,8 +657,8 @@ struct id3_tag *v2_parse(id3_byte_t const *ptr)
 }
 
 /*
- * NAME:	tag->parse()
- * DESCRIPTION:	parse a complete ID3 tag
+ * NAME:    tag->parse()
+ * DESCRIPTION: parse a complete ID3 tag
  */
 struct id3_tag *id3_tag_parse(id3_byte_t const *data, id3_length_t length)
 {
@@ -722,8 +722,8 @@ void v1_renderstr(struct id3_tag const *tag, char const *frameid,
 }
 
 /*
- * NAME:	v1->render()
- * DESCRIPTION:	render an ID3v1 (or ID3v1.1) tag
+ * NAME:    v1->render()
+ * DESCRIPTION: render an ID3v1 (or ID3v1.1) tag
  */
 static
 id3_length_t v1_render(struct id3_tag const *tag, id3_byte_t *buffer)
@@ -801,8 +801,8 @@ id3_length_t v1_render(struct id3_tag const *tag, id3_byte_t *buffer)
 }
 
 /*
- * NAME:	tag->render()
- * DESCRIPTION:	render a complete ID3 tag
+ * NAME:    tag->render()
+ * DESCRIPTION: render a complete ID3 tag
  */
 id3_length_t id3_tag_render(struct id3_tag const *tag, id3_byte_t *buffer)
 {

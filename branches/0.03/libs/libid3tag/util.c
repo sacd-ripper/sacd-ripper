@@ -32,8 +32,8 @@
 # include "util.h"
 
 /*
- * NAME:	util->unsynchronise()
- * DESCRIPTION:	perform (in-place) unsynchronisation
+ * NAME:    util->unsynchronise()
+ * DESCRIPTION: perform (in-place) unsynchronisation
  */
 id3_length_t id3_util_unsynchronise(id3_byte_t *data, id3_length_t length)
 {
@@ -71,8 +71,8 @@ id3_length_t id3_util_unsynchronise(id3_byte_t *data, id3_length_t length)
 }
 
 /*
- * NAME:	util->deunsynchronise()
- * DESCRIPTION:	undo unsynchronisation (in-place)
+ * NAME:    util->deunsynchronise()
+ * DESCRIPTION: undo unsynchronisation (in-place)
  */
 id3_length_t id3_util_deunsynchronise(id3_byte_t *data, id3_length_t length)
 {
@@ -95,8 +95,8 @@ id3_length_t id3_util_deunsynchronise(id3_byte_t *data, id3_length_t length)
 }
 
 /*
- * NAME:	util->compress()
- * DESCRIPTION:	perform zlib deflate method compression
+ * NAME:    util->compress()
+ * DESCRIPTION: perform zlib deflate method compression
  */
 id3_byte_t *id3_util_compress(id3_byte_t const *data, id3_length_t length,
                               id3_length_t *newlength)
@@ -130,8 +130,8 @@ id3_byte_t *id3_util_compress(id3_byte_t const *data, id3_length_t length,
 }
 
 /*
- * NAME:	util->decompress()
- * DESCRIPTION:	undo zlib deflate method compression
+ * NAME:    util->decompress()
+ * DESCRIPTION: undo zlib deflate method compression
  */
 id3_byte_t *id3_util_decompress(id3_byte_t const *data, id3_length_t length,
                                 id3_length_t newlength)

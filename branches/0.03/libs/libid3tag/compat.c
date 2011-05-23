@@ -398,8 +398,8 @@ int translate_TCON(struct id3_frame *frame, char const *oldid,
 }
 
 /*
- * NAME:	compat->fixup()
- * DESCRIPTION:	finish compatibility translations
+ * NAME:    compat->fixup()
+ * DESCRIPTION: finish compatibility translations
  */
 int id3_compat_fixup(struct id3_tag *tag)
 {
