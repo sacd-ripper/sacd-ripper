@@ -161,7 +161,6 @@ static int scarletbook_read_master_toc(scarletbook_handle_t *handle)
         return 0;
     }
 
-    SWAP16(master_toc->disc_version);
     SWAP16(master_toc->album_set_size);
     SWAP16(master_toc->album_sequence_number);
     SWAP32(master_toc->area_1_toc_1_start);
@@ -172,9 +171,9 @@ static int scarletbook_read_master_toc(scarletbook_handle_t *handle)
     SWAP16(master_toc->area_2_toc_size);
     SWAP16(master_toc->disc_date_year);
 
-    if (master_toc->disc_version > SUPPORT_SCARLETBOOK_VERSION)
+    if (master_toc->version.major > SUPPORTED_VERSION_MAJOR || master_toc->version.minor > SUPPORTED_VERSION_MINOR)
     {
-        fprintf(stderr, "libsacdread: Unsupported version: %i.%02i\n", (master_toc->disc_version >> 8) & 0xff, master_toc->disc_version & 0xff);
+        fprintf(stderr, "libsacdread: Unsupported version: %i.%02i\n", master_toc->version.major, master_toc->version.minor);
         return 0;
     }
 
@@ -243,11 +242,11 @@ static int scarletbook_read_master_toc(scarletbook_handle_t *handle)
 
 static int scarletbook_read_area_toc(scarletbook_handle_t *handle, int area_idx)
 {
-    int           i, j;
-    area_toc_t *area_toc;
-    uint8_t       *area_data;
-    uint8_t       *p;
-    area_t        *area = &handle->area[area_idx];
+    int                 i, j;
+    area_toc_t         *area_toc;
+    uint8_t            *area_data;
+    uint8_t            *p;
+    scarletbook_area_t *area = &handle->area[area_idx];
 
     p = area_data = area->area_data;
     area_toc = area->area_toc = (area_toc_t *) area_data;
@@ -258,7 +257,6 @@ static int scarletbook_read_area_toc(scarletbook_handle_t *handle, int area_idx)
         return 0;
     }
 
-    SWAP16(area_toc->version);
     SWAP16(area_toc->size);
     SWAP32(area_toc->track_start);
     SWAP32(area_toc->track_end);
@@ -280,9 +278,9 @@ static int scarletbook_read_area_toc(scarletbook_handle_t *handle, int area_idx)
     CHECK_ZERO(area_toc->reserved09);
     CHECK_ZERO(area_toc->reserved10);
 
-    if (area_toc->version > SUPPORT_SCARLETBOOK_VERSION)
+    if (area_toc->version.major > SUPPORTED_VERSION_MAJOR || area_toc->version.minor > SUPPORTED_VERSION_MINOR)
     {
-        fprintf(stderr, "libsacdread: Unsupported version: %2i.%2i\n", (area_toc->version >> 8) & 0xff, area_toc->version & 0xff);
+        fprintf(stderr, "libsacdread: Unsupported version: %2i.%2i\n", area_toc->version.major, area_toc->version.minor);
         return 0;
     }
 
