@@ -187,54 +187,46 @@ int main(int argc, char* argv[]) {
         sacd_reader = sacd_open(opts.input_device);
         if (sacd_reader) {
             uint8_t buffer[2048];
+
             handle = scarletbook_open(sacd_reader, 0);
             if (opts.print_only) {
                 scarletbook_print(handle);
             }
             
-            {
-                int written = scarletbook_id3_tag_render(handle, buffer, 0, 0);
-
-            }
-
-            /*if (opts.output_dsdiff) {
+            if (opts.output_dsdiff) {
                 uint32_t block_count;
                 uint8_t buffer[2048];
                 dsdiff_handle_t *dsdiff_handle;
-                int area = 0;
-                ebunch_t *dst_decoder = 0;
+                int area_idx = 0; //(opts.multi_channel ? );
 
-                for (i = 0; i < handle->[area].area_toc->track_count; i++) {
-                    dsdiff_handle = dsdiff_open(handle, generate_trackname(i + 1), area, i, opts.convert_dst);
+                for (i = 0; i < handle->area[area_idx].area_toc->track_count; i++) {
+                    dsdiff_handle = dsdiff_create(handle, generate_trackname(i + 1), area_idx, i, opts.convert_dst);
                     if (!dsdiff_handle) {
                         break;
                     }
 
-                    dst_decoder = open_dst_decoder(handle->area[area].area_toc->area_count);
-
-                    sacd_seek_block(sacd_reader, handle->area[area].area_tracklist_offset->track_pos_lsn[i]);
+                    /*sacd_seek_block(sacd_reader, handle->area[area].area_tracklist_offset->track_pos_lsn[i]);
                     block_count = handle->area[area].area_tracklist_offset->track_length_lsn[i];
                     while (--block_count) {
                         sacd_read_block(sacd_reader, 1, buffer);
-                        switch (handle->area[area].area_toc->encoding) {
-                            case ENCODING_DSD_3_IN_14:
+                        switch (handle->area[area].area_toc->frame_format) {
+                            case FRAME_FORMAT_DSD_3_IN_14:
                                 write(dsdiff_handle->fd, buffer + 32, SACD_LSN_SIZE - 32);
                                 break;
-                            case ENCODING_DSD_3_IN_16:
+                            case FRAME_FORMAT_DSD_3_IN_16:
                                 write(dsdiff_handle->fd, buffer + 284, SACD_LSN_SIZE - 284);
                                 break;
-                            case ENCODING_DST:
+                            case FRAME_FORMAT_DST:
                                 break;
                         }
-                    }
+                    }*/
 
-                    close_dst_decoder(dst_decoder);
                     dsdiff_close(dsdiff_handle);
                 }
 
             } else if (opts.output_dsf) {
                 fprintf(stderr, "dsf has not been implemented yet");
-            }*/
+            }
             scarletbook_close(handle);
         }
 
