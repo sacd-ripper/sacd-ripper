@@ -39,6 +39,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <time.h>
+#include <unistd.h>
 
 #ifdef __lv2ppu__
 #include <sys/mutex.h>
@@ -55,11 +56,6 @@ static sys_mutex_t _log_lock;
 #define _LOCK_LOG()
 #define _UNLOCK_LOG()
 #endif
-
-#if defined(WIN32)
-#define strcasecmp _stricmp
-#define snprintf _snprintf
-#endif 
 
 #define _PUT_LOG(fd, buf, nb)    { fwrite(buf, 1, nb, fd); fflush(fd); }
 

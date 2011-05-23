@@ -126,7 +126,7 @@ void scarletbook_close(scarletbook_handle_t *handle)
         return;
 
     if (handle->master_data)
-        free(handle->master_data);
+        free((void *) handle->master_data);
 
     if (handle->area[0].area_data)
         free(handle->area[0].area_data);

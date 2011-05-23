@@ -23,6 +23,7 @@
 #define SCARLETBOOK_H_INCLUDED
 
 #include <inttypes.h>
+#include "config.h"
 
 #undef ATTRIBUTE_PACKED
 #undef PRAGMA_PACK_BEGIN
@@ -305,7 +306,12 @@ typedef struct
     uint8_t        reserved05 : 4;
 #endif
     uint8_t        reserved06[15];
-    uint8_t        total_area_play_time[3];
+    struct
+    {
+        uint8_t minutes;
+        uint8_t seconds;
+        uint8_t frames;
+    } ATTRIBUTE_PACKED total_playtime;
     uint8_t        reserved07;
     uint8_t        track_offset;
     uint8_t        track_count;
@@ -404,7 +410,7 @@ typedef struct
     uint8_t extra_use : 3;
 #endif
 }
-ATTRIBUTE_PACKED start_time_t;
+ATTRIBUTE_PACKED area_tracklist_time_start_t;
 
 typedef struct
 {
@@ -427,13 +433,13 @@ typedef struct
     uint8_t track_flags_ilp : 1;
 #endif
 }
-ATTRIBUTE_PACKED time_length_t;
+ATTRIBUTE_PACKED area_tracklist_time_duration_t;
 
 typedef struct
 {
-    char            id[8];                           // SACDTRL2
-    start_time_t    start_time[255];
-    time_length_t   length[255];
+    char                           id[8];                           // SACDTRL2
+    area_tracklist_time_start_t    start[255];
+    area_tracklist_time_duration_t duration[255];
 } 
 ATTRIBUTE_PACKED area_tracklist_time_t;
 
@@ -502,24 +508,24 @@ audio_sector_t;
 
 typedef struct  
 {
-    uint8_t                    * area_data;
-    area_toc_t                 * area_toc;
-    area_tracklist_offset_t    * area_tracklist_offset;
-    area_tracklist_time_t      * area_tracklist_time;
-    area_text_t                * area_text;
-    area_track_text_t            area_track_text[255];                      // max of 255 supported tracks
-    area_isrc_genre_t          * area_isrc_genre;
+    uint8_t                  * area_data;
+    area_toc_t               * area_toc;
+    area_tracklist_offset_t  * area_tracklist_offset;
+    area_tracklist_time_t    * area_tracklist_time;
+    area_text_t              * area_text;
+    area_track_text_t          area_track_text[255];                      // max of 255 supported tracks
+    area_isrc_genre_t        * area_isrc_genre;
 }
 area_t;
 
 typedef struct
 {
-    void                       * sacd;                                  //sacd_reader_t
+    void                     * sacd;                                  //sacd_reader_t
 
-    uint8_t                    * master_data;
-    master_toc_t               * master_toc;
-    master_text_t              * master_text[8];
-    master_man_t               * master_man;
+    uint8_t                  * master_data;
+    master_toc_t             * master_toc;
+    master_text_t            * master_text[8];
+    master_man_t             * master_man;
 
     int                        twoch_area_idx;
     int                        mulch_area_idx;
@@ -532,7 +538,6 @@ scarletbook_handle_t;
 /**
  * helper functions..
  */
-#if defined(__lv2ppu__)
 static inline int has_two_channel(scarletbook_handle_t *handle)
 {
     return handle->twoch_area_idx != -1;
@@ -557,7 +562,6 @@ static inline area_toc_t* get_multi_channel(scarletbook_handle_t *handle)
 {
     return(handle->mulch_area_idx == -1 ? 0 : handle->area[handle->mulch_area_idx].area_toc);
 }
-#endif
 
 char *get_speaker_config_string(area_toc_t *);
 
