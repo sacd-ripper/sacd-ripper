@@ -134,6 +134,6 @@ int scarletbook_id3_tag_render(scarletbook_handle_t *handle, uint8_t *buffer, in
 
     return len;
 #else
-	return 0;
+    return 0;
 #endif
 }

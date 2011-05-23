@@ -32,10 +32,10 @@ char *substr(const char *, int, int);
 #define min(a, b)    (((a) < (b)) ? (a) : (b))
 
 #define is_between_exclusive(num,lowerbound,upperbound) \
-	( ((num) > (lowerbound)) && ((num) < (upperbound)) )
+    ( ((num) > (lowerbound)) && ((num) < (upperbound)) )
 
 #define is_between_inclusive(num,lowerbound,upperbound) \
-	( ((num) >= (lowerbound)) && ((num) <= (upperbound)) )
+    ( ((num) >= (lowerbound)) && ((num) <= (upperbound)) )
 
 #ifdef __cplusplus
 };

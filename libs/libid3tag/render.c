@@ -177,8 +177,8 @@ id3_length_t id3_render_padding(id3_byte_t **ptr, id3_byte_t value,
 }
 
 /*
- * NAME:	render->paddedstring()
- * DESCRIPTION:	render a space-padded string using latin1 encoding
+ * NAME:    render->paddedstring()
+ * DESCRIPTION: render a space-padded string using latin1 encoding
  */
 id3_length_t id3_render_paddedstring(id3_byte_t **ptr, id3_ucs4_t const *ucs4,
                                      id3_length_t length)

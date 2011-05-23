@@ -209,10 +209,10 @@ typedef struct
     uint8_t        disc_type_hybrid     : 1;
     uint8_t        disc_type_reserved   : 7;
 #else
-	uint8_t        disc_type_reserved   : 7;
-	uint8_t        disc_type_hybrid     : 1;
+    uint8_t        disc_type_reserved   : 7;
+    uint8_t        disc_type_hybrid     : 1;
 #endif
-	uint8_t        reserved04[3];
+    uint8_t        reserved04[3];
     uint16_t       area_1_toc_size;
     uint16_t       area_2_toc_size;
     char           disc_catalog_number[16];   // 0x00 when empty, else padded with spaces for short strings
@@ -282,8 +282,8 @@ typedef struct
     uint8_t        reserved02   : 4;
     uint8_t        frame_format : 4;
 #else
-	uint8_t        frame_format : 4;
-	uint8_t        reserved02   : 4;
+    uint8_t        frame_format : 4;
+    uint8_t        reserved02   : 4;
 #endif
     uint8_t        reserved03[10];
     uint8_t        channel_count;
@@ -291,20 +291,20 @@ typedef struct
     uint8_t        loudspeaker_config : 5;
     uint8_t        extra_settings : 3;
 #else
-	uint8_t        extra_settings : 3;
-	uint8_t        loudspeaker_config : 5;
+    uint8_t        extra_settings : 3;
+    uint8_t        loudspeaker_config : 5;
 #endif
-	uint8_t        max_available_channels;
+    uint8_t        max_available_channels;
     uint8_t        area_mute_flags;
     uint8_t        reserved04[12];
 #if defined(__BIG_ENDIAN__)
     uint8_t        reserved05 : 4;
     uint8_t        track_attribute : 4;
 #else
-	uint8_t        track_attribute : 4;
-	uint8_t        reserved05 : 4;
+    uint8_t        track_attribute : 4;
+    uint8_t        reserved05 : 4;
 #endif
-	uint8_t        reserved06[15];
+    uint8_t        reserved06[15];
     uint8_t        total_area_play_time[3];
     uint8_t        reserved07;
     uint8_t        track_offset;
@@ -400,8 +400,8 @@ typedef struct
     uint8_t extra_use : 3;
     uint8_t reserved : 5;
 #else
-	uint8_t reserved : 5;
-	uint8_t extra_use : 3;
+    uint8_t reserved : 5;
+    uint8_t extra_use : 3;
 #endif
 }
 ATTRIBUTE_PACKED start_time_t;
@@ -419,12 +419,12 @@ typedef struct
     uint8_t track_flags_tmf1 : 1;
     uint8_t reserved : 3;
 #else
-	uint8_t reserved : 3;
-	uint8_t track_flags_tmf1 : 1;
-	uint8_t track_flags_tmf2 : 1;
-	uint8_t track_flags_tmf3 : 1;
-	uint8_t track_flags_tmf4 : 1;
-	uint8_t track_flags_ilp : 1;
+    uint8_t reserved : 3;
+    uint8_t track_flags_tmf1 : 1;
+    uint8_t track_flags_tmf2 : 1;
+    uint8_t track_flags_tmf3 : 1;
+    uint8_t track_flags_tmf4 : 1;
+    uint8_t track_flags_ilp : 1;
 #endif
 }
 ATTRIBUTE_PACKED time_length_t;
@@ -445,10 +445,10 @@ typedef struct
     uint8_t  data_type     : 3;
     uint16_t packet_length : 11;
 #else
-	uint16_t packet_length : 11;
-	uint8_t  data_type     : 3;
-	uint8_t  reserved      : 1;
-	uint8_t  frame_start   : 1;
+    uint16_t packet_length : 11;
+    uint8_t  data_type     : 3;
+    uint8_t  reserved      : 1;
+    uint8_t  frame_start   : 1;
 #endif
 } 
 ATTRIBUTE_PACKED audio_packet_info_t;
@@ -468,10 +468,10 @@ typedef struct
     uint8_t channel_bit_2 : 1;
     uint8_t channel_bit_3 : 1;  // (1 = 5 channels, 0 = Stereo)
 #else
-	uint8_t channel_bit_3 : 1;  // (1 = 5 channels, 0 = Stereo)
-	uint8_t channel_bit_2 : 1;
-	uint8_t sector_count  : 5;
-	uint8_t channel_bit_1 : 1;
+    uint8_t channel_bit_3 : 1;  // (1 = 5 channels, 0 = Stereo)
+    uint8_t channel_bit_2 : 1;
+    uint8_t sector_count  : 5;
+    uint8_t channel_bit_1 : 1;
 #endif
 } 
 ATTRIBUTE_PACKED audio_frame_info_t;
@@ -484,10 +484,10 @@ typedef struct
     uint8_t reserved          : 1;
     uint8_t dst_encoded       : 1;
 #else
-	uint8_t dst_encoded       : 1;
-	uint8_t reserved          : 1;
-	uint8_t frame_info_count  : 3;
-	uint8_t packet_info_count : 3;
+    uint8_t dst_encoded       : 1;
+    uint8_t reserved          : 1;
+    uint8_t frame_info_count  : 3;
+    uint8_t packet_info_count : 3;
 #endif
 }
 ATTRIBUTE_PACKED audio_sector_header_t;
@@ -502,13 +502,13 @@ audio_sector_t;
 
 typedef struct  
 {
-	uint8_t                    * area_data;
-	area_toc_t				   * area_toc;
-	area_tracklist_offset_t    * area_tracklist_offset;
-	area_tracklist_time_t      * area_tracklist_time;
-	area_text_t                * area_text;
-	area_track_text_t            area_track_text[255];                      // max of 255 supported tracks
-	area_isrc_genre_t          * area_isrc_genre;
+    uint8_t                    * area_data;
+    area_toc_t                 * area_toc;
+    area_tracklist_offset_t    * area_tracklist_offset;
+    area_tracklist_time_t      * area_tracklist_time;
+    area_text_t                * area_text;
+    area_track_text_t            area_track_text[255];                      // max of 255 supported tracks
+    area_isrc_genre_t          * area_isrc_genre;
 }
 area_t;
 
@@ -523,7 +523,7 @@ typedef struct
 
     int                        twoch_area_idx;
     int                        mulch_area_idx;
-	int                        area_count;
+    int                        area_count;
 
     area_t                     area[2];
 } 

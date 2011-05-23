@@ -528,7 +528,7 @@ struct dst_frame_data_chunk_t
 
     // DSTsoundData[] contains the data that make up the sound. DST material consists of
     // compressed DSD data (See [ScarletBook]).
-    //uint8_t		DSTsoundData[1]; // The DST data for one frame
+    //uint8_t       DSTsoundData[1]; // The DST data for one frame
 } ATTRIBUTE_PACKED;
 typedef struct dst_frame_data_chunk_t   dst_frame_data_chunk_t;
 
@@ -552,7 +552,7 @@ struct dst_frame_crc_chunk_t
     // DSD data of the preceding DST Frame Data Chunk.
     // The specification of the CRC Algorithm :
     // A four-byte CRC is computed over the DSDsoundData[], per frame.
-    //uint8_t		crcData[1]; // the value of the CRC
+    //uint8_t       crcData[1]; // the value of the CRC
 } ATTRIBUTE_PACKED;
 typedef struct dst_frame_crc_chunk_t   dst_frame_crc_chunk_t;
 
@@ -723,7 +723,7 @@ struct edited_master_information_chunk_t
     // -  Marker Chunk
     // -  Artist Chunk
     // -  Title Chunk
-    //chunk_header_t			EmChunks[1]; // container
+    //chunk_header_t            EmChunks[1]; // container
 } ATTRIBUTE_PACKED;
 typedef struct edited_master_information_chunk_t   edited_master_information_chunk_t;
 

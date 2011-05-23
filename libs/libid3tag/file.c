@@ -69,8 +69,8 @@ enum
 };
 
 /*
- * NAME:	query_tag()
- * DESCRIPTION:	check for a tag at a file's current position
+ * NAME:    query_tag()
+ * DESCRIPTION: check for a tag at a file's current position
  */
 static
 signed long query_tag(FILE *iofile)
@@ -91,8 +91,8 @@ signed long query_tag(FILE *iofile)
 }
 
 /*
- * NAME:	read_tag()
- * DESCRIPTION:	read and parse a tag at a file's current position
+ * NAME:    read_tag()
+ * DESCRIPTION: read and parse a tag at a file's current position
  */
 static
 struct id3_tag *read_tag(FILE *iofile, id3_length_t size)
@@ -113,8 +113,8 @@ struct id3_tag *read_tag(FILE *iofile, id3_length_t size)
 }
 
 /*
- * NAME:	update_primary()
- * DESCRIPTION:	update the primary tag with data from a new tag
+ * NAME:    update_primary()
+ * DESCRIPTION: update the primary tag with data from a new tag
  */
 static
 int update_primary(struct id3_tag *tag, struct id3_tag const *new)
@@ -139,8 +139,8 @@ int update_primary(struct id3_tag *tag, struct id3_tag const *new)
 }
 
 /*
- * NAME:	tag_compare()
- * DESCRIPTION:	tag sort function for qsort()
+ * NAME:    tag_compare()
+ * DESCRIPTION: tag sort function for qsort()
  */
 static
 int tag_compare(const void *a, const void *b)
@@ -156,8 +156,8 @@ int tag_compare(const void *a, const void *b)
 }
 
 /*
- * NAME:	add_filetag()
- * DESCRIPTION:	add a new file tag entry
+ * NAME:    add_filetag()
+ * DESCRIPTION: add a new file tag entry
  */
 static
 int add_filetag(struct id3_file *file, struct filetag const *filetag)
@@ -180,8 +180,8 @@ int add_filetag(struct id3_file *file, struct filetag const *filetag)
 }
 
 /*
- * NAME:	del_filetag()
- * DESCRIPTION:	delete a file tag entry
+ * NAME:    del_filetag()
+ * DESCRIPTION: delete a file tag entry
  */
 static
 void del_filetag(struct id3_file *file, unsigned int index)
@@ -198,8 +198,8 @@ void del_filetag(struct id3_file *file, unsigned int index)
 }
 
 /*
- * NAME:	add_tag()
- * DESCRIPTION:	read, parse, and add a tag to a file structure
+ * NAME:    add_tag()
+ * DESCRIPTION: read, parse, and add a tag to a file structure
  */
 static
 struct id3_tag *add_tag(struct id3_file *file, id3_length_t length)
@@ -254,8 +254,8 @@ struct id3_tag *add_tag(struct id3_file *file, id3_length_t length)
 }
 
 /*
- * NAME:	search_tags()
- * DESCRIPTION:	search for tags in a file
+ * NAME:    search_tags()
+ * DESCRIPTION: search for tags in a file
  */
 static
 int search_tags(struct id3_file *file)
@@ -357,8 +357,8 @@ int search_tags(struct id3_file *file)
 }
 
 /*
- * NAME:	finish_file()
- * DESCRIPTION:	release memory associated with a file
+ * NAME:    finish_file()
+ * DESCRIPTION: release memory associated with a file
  */
 static
 void finish_file(struct id3_file *file)
@@ -393,8 +393,8 @@ void finish_file(struct id3_file *file)
 }
 
 /*
- * NAME:	new_file()
- * DESCRIPTION:	create a new file structure and load tags
+ * NAME:    new_file()
+ * DESCRIPTION: create a new file structure and load tags
  */
 static
 struct id3_file *new_file(FILE *iofile, enum id3_file_mode mode,
@@ -443,8 +443,8 @@ struct id3_file *new_file(FILE *iofile, enum id3_file_mode mode,
 }
 
 /*
- * NAME:	file->open()
- * DESCRIPTION:	open a file given its pathname
+ * NAME:    file->open()
+ * DESCRIPTION: open a file given its pathname
  */
 struct id3_file *id3_file_open(char const *path, enum id3_file_mode mode)
 {
@@ -465,8 +465,8 @@ struct id3_file *id3_file_open(char const *path, enum id3_file_mode mode)
 }
 
 /*
- * NAME:	file->fdopen()
- * DESCRIPTION:	open a file using an existing file descriptor
+ * NAME:    file->fdopen()
+ * DESCRIPTION: open a file using an existing file descriptor
  */
 struct id3_file *id3_file_fdopen(int fd, enum id3_file_mode mode)
 {
@@ -500,8 +500,8 @@ struct id3_file *id3_file_fdopen(int fd, enum id3_file_mode mode)
 }
 
 /*
- * NAME:	file->close()
- * DESCRIPTION:	close a file and delete its associated tags
+ * NAME:    file->close()
+ * DESCRIPTION: close a file and delete its associated tags
  */
 int id3_file_close(struct id3_file *file)
 {
@@ -518,8 +518,8 @@ int id3_file_close(struct id3_file *file)
 }
 
 /*
- * NAME:	file->tag()
- * DESCRIPTION:	return the primary tag structure for a file
+ * NAME:    file->tag()
+ * DESCRIPTION: return the primary tag structure for a file
  */
 struct id3_tag *id3_file_tag(struct id3_file const *file)
 {
@@ -529,8 +529,8 @@ struct id3_tag *id3_file_tag(struct id3_file const *file)
 }
 
 /*
- * NAME:	v1_write()
- * DESCRIPTION:	write ID3v1 tag modifications to a file
+ * NAME:    v1_write()
+ * DESCRIPTION: write ID3v1 tag modifications to a file
  */
 static
 int v1_write(struct id3_file *file,
@@ -593,8 +593,8 @@ int v1_write(struct id3_file *file,
 }
 
 /*
- * NAME:	v2_write()
- * DESCRIPTION:	write ID3v2 tag modifications to a file
+ * NAME:    v2_write()
+ * DESCRIPTION: write ID3v2 tag modifications to a file
  */
 static
 int v2_write(struct id3_file *file,
@@ -626,8 +626,8 @@ int v2_write(struct id3_file *file,
 }
 
 /*
- * NAME:	file->update()
- * DESCRIPTION:	rewrite tag(s) to a file
+ * NAME:    file->update()
+ * DESCRIPTION: rewrite tag(s) to a file
  */
 int id3_file_update(struct id3_file *file)
 {

@@ -36,8 +36,8 @@
 id3_ucs4_t const id3_ucs4_empty[] = { 0 };
 
 /*
- * NAME:	ucs4->length()
- * DESCRIPTION:	return the number of ucs4 chars represented by a ucs4 string
+ * NAME:    ucs4->length()
+ * DESCRIPTION: return the number of ucs4 chars represented by a ucs4 string
  */
 id3_length_t id3_ucs4_length(id3_ucs4_t const *ucs4)
 {
@@ -50,8 +50,8 @@ id3_length_t id3_ucs4_length(id3_ucs4_t const *ucs4)
 }
 
 /*
- * NAME:	ucs4->size()
- * DESCRIPTION:	return the encoding size of a ucs4 string
+ * NAME:    ucs4->size()
+ * DESCRIPTION: return the encoding size of a ucs4 string
  */
 id3_length_t id3_ucs4_size(id3_ucs4_t const *ucs4)
 {
@@ -59,8 +59,8 @@ id3_length_t id3_ucs4_size(id3_ucs4_t const *ucs4)
 }
 
 /*
- * NAME:	ucs4->latin1size()
- * DESCRIPTION:	return the encoding size of a latin1-encoded ucs4 string
+ * NAME:    ucs4->latin1size()
+ * DESCRIPTION: return the encoding size of a latin1-encoded ucs4 string
  */
 id3_length_t id3_ucs4_latin1size(id3_ucs4_t const *ucs4)
 {
@@ -68,8 +68,8 @@ id3_length_t id3_ucs4_latin1size(id3_ucs4_t const *ucs4)
 }
 
 /*
- * NAME:	ucs4->utf16size()
- * DESCRIPTION:	return the encoding size of a utf16-encoded ucs4 string
+ * NAME:    ucs4->utf16size()
+ * DESCRIPTION: return the encoding size of a utf16-encoded ucs4 string
  */
 id3_length_t id3_ucs4_utf16size(id3_ucs4_t const *ucs4)
 {
@@ -89,8 +89,8 @@ id3_length_t id3_ucs4_utf16size(id3_ucs4_t const *ucs4)
 }
 
 /*
- * NAME:	ucs4->utf8size()
- * DESCRIPTION:	return the encoding size of a utf8-encoded ucs4 string
+ * NAME:    ucs4->utf8size()
+ * DESCRIPTION: return the encoding size of a utf8-encoded ucs4 string
  */
 id3_length_t id3_ucs4_utf8size(id3_ucs4_t const *ucs4)
 {
@@ -120,8 +120,8 @@ id3_length_t id3_ucs4_utf8size(id3_ucs4_t const *ucs4)
 }
 
 /*
- * NAME:	ucs4->latin1duplicate()
- * DESCRIPTION:	duplicate and encode a ucs4 string into latin1
+ * NAME:    ucs4->latin1duplicate()
+ * DESCRIPTION: duplicate and encode a ucs4 string into latin1
  */
 id3_latin1_t *id3_ucs4_latin1duplicate(id3_ucs4_t const *ucs4)
 {
@@ -135,8 +135,8 @@ id3_latin1_t *id3_ucs4_latin1duplicate(id3_ucs4_t const *ucs4)
 }
 
 /*
- * NAME:	ucs4->utf16duplicate()
- * DESCRIPTION:	duplicate and encode a ucs4 string into utf16
+ * NAME:    ucs4->utf16duplicate()
+ * DESCRIPTION: duplicate and encode a ucs4 string into utf16
  */
 id3_utf16_t *id3_ucs4_utf16duplicate(id3_ucs4_t const *ucs4)
 {
@@ -150,8 +150,8 @@ id3_utf16_t *id3_ucs4_utf16duplicate(id3_ucs4_t const *ucs4)
 }
 
 /*
- * NAME:	ucs4->utf8duplicate()
- * DESCRIPTION:	duplicate and encode a ucs4 string into utf8
+ * NAME:    ucs4->utf8duplicate()
+ * DESCRIPTION: duplicate and encode a ucs4 string into utf8
  */
 id3_utf8_t *id3_ucs4_utf8duplicate(id3_ucs4_t const *ucs4)
 {
@@ -165,8 +165,8 @@ id3_utf8_t *id3_ucs4_utf8duplicate(id3_ucs4_t const *ucs4)
 }
 
 /*
- * NAME:	ucs4->copy()
- * DESCRIPTION:	copy a ucs4 string
+ * NAME:    ucs4->copy()
+ * DESCRIPTION: copy a ucs4 string
  */
 void id3_ucs4_copy(id3_ucs4_t *dest, id3_ucs4_t const *src)
 {
@@ -175,8 +175,8 @@ void id3_ucs4_copy(id3_ucs4_t *dest, id3_ucs4_t const *src)
 }
 
 /*
- * NAME:	ucs4->duplicate()
- * DESCRIPTION:	duplicate a ucs4 string
+ * NAME:    ucs4->duplicate()
+ * DESCRIPTION: duplicate a ucs4 string
  */
 id3_ucs4_t *id3_ucs4_duplicate(id3_ucs4_t const *src)
 {
@@ -190,8 +190,8 @@ id3_ucs4_t *id3_ucs4_duplicate(id3_ucs4_t const *src)
 }
 
 /*
- * NAME:	ucs4->putnumber()
- * DESCRIPTION:	write a ucs4 string containing a (positive) decimal number
+ * NAME:    ucs4->putnumber()
+ * DESCRIPTION: write a ucs4 string containing a (positive) decimal number
  */
 void id3_ucs4_putnumber(id3_ucs4_t *ucs4, unsigned long number)
 {
@@ -212,8 +212,8 @@ void id3_ucs4_putnumber(id3_ucs4_t *ucs4, unsigned long number)
 }
 
 /*
- * NAME:	ucs4->getnumber()
- * DESCRIPTION:	read a ucs4 string containing a (positive) decimal number
+ * NAME:    ucs4->getnumber()
+ * DESCRIPTION: read a ucs4 string containing a (positive) decimal number
  */
 unsigned long id3_ucs4_getnumber(id3_ucs4_t const *ucs4)
 {

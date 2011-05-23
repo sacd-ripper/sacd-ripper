@@ -32,8 +32,8 @@
 # include "ucs4.h"
 
 /*
- * NAME:	utf8->length()
- * DESCRIPTION:	return the number of ucs4 chars represented by a utf8 string
+ * NAME:    utf8->length()
+ * DESCRIPTION: return the number of ucs4 chars represented by a utf8 string
  */
 id3_length_t id3_utf8_length(id3_utf8_t const *utf8)
 {
@@ -110,8 +110,8 @@ id3_length_t id3_utf8_length(id3_utf8_t const *utf8)
 }
 
 /*
- * NAME:	utf8->size()
- * DESCRIPTION:	return the encoding size of a utf8 string
+ * NAME:    utf8->size()
+ * DESCRIPTION: return the encoding size of a utf8 string
  */
 id3_length_t id3_utf8_size(id3_utf8_t const *utf8)
 {
@@ -124,8 +124,8 @@ id3_length_t id3_utf8_size(id3_utf8_t const *utf8)
 }
 
 /*
- * NAME:	utf8->ucs4duplicate()
- * DESCRIPTION:	duplicate and decode a utf8 string into ucs4
+ * NAME:    utf8->ucs4duplicate()
+ * DESCRIPTION: duplicate and decode a utf8 string into ucs4
  */
 id3_ucs4_t *id3_utf8_ucs4duplicate(id3_utf8_t const *utf8)
 {
@@ -139,8 +139,8 @@ id3_ucs4_t *id3_utf8_ucs4duplicate(id3_utf8_t const *utf8)
 }
 
 /*
- * NAME:	utf8->decodechar()
- * DESCRIPTION:	decode a series of utf8 chars into a single ucs4 char
+ * NAME:    utf8->decodechar()
+ * DESCRIPTION: decode a series of utf8 chars into a single ucs4 char
  */
 id3_length_t id3_utf8_decodechar(id3_utf8_t const *utf8, id3_ucs4_t *ucs4)
 {
@@ -224,8 +224,8 @@ id3_length_t id3_utf8_decodechar(id3_utf8_t const *utf8, id3_ucs4_t *ucs4)
 }
 
 /*
- * NAME:	utf8->encodechar()
- * DESCRIPTION:	encode a single ucs4 char into a series of up to 6 utf8 chars
+ * NAME:    utf8->encodechar()
+ * DESCRIPTION: encode a single ucs4 char into a series of up to 6 utf8 chars
  */
 id3_length_t id3_utf8_encodechar(id3_utf8_t *utf8, id3_ucs4_t ucs4)
 {
@@ -287,8 +287,8 @@ id3_length_t id3_utf8_encodechar(id3_utf8_t *utf8, id3_ucs4_t ucs4)
 }
 
 /*
- * NAME:	utf8->decode()
- * DESCRIPTION:	decode a complete utf8 string into a ucs4 string
+ * NAME:    utf8->decode()
+ * DESCRIPTION: decode a complete utf8 string into a ucs4 string
  */
 void id3_utf8_decode(id3_utf8_t const *utf8, id3_ucs4_t *ucs4)
 {
@@ -298,8 +298,8 @@ void id3_utf8_decode(id3_utf8_t const *utf8, id3_ucs4_t *ucs4)
 }
 
 /*
- * NAME:	utf8->encode()
- * DESCRIPTION:	encode a complete ucs4 string into a utf8 string
+ * NAME:    utf8->encode()
+ * DESCRIPTION: encode a complete ucs4 string into a utf8 string
  */
 void id3_utf8_encode(id3_utf8_t *utf8, id3_ucs4_t const *ucs4)
 {
@@ -309,8 +309,8 @@ void id3_utf8_encode(id3_utf8_t *utf8, id3_ucs4_t const *ucs4)
 }
 
 /*
- * NAME:	utf8->put()
- * DESCRIPTION:	serialize a single utf8 character
+ * NAME:    utf8->put()
+ * DESCRIPTION: serialize a single utf8 character
  */
 id3_length_t id3_utf8_put(id3_byte_t **ptr, id3_utf8_t utf8)
 {
@@ -321,8 +321,8 @@ id3_length_t id3_utf8_put(id3_byte_t **ptr, id3_utf8_t utf8)
 }
 
 /*
- * NAME:	utf8->get()
- * DESCRIPTION:	deserialize a single utf8 character
+ * NAME:    utf8->get()
+ * DESCRIPTION: deserialize a single utf8 character
  */
 id3_utf8_t id3_utf8_get(id3_byte_t const **ptr)
 {
@@ -330,8 +330,8 @@ id3_utf8_t id3_utf8_get(id3_byte_t const **ptr)
 }
 
 /*
- * NAME:	utf8->serialize()
- * DESCRIPTION:	serialize a ucs4 string using utf8 encoding
+ * NAME:    utf8->serialize()
+ * DESCRIPTION: serialize a ucs4 string using utf8 encoding
  */
 id3_length_t id3_utf8_serialize(id3_byte_t **ptr, id3_ucs4_t const *ucs4,
                                 int terminate)
@@ -360,8 +360,8 @@ id3_length_t id3_utf8_serialize(id3_byte_t **ptr, id3_ucs4_t const *ucs4,
 }
 
 /*
- * NAME:	utf8->deserialize()
- * DESCRIPTION:	deserialize a ucs4 string using utf8 encoding
+ * NAME:    utf8->deserialize()
+ * DESCRIPTION: deserialize a ucs4 string using utf8 encoding
  */
 id3_ucs4_t *id3_utf8_deserialize(id3_byte_t const **ptr, id3_length_t length)
 {

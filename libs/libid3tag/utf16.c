@@ -32,8 +32,8 @@
 # include "ucs4.h"
 
 /*
- * NAME:	utf16->length()
- * DESCRIPTION:	return the number of ucs4 chars represented by a utf16 string
+ * NAME:    utf16->length()
+ * DESCRIPTION: return the number of ucs4 chars represented by a utf16 string
  */
 id3_length_t id3_utf16_length(id3_utf16_t const *utf16)
 {
@@ -57,8 +57,8 @@ id3_length_t id3_utf16_length(id3_utf16_t const *utf16)
 }
 
 /*
- * NAME:	utf16->size()
- * DESCRIPTION:	return the encoding size of a utf16 string
+ * NAME:    utf16->size()
+ * DESCRIPTION: return the encoding size of a utf16 string
  */
 id3_length_t id3_utf16_size(id3_utf16_t const *utf16)
 {
@@ -71,8 +71,8 @@ id3_length_t id3_utf16_size(id3_utf16_t const *utf16)
 }
 
 /*
- * NAME:	utf16->ucs4duplicate()
- * DESCRIPTION:	duplicate and decode a utf16 string into ucs4
+ * NAME:    utf16->ucs4duplicate()
+ * DESCRIPTION: duplicate and decode a utf16 string into ucs4
  */
 id3_ucs4_t *id3_utf16_ucs4duplicate(id3_utf16_t const *utf16)
 {
@@ -86,8 +86,8 @@ id3_ucs4_t *id3_utf16_ucs4duplicate(id3_utf16_t const *utf16)
 }
 
 /*
- * NAME:	utf16->decodechar()
- * DESCRIPTION:	decode a series of utf16 chars into a single ucs4 char
+ * NAME:    utf16->decodechar()
+ * DESCRIPTION: decode a series of utf16 chars into a single ucs4 char
  */
 id3_length_t id3_utf16_decodechar(id3_utf16_t const *utf16, id3_ucs4_t *ucs4)
 {
@@ -113,8 +113,8 @@ id3_length_t id3_utf16_decodechar(id3_utf16_t const *utf16, id3_ucs4_t *ucs4)
 }
 
 /*
- * NAME:	utf16->encodechar()
- * DESCRIPTION:	encode a single ucs4 char into a series of up to 2 utf16 chars
+ * NAME:    utf16->encodechar()
+ * DESCRIPTION: encode a single ucs4 char into a series of up to 2 utf16 chars
  */
 id3_length_t id3_utf16_encodechar(id3_utf16_t *utf16, id3_ucs4_t ucs4)
 {
@@ -140,8 +140,8 @@ id3_length_t id3_utf16_encodechar(id3_utf16_t *utf16, id3_ucs4_t ucs4)
 }
 
 /*
- * NAME:	utf16->decode()
- * DESCRIPTION:	decode a complete utf16 string into a ucs4 string
+ * NAME:    utf16->decode()
+ * DESCRIPTION: decode a complete utf16 string into a ucs4 string
  */
 void id3_utf16_decode(id3_utf16_t const *utf16, id3_ucs4_t *ucs4)
 {
@@ -151,8 +151,8 @@ void id3_utf16_decode(id3_utf16_t const *utf16, id3_ucs4_t *ucs4)
 }
 
 /*
- * NAME:	utf16->encode()
- * DESCRIPTION:	encode a complete ucs4 string into a utf16 string
+ * NAME:    utf16->encode()
+ * DESCRIPTION: encode a complete ucs4 string into a utf16 string
  */
 void id3_utf16_encode(id3_utf16_t *utf16, id3_ucs4_t const *ucs4)
 {
@@ -162,8 +162,8 @@ void id3_utf16_encode(id3_utf16_t *utf16, id3_ucs4_t const *ucs4)
 }
 
 /*
- * NAME:	utf16->put()
- * DESCRIPTION:	serialize a single utf16 character
+ * NAME:    utf16->put()
+ * DESCRIPTION: serialize a single utf16 character
  */
 id3_length_t id3_utf16_put(id3_byte_t **ptr, id3_utf16_t utf16,
                            enum id3_utf16_byteorder byteorder)
@@ -191,8 +191,8 @@ id3_length_t id3_utf16_put(id3_byte_t **ptr, id3_utf16_t utf16,
 }
 
 /*
- * NAME:	utf16->get()
- * DESCRIPTION:	deserialize a single utf16 character
+ * NAME:    utf16->get()
+ * DESCRIPTION: deserialize a single utf16 character
  */
 id3_utf16_t id3_utf16_get(id3_byte_t const **ptr,
                           enum id3_utf16_byteorder byteorder)
@@ -221,8 +221,8 @@ id3_utf16_t id3_utf16_get(id3_byte_t const **ptr,
 }
 
 /*
- * NAME:	utf16->serialize()
- * DESCRIPTION:	serialize a ucs4 string using utf16 encoding
+ * NAME:    utf16->serialize()
+ * DESCRIPTION: serialize a ucs4 string using utf16 encoding
  */
 id3_length_t id3_utf16_serialize(id3_byte_t **ptr, id3_ucs4_t const *ucs4,
                                  enum id3_utf16_byteorder byteorder,
@@ -251,8 +251,8 @@ id3_length_t id3_utf16_serialize(id3_byte_t **ptr, id3_ucs4_t const *ucs4,
 }
 
 /*
- * NAME:	utf16->deserialize()
- * DESCRIPTION:	deserialize a ucs4 string using utf16 encoding
+ * NAME:    utf16->deserialize()
+ * DESCRIPTION: deserialize a ucs4 string using utf16 encoding
  */
 id3_ucs4_t *id3_utf16_deserialize(id3_byte_t const **ptr, id3_length_t length,
                                   enum id3_utf16_byteorder byteorder)
