@@ -61,7 +61,8 @@
 #define MAX_AREA_TOC_SIZE_LSN          96
 #define MAX_LANGUAGE_COUNT             8
 #define SAMPLES_PER_FRAME              588
-#define SUPPORT_SCARLETBOOK_VERSION    0x114
+#define SUPPORTED_VERSION_MAJOR        1
+#define SUPPORTED_VERSION_MINOR        20
 
 #define MAX_GENRE_COUNT                29
 #define MAX_CATEGORY_COUNT             3
@@ -194,7 +195,11 @@ ATTRIBUTE_PACKED locale_table_t;
 typedef struct
 {
     char           id[8];                     // SACDMTOC
-    uint16_t       disc_version;              // 1.20 / 0x0114
+    struct
+    {
+        uint8_t major;
+        uint8_t minor;
+    } ATTRIBUTE_PACKED version;               // 1.20 / 0x0114
     uint8_t        reserved01[6];
     uint16_t       album_set_size;
     uint16_t       album_sequence_number;
@@ -274,7 +279,11 @@ ATTRIBUTE_PACKED master_man_t;
 typedef struct
 {
     char           id[8];                     // TWOCHTOC or MULCHTOC
-    uint16_t       version;                   // 1.20, 0x0114
+    struct
+    {
+        uint8_t major;
+        uint8_t minor;
+    } ATTRIBUTE_PACKED version;               // 1.20 / 0x0114
     uint16_t       size;                      // ex. 40 (total size of TOC)
     uint8_t        reserved01[4];
     uint32_t       max_byte_rate;
@@ -516,11 +525,11 @@ typedef struct
     area_track_text_t          area_track_text[255];                      // max of 255 supported tracks
     area_isrc_genre_t        * area_isrc_genre;
 }
-area_t;
+scarletbook_area_t;
 
 typedef struct
 {
-    void                     * sacd;                                  //sacd_reader_t
+    void                     * sacd;                                      // sacd_reader_t
 
     uint8_t                  * master_data;
     master_toc_t             * master_toc;
@@ -530,8 +539,7 @@ typedef struct
     int                        twoch_area_idx;
     int                        mulch_area_idx;
     int                        area_count;
-
-    area_t                     area[2];
+    scarletbook_area_t         area[2];
 } 
 scarletbook_handle_t;
 

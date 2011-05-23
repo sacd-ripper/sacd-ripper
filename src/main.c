@@ -317,7 +317,7 @@ void main_loop(void)
 
                 if (message[idx - 1] != '\n') { message[idx++] = '\n'; message[idx] = '\0'; } 
 
-                idx += snprintf(message + idx, 20, "Version: %02i.%02i\n", (mtoc->disc_version >> 8) & 0xff, mtoc->disc_version & 0xff);
+                idx += snprintf(message + idx, 20, "Version: %02i.%02i\n", mtoc->version.major, mtoc->version.minor);
                 idx += snprintf(message + idx, 25, "Created: %4i-%02i-%02i\n", mtoc->disc_date_year, mtoc->disc_date_month, mtoc->disc_date_day);
                 
                 idx += snprintf(message + idx, 15, "Track 0:\n");

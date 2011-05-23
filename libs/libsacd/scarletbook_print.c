@@ -97,7 +97,7 @@ void scarletbook_print_master_toc(scarletbook_handle_t *handle)
     master_toc_t *mtoc = handle->master_toc;
 
     fprintf(stdout, "Disc Information:\n\n");
-    fprintf(stdout, "\tVersion: %2i.%02i\n", (mtoc->disc_version >> 8) & 0xff, mtoc->disc_version & 0xff);
+    fprintf(stdout, "\tVersion: %2i.%02i\n", mtoc->version.major, mtoc->version.minor);
     fprintf(stdout, "\tCreation date: %4i-%02i-%02i\n"
             , mtoc->disc_date_year, mtoc->disc_date_month, mtoc->disc_date_day);
 
@@ -192,7 +192,7 @@ void scarletbook_print_area_toc(scarletbook_handle_t *handle, int area_idx)
     area_tracklist_time   = handle->area[area_idx].area_tracklist_time;
 
     fprintf(stdout, "\tArea Information [%i]:\n\n", area_idx);
-    fprintf(stdout, "\tVersion: %2i.%02i\n", (area_toc->version >> 8) & 0xff, area_toc->version & 0xff);
+    fprintf(stdout, "\tVersion: %2i.%02i\n", area_toc->version.major, area_toc->version.minor);
 
     if (area_toc->copyright_offset)
         fprintf(stdout, "\tCopyright: %s\n", substr((char *) area_toc + area_toc->copyright_offset, 0, 60));
