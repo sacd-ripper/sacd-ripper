@@ -550,12 +550,12 @@ static inline int has_both_channels(scarletbook_handle_t *handle)
 
 static inline area_toc_t* get_two_channel(scarletbook_handle_t *handle)
 {
-    return(handle->twoch_area_idx == -1 ? 0 : handle->area_toc[handle->twoch_area_idx]);
+    return(handle->twoch_area_idx == -1 ? 0 : handle->area[handle->twoch_area_idx].area_toc);
 }
 
 static inline area_toc_t* get_multi_channel(scarletbook_handle_t *handle)
 {
-    return(handle->mulch_area_idx == -1 ? 0 : handle->area_toc[handle->mulch_area_idx]);
+    return(handle->mulch_area_idx == -1 ? 0 : handle->area[handle->mulch_area_idx].area_toc);
 }
 #endif
 
