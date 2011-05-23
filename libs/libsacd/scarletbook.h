@@ -46,11 +46,9 @@
  *  - SACDRTOC (revocation toc)
  *  - SACD_WLL (track weblink list)
  *  - SACDPLAY (set of playlists)
- *  - SACD_ACC (access list)
- *  - SACD_MAN (manufacturer information)
  *
  * TODO:
- *  - replace name "channel" with track
+ *  - replace name "channel" with area
  */
 
 /**
@@ -72,10 +70,11 @@
 
 enum
 {
-    ENCODING_DST           = 0
-    , ENCODING_DSD_3_IN_14 = 2
-    , ENCODING_DSD_3_IN_16 = 3
-} encoding_t;
+    FRAME_FORMAT_DST           = 0
+    , FRAME_FORMAT_DSD_3_IN_14 = 2
+    , FRAME_FORMAT_DSD_3_IN_16 = 3
+} 
+frame_format_t;
 
 enum
 {
@@ -87,7 +86,8 @@ enum
     , CHAR_SET_GB2312        = 5
     , CHAR_SET_BIG5          = 6
     , CHAR_SET_ISO8859_1_ESC = 7
-}                 character_set_t;
+} 
+character_set_t;
 
 extern const char *album_genre[];
 
@@ -123,14 +123,16 @@ enum
     , GENRE_SPOKEN_WORD            = 27      // 101
     , GENRE_WORLD_MUSIC            = 28      // 12
     , GENRE_BLUES                  = 29      // 0
-} genre_t;
+} 
+genre_t;
 
 enum
 {
     CATEGORY_NOT_USED   = 0
     , CATEGORY_GENERAL  = 1
     , CATEGORY_JAPANESE = 2
-}                 category_t;
+}                 
+category_t;
 
 extern const char *album_category[];
 
@@ -151,7 +153,8 @@ enum
     , TRACK_TYPE_ARRANGER_PHONETIC      = 0x85
     , TRACK_TYPE_MESSAGE_PHONETIC       = 0x86
     , TRACK_TYPE_EXTRA_MESSAGE_PHONETIC = 0x87
-} track_type_t;
+} 
+track_type_t;
 
 #if PRAGMA_PACK
 #pragma pack(1)
@@ -169,9 +172,10 @@ enum
 typedef struct
 {
     uint8_t  category;                        // category_t
-    uint16_t zero_01;
+    uint16_t reserved;
     uint8_t  genre;                           // genre_t
-} ATTRIBUTE_PACKED genre_table_t;
+}
+ATTRIBUTE_PACKED genre_table_t;
 
 /**
  * Language & character set
@@ -179,9 +183,10 @@ typedef struct
 typedef struct
 {
     char    language_code[2];                 // ISO639-2 Language code
-    uint8_t character_set;                    // char_set_t
-    uint8_t zero_01;
-} ATTRIBUTE_PACKED locale_table_t;
+    uint8_t character_set;                    // char_set_t, 1 (ISO 646)
+    uint8_t reserved;
+}
+ATTRIBUTE_PACKED locale_table_t;
 
 /**
  * Master TOC
@@ -192,19 +197,20 @@ typedef struct
 {
     char           id[8];                     // SACDMTOC
     uint16_t       disc_version;              // 1.20 / 0x0114
-    uint8_t        zero_01[6];
+    uint8_t        reserved01[6];
     uint16_t       album_set_size;
     uint16_t       album_sequence_number;
-    uint8_t        zero_02[4];
+    uint8_t        reserved02[4];
     char           album_catalog_number[16];  // 0x00 when empty, else padded with spaces for short strings
     genre_table_t  album_genre[4];
-    uint8_t        zero_03[8];
+    uint8_t        reserved03[8];
     uint32_t       channel_1_toc_area_1_start;
     uint32_t       channel_1_toc_area_2_start;
     uint32_t       channel_2_toc_area_1_start;
     uint32_t       channel_2_toc_area_2_start;
-    uint8_t        disc_type;                 // 0x80 hybrid, 0x00 for single, 0x?? for dual?
-    uint8_t        zero_04[3];
+    uint8_t        disc_type_hybrid     : 1;
+    uint8_t        disc_type_reserved   : 7;
+    uint8_t        reserved04[3];
     uint16_t       channel_1_toc_area_size;
     uint16_t       channel_2_toc_area_size;
     char           disc_catalog_number[16];   // 0x00 when empty, else padded with spaces for short strings
@@ -212,11 +218,12 @@ typedef struct
     uint16_t       disc_date_year;
     uint8_t        disc_date_month;
     uint8_t        disc_date_day;
-    uint8_t        zero_05[4];                // time?
+    uint8_t        reserved05[4];
     uint8_t        text_channel_count;
-    uint8_t        zero_06[7];
+    uint8_t        reserved06[7];
     locale_table_t locales[8];
-} ATTRIBUTE_PACKED master_toc_t;
+}
+ATTRIBUTE_PACKED master_toc_t;
 
 /**
  * Master Album Information
@@ -224,7 +231,7 @@ typedef struct
 typedef struct
 {
     char     id[8];                           // SACDText
-    uint64_t zero_01;
+    uint8_t  reserved[8];
     uint16_t album_title_position;
     uint16_t album_title_phonetic_position;
     uint16_t album_artist_position;
@@ -242,7 +249,8 @@ typedef struct
     uint16_t disc_copyright_position;
     uint16_t disc_copyright_phonetic_position;
     uint8_t  data[2000];
-} ATTRIBUTE_PACKED master_text_t;
+}
+ATTRIBUTE_PACKED master_text_t;
 
 /**
  * Unknown Structure
@@ -250,8 +258,9 @@ typedef struct
 typedef struct
 {
     char    id[8];                             // SACD_Man, manufacturer information
-    uint8_t data[2040];
-} ATTRIBUTE_PACKED master_man_t;
+    uint8_t information[2040];
+}
+ATTRIBUTE_PACKED master_man_t;
 
 /**
  * Channel TOC
@@ -264,32 +273,42 @@ typedef struct
     char           id[8];                     // TWOCHTOC or MULCHTOC
     uint16_t       version;                   // 1.20, 0x0114
     uint16_t       size;                      // ex. 40 (total size of TOC)
-    uint8_t        zero_01[4];
+    uint8_t        reserved01[4];
     uint32_t       max_byte_rate;
-    uint8_t        sample_frequency;                      // 0x04 = 2822400 (physically there can be no other values, or..? :)
-    uint8_t        encoding;
-    uint8_t        zero_02[10];
+    uint8_t        sample_frequency;          // 0x04 = (64 * 44.1 kHz) (physically there can be no other values, or..? :)
+    uint8_t        reserved02   : 4;
+    uint8_t        frame_format : 4;
+    uint8_t        reserved03[10];
     uint8_t        channel_count;
-    uint8_t        loudspeaker_config;
-    uint8_t        unknown_01;
-    uint8_t        zero_03[29];
-    uint32_t       unknown_02;
-    uint16_t       track_count;
-    uint16_t       zero_04;
+    uint8_t        loudspeaker_config : 5;
+    uint8_t        extra_settings : 3;
+    uint8_t        max_available_channels;
+    uint8_t        area_mute_flags;
+    uint8_t        reserved04[12];
+    uint8_t        reserved05 : 4;
+    uint8_t        track_attribute : 4;
+    uint8_t        reserved06[15];
+    uint8_t        total_area_play_time[3];
+    uint8_t        reserved07;
+    uint8_t        track_offset;
+    uint8_t        track_count;
+    uint8_t        reserved08[2];
     uint32_t       track_start;
     uint32_t       track_end;
     uint8_t        text_channel_count;
-    uint8_t        zero_05[7];
+    uint8_t        reserved09[7];
     locale_table_t languages[10];
-    uint32_t       unknown_03;
-    uint16_t       unknown_04;
-    uint8_t        zero_06[10];
+    uint16_t       track_text_offset;
+    uint16_t       index_list_offset;
+    uint16_t       access_list_offset;
+    uint8_t        reserved10[10];
     uint16_t       area_description_offset;
     uint16_t       copyright_offset;
     uint16_t       area_description_phonetic_offset;
     uint16_t       copyright_phonetic_offset;
     uint8_t        data[1896];
-} ATTRIBUTE_PACKED channel_toc_t;
+}
+ATTRIBUTE_PACKED channel_toc_t;
 
 typedef struct
 {
@@ -307,13 +326,15 @@ typedef struct
     char *track_type_arranger_phonetic;
     char *track_type_message_phonetic;
     char *track_type_extra_message_phonetic;
-} channel_track_text_t;
+} 
+channel_track_text_t;
 
 typedef struct
 {
     char     id[8];                           // SACDTTxt, Track Text
     uint16_t track_text_position[];
-} ATTRIBUTE_PACKED channel_text_t;
+}
+ATTRIBUTE_PACKED channel_text_t;
 
 typedef struct
 {
@@ -321,46 +342,110 @@ typedef struct
     char owner_code[3];
     char recording_year[2];
     char designation_code[5];
-} ATTRIBUTE_PACKED isrc_t;
+}
+ATTRIBUTE_PACKED isrc_t;
 
 typedef struct
 {
     char          id[8];                      // SACD_IGL, ISRC and Genre List
     isrc_t        isrc[255];
-    uint32_t      zero_01;
+    uint32_t      reserved;
     genre_table_t track_genre[255];
-} ATTRIBUTE_PACKED channel_isrc_t;
+}
+ATTRIBUTE_PACKED channel_isrc_t;
 
 typedef struct
 {
-    char    id[8];                            // SACD_ACC, Access List
-    uint8_t data[0xfff8];
-} ATTRIBUTE_PACKED channel_index_t;
+    char        id[8];                            // SACD_ACC, Access List
+    uint16_t    entry_count;
+    uint8_t     main_step_size;
+    uint8_t     reserved01[5];
+    uint8_t     main_access_list[6550][5];
+    uint8_t     reserved02[2];
+    uint8_t     detailed_access_list[32768];
+}
+ATTRIBUTE_PACKED channel_index_t;
 
 typedef struct
 {
     char     id[8];                           // SACDTRL1
-    uint32_t track_pos_lsn[255];
+    uint32_t track_start_lsn[255];
     uint32_t track_length_lsn[255];
-} ATTRIBUTE_PACKED channel_tracklist_offset_t;
+}
+ATTRIBUTE_PACKED channel_tracklist_offset_t;
 
-/**
- * SACD Time Information.
- */
 typedef struct
 {
     uint8_t hour;
     uint8_t minute;
     uint8_t second;
-    uint8_t frame_u; /* The two high bits are the frame rate. */
-} ATTRIBUTE_PACKED sacd_time_t;
+    uint8_t extra_use : 3;
+    uint8_t reserved : 5;
+}
+ATTRIBUTE_PACKED start_time_t;
 
 typedef struct
 {
-    char     id[8];                           // SACDTRL2
-    uint32_t track_pos_abs[255];
-    uint32_t track_length_abs[255];
-} ATTRIBUTE_PACKED channel_tracklist_abs_t;
+    uint8_t hour;
+    uint8_t minute;
+    uint8_t second;
+    uint8_t track_flags_ilp : 1;
+    uint8_t track_flags_tmf4 : 1;
+    uint8_t track_flags_tmf3 : 1;
+    uint8_t track_flags_tmf2 : 1;
+    uint8_t track_flags_tmf1 : 1;
+    uint8_t reserved : 3;
+}
+ATTRIBUTE_PACKED time_length_t;
+
+typedef struct
+{
+    char            id[8];                           // SACDTRL2
+    start_time_t    start_time[255];
+    time_length_t   length[255];
+} 
+ATTRIBUTE_PACKED channel_tracklist_time_t;
+
+typedef struct
+{
+    uint8_t  frame_start   : 1;
+    uint8_t  reserved      : 1;
+    uint8_t  data_type     : 3;
+    uint16_t packet_length : 11;
+} 
+ATTRIBUTE_PACKED audio_packet_info_t;
+
+typedef struct
+{
+    struct
+    {
+        uint8_t minutes : 8;
+        uint8_t seconds : 8;
+        uint8_t frames  : 8;
+    } ATTRIBUTE_PACKED timecode;
+    uint8_t channel_bit_1 : 1;
+    uint8_t sector_count  : 5;
+    uint8_t channel_bit_2 : 1;
+    uint8_t channel_bit_3 : 1;  // (1 = 5 channels, 0 = Stereo)
+} 
+ATTRIBUTE_PACKED audio_frame_info_t;
+
+typedef struct
+{
+    uint8_t packet_info_count : 3;
+    uint8_t frame_info_count  : 3;
+    uint8_t reserved          : 1;
+    uint8_t dst_encoded       : 1;
+}
+ATTRIBUTE_PACKED audio_sector_header_t;
+
+typedef struct
+{
+    audio_sector_header_t header;
+    audio_packet_info_t   packet[8];
+    audio_frame_info_t    frame[8];
+} 
+audio_sector_t;
 
 typedef struct
 {
@@ -378,12 +463,13 @@ typedef struct
     int                        channel_count;
     channel_toc_t              * channel_toc[2];
     channel_tracklist_offset_t * channel_tracklist_offset[2];
-    channel_tracklist_abs_t    * channel_tracklist_time[2];
+    channel_tracklist_time_t   * channel_tracklist_time[2];
     channel_text_t             * channel_text[2];
     channel_track_text_t       channel_track_text[2][255];                      // max of 255 supported tracks
 
     channel_isrc_t             * channel_isrc[2];
-} scarletbook_handle_t;
+} 
+scarletbook_handle_t;
 
 /**
  * helper functions..
@@ -406,17 +492,17 @@ static inline int has_both_channels(scarletbook_handle_t *handle)
 
 static inline channel_toc_t* get_two_channel(scarletbook_handle_t *handle)
 {
-    return (handle->twoch_idx == -1 ? 0 : handle->channel_toc[handle->twoch_idx]);
+    return(handle->twoch_idx == -1 ? 0 : handle->channel_toc[handle->twoch_idx]);
 }
 
 static inline channel_toc_t* get_multi_channel(scarletbook_handle_t *handle)
 {
-    return (handle->mulch_idx == -1 ? 0 : handle->channel_toc[handle->mulch_idx]);
+    return(handle->mulch_idx == -1 ? 0 : handle->channel_toc[handle->mulch_idx]);
 }
 
 char *get_speaker_config_string(channel_toc_t *channel);
 
-char *get_encoding_string(channel_toc_t *channel);
+char *get_frame_format_string(channel_toc_t *channel);
 
 
 #if PRAGMA_PACK

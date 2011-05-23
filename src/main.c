@@ -322,14 +322,14 @@ void main_loop(void)
                 
                 idx += snprintf(message + idx, 15, "Track 0:\n");
                 idx += snprintf(message + idx, 35, "   Speakers: %s\n", get_speaker_config_string(sb_handle->channel_toc[0]));
-                idx += snprintf(message + idx, 35, "   Encoding: %s\n", get_encoding_string(sb_handle->channel_toc[0]));
+                idx += snprintf(message + idx, 35, "   Encoding: %s\n", get_frame_format_string(sb_handle->channel_toc[0]));
                 idx += snprintf(message + idx, 25, "   Tracks: %d (%.2fGB)\n", sb_handle->channel_toc[0]->track_count, ((double) (sb_handle->channel_toc[0]->track_end - sb_handle->channel_toc[0]->track_start) * SACD_LSN_SIZE) / 1073741824.00);
                 if (has_both_channels(sb_handle)) 
                 {
                     idx += snprintf(message + idx, 2, "\n");
                     idx += snprintf(message + idx, 15, "Track 1:\n");
                     idx += snprintf(message + idx, 35, "   Speakers: %s\n", get_speaker_config_string(sb_handle->channel_toc[1]));
-                    idx += snprintf(message + idx, 35, "   Encoding: %s\n", get_encoding_string(sb_handle->channel_toc[1]));
+                    idx += snprintf(message + idx, 35, "   Encoding: %s\n", get_frame_format_string(sb_handle->channel_toc[1]));
                     idx += snprintf(message + idx, 25, "   Tracks: %d (%.2fGB)", sb_handle->channel_toc[1]->track_count, ((double) (sb_handle->channel_toc[1]->track_end - sb_handle->channel_toc[1]->track_start) * SACD_LSN_SIZE) / 1073741824.00);
                 }
 
