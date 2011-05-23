@@ -28,13 +28,13 @@
 
 #if defined(__lv2ppu__)
 #include <sys/storage.h>
+#include "ioctl.h"
 #elif defined(WIN32)
 #include <io.h>
 #endif
 
 #include "scarletbook.h"
 #include "sacd_input.h"
-#include "ioctl.h"
 
 struct sacd_input_s
 {

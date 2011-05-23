@@ -355,6 +355,7 @@ sacd_reader_t *sacd_open(const char *ppath)
     fprintf(stderr, "libsacdread: Could not open %s\n", path);
     free(path);
     return NULL;
+
 }
 
 void sacd_close(sacd_reader_t *sacd)

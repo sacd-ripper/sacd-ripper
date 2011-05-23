@@ -62,17 +62,17 @@ const char *album_category[] =
     , "Japanese"
 };
 
-char *get_speaker_config_string(channel_toc_t *channel) 
+char *get_speaker_config_string(area_toc_t *area) 
 {
-    if (channel->channel_count == 2 && channel->loudspeaker_config == 0)
+    if (area->channel_count == 2 && area->extra_settings == 0)
     {
         return "2ch.";
     }
-    else if (channel->channel_count == 5 && channel->loudspeaker_config == 3)
+    else if (area->channel_count == 5 && area->extra_settings == 3)
     {
         return "5ch.";
     }
-    else if (channel->channel_count == 6 && channel->loudspeaker_config == 4)
+    else if (area->channel_count == 6 && area->extra_settings == 4)
     {
         return "5.1ch";
     }
@@ -82,17 +82,17 @@ char *get_speaker_config_string(channel_toc_t *channel)
     }
 }
 
-char *get_frame_format_string(channel_toc_t *channel) 
+char *get_frame_format_string(area_toc_t *area) 
 {
-    if (channel->frame_format == FRAME_FORMAT_DSD_3_IN_14)
+    if (area->frame_format == FRAME_FORMAT_DSD_3_IN_14)
     {
         return "DSD 3 in 14";
     }
-    else if (channel->frame_format == FRAME_FORMAT_DSD_3_IN_16)
+    else if (area->frame_format == FRAME_FORMAT_DSD_3_IN_16)
     {
         return "DSD 3 in 16";
     }
-    else if (channel->frame_format == FRAME_FORMAT_DST)
+    else if (area->frame_format == FRAME_FORMAT_DST)
     {
         return "Lossless DST";
     }

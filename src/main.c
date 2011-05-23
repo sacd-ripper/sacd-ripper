@@ -285,7 +285,7 @@ void main_loop(void)
                 master_text_t *master_text = sb_handle->master_text[0];
                 master_toc_t *mtoc = sb_handle->master_toc;
 
-                for (i = 0; i < mtoc->text_channel_count; i++)
+                for (i = 0; i < mtoc->text_area_count; i++)
                 {
                      if (sb_handle->master_text[i]->album_title_position 
                       || sb_handle->master_text[i]->album_title_phonetic_position
@@ -321,16 +321,16 @@ void main_loop(void)
                 idx += snprintf(message + idx, 25, "Created: %4i-%02i-%02i\n", mtoc->disc_date_year, mtoc->disc_date_month, mtoc->disc_date_day);
                 
                 idx += snprintf(message + idx, 15, "Track 0:\n");
-                idx += snprintf(message + idx, 35, "   Speakers: %s\n", get_speaker_config_string(sb_handle->channel_toc[0]));
-                idx += snprintf(message + idx, 35, "   Encoding: %s\n", get_frame_format_string(sb_handle->channel_toc[0]));
-                idx += snprintf(message + idx, 25, "   Tracks: %d (%.2fGB)\n", sb_handle->channel_toc[0]->track_count, ((double) (sb_handle->channel_toc[0]->track_end - sb_handle->channel_toc[0]->track_start) * SACD_LSN_SIZE) / 1073741824.00);
+                idx += snprintf(message + idx, 35, "   Speakers: %s\n", get_speaker_config_string(sb_handle->area_toc[0]));
+                idx += snprintf(message + idx, 35, "   Encoding: %s\n", get_frame_format_string(sb_handle->area_toc[0]));
+                idx += snprintf(message + idx, 25, "   Tracks: %d (%.2fGB)\n", sb_handle->area_toc[0]->track_count, ((double) (sb_handle->area_toc[0]->track_end - sb_handle->area_toc[0]->track_start) * SACD_LSN_SIZE) / 1073741824.00);
                 if (has_both_channels(sb_handle)) 
                 {
                     idx += snprintf(message + idx, 2, "\n");
                     idx += snprintf(message + idx, 15, "Track 1:\n");
-                    idx += snprintf(message + idx, 35, "   Speakers: %s\n", get_speaker_config_string(sb_handle->channel_toc[1]));
-                    idx += snprintf(message + idx, 35, "   Encoding: %s\n", get_frame_format_string(sb_handle->channel_toc[1]));
-                    idx += snprintf(message + idx, 25, "   Tracks: %d (%.2fGB)", sb_handle->channel_toc[1]->track_count, ((double) (sb_handle->channel_toc[1]->track_end - sb_handle->channel_toc[1]->track_start) * SACD_LSN_SIZE) / 1073741824.00);
+                    idx += snprintf(message + idx, 35, "   Speakers: %s\n", get_speaker_config_string(sb_handle->area_toc[1]));
+                    idx += snprintf(message + idx, 35, "   Encoding: %s\n", get_frame_format_string(sb_handle->area_toc[1]));
+                    idx += snprintf(message + idx, 25, "   Tracks: %d (%.2fGB)", sb_handle->area_toc[1]->track_count, ((double) (sb_handle->area_toc[1]->track_end - sb_handle->area_toc[1]->track_start) * SACD_LSN_SIZE) / 1073741824.00);
                 }
 
                 idx += snprintf(message + idx, 50, "\nclick X to start ripping, O to change output");

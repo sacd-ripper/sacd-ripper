@@ -444,10 +444,10 @@ static void processing_thread(void *arg)
     }
     accessor->aio_packet->accessor = accessor;
     
-    for (i = 0; i < sb_handle->channel_count; i++)
+    for (i = 0; i < sb_handle->area_count; i++)
     {
-        decrypt_start[i] = sb_handle->channel_toc[i]->track_start;
-        decrypt_end[i] = sb_handle->channel_toc[i]->track_end;
+        decrypt_start[i] = sb_handle->area_toc[i]->track_start;
+        decrypt_end[i] = sb_handle->area_toc[i]->track_end;
     }
 
     atomic_set(&outstanding_read_requests, 0);
@@ -574,7 +574,7 @@ close_thread:
 
     scarletbook_close(sb_handle);
     sacd_close(sacd_reader);
-    sacd_accessor_close(accessor); // closing accessor comes after closing device
+    sacd_accessor_close(accessor); // closing accessor comes after closing the device
     free(accessor);
 
     atomic_set(&stop_processing, 1);

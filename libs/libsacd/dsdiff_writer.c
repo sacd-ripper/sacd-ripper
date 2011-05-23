@@ -49,7 +49,7 @@ static char *get_mtoc_title_text(scarletbook_handle_t *handle)
     int          i;
     master_toc_t *master_toc = handle->master_toc;
 
-    for (i = 0; i < master_toc->text_channel_count; i++)
+    for (i = 0; i < master_toc->text_area_count; i++)
     {
         master_text_t *master_text = handle->master_text[i];
 
@@ -61,7 +61,7 @@ static char *get_mtoc_title_text(scarletbook_handle_t *handle)
     return 0;
 }
 
-dsdiff_handle_t *dsdiff_create(scarletbook_handle_t *sb_handle, char *filename, int channel, int track, int dst_encoded)
+dsdiff_handle_t *dsdiff_create(scarletbook_handle_t *sb_handle, char *filename, int area, int track, int dst_encoded)
 {
     dsdiff_handle_t  *handle;
     form_dsd_chunk_t *form_dsd_chunk;
@@ -132,7 +132,7 @@ dsdiff_handle_t *dsdiff_create(scarletbook_handle_t *sb_handle, char *filename, 
     // The Channels Chunk is required and may appear only once in the Property Chunk.
     {
         int              i;
-        uint8_t          channel_count    = sb_handle->channel_toc[channel]->channel_count;
+        uint8_t          channel_count    = sb_handle->area_toc[area]->channel_count;
         channels_chunk_t * channels_chunk = (channels_chunk_t *) write_ptr;
         channels_chunk->chunk_id        = CHNL_MARKER;
         channels_chunk->chunk_data_size = CALC_CHUNK_SIZE(CHANNELS_CHUNK_SIZE - CHUNK_HEADER_SIZE + channel_count * sizeof(uint32_t));
@@ -204,7 +204,7 @@ dsdiff_handle_t *dsdiff_create(scarletbook_handle_t *sb_handle, char *filename, 
     // The Loudspeaker Configuration Chunk is optional but if used it may appear only once in
     // the Property Chunk.
     {
-        uint8_t                    channel_count             = sb_handle->channel_toc[channel]->channel_count;
+        uint8_t                    channel_count             = sb_handle->area_toc[area]->channel_count;
         loudspeaker_config_chunk_t *loudspeaker_config_chunk = (loudspeaker_config_chunk_t *) write_ptr;
         loudspeaker_config_chunk->chunk_id        = LSCO_MARKER;
         loudspeaker_config_chunk->chunk_data_size = CALC_CHUNK_SIZE(LOADSPEAKER_CONFIG_CHUNK_SIZE - CHUNK_HEADER_SIZE);
@@ -235,7 +235,7 @@ dsdiff_handle_t *dsdiff_create(scarletbook_handle_t *sb_handle, char *filename, 
         int            id3_chunk_size;
         id3_chunk                  = (chunk_header_t *) write_ptr;
         id3_chunk->chunk_id        = MAKE_MARKER('I', 'D', '3', ' ');
-        id3_chunk_size             = scarletbook_id3_tag_render(sb_handle, write_ptr + CHUNK_HEADER_SIZE, channel, track);
+        id3_chunk_size             = scarletbook_id3_tag_render(sb_handle, write_ptr + CHUNK_HEADER_SIZE, area, track);
         id3_chunk->chunk_data_size = CALC_CHUNK_SIZE(id3_chunk_size);
 
         write_ptr += CEIL_ODD_NUMBER(CHUNK_HEADER_SIZE + id3_chunk_size);
@@ -244,8 +244,8 @@ dsdiff_handle_t *dsdiff_create(scarletbook_handle_t *sb_handle, char *filename, 
     // all properties have been written, now set the property chunk size
     property_chunk->chunk_data_size = CALC_CHUNK_SIZE(write_ptr - prop_ptr - CHUNK_HEADER_SIZE);
 
-    track_size = sb_handle->channel_tracklist_offset[channel]->track_length_lsn[track] - 1;
-    switch (sb_handle->channel_toc[0]->frame_format)
+    track_size = sb_handle->area_tracklist_offset[area]->track_length_lsn[track] - 1;
+    switch (sb_handle->area_toc[0]->frame_format)
     {
     case FRAME_FORMAT_DSD_3_IN_14:
         track_size *= (SACD_LSN_SIZE - 32);
