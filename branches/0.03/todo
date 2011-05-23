@@ -9,7 +9,7 @@ todo:
     - write log along each consecutive rip
 
   interface: 
-    - ask which track to rip (in case of multiple)
+    - ask which area to rip (in case of multiple)
     - show not enough disc space message (do fstat during ripping)
 
 - add dst decoding
@@ -18,4 +18,3 @@ todo:
 refactoring:
 
     - merge ripping logic into libsacd
-    - libsacd: replace name "channel" with track

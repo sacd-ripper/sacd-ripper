@@ -55,7 +55,7 @@ static const uint8_t my_friendly_zeros[2048];
 
 /* Prototypes for internal functions */
 static int scarletbook_read_master_toc(scarletbook_handle_t *);
-static int scarletbook_read_channel_toc(scarletbook_handle_t *, int);
+static int scarletbook_read_area_toc(scarletbook_handle_t *, int);
 
 scarletbook_handle_t *scarletbook_open(sacd_reader_t *sacd, int title)
 {
@@ -67,8 +67,8 @@ scarletbook_handle_t *scarletbook_open(sacd_reader_t *sacd, int title)
 
     memset(sb, 0, sizeof(scarletbook_handle_t));
     sb->sacd      = sacd;
-    sb->twoch_idx = -1;
-    sb->mulch_idx = -1;
+    sb->twoch_area_idx = -1;
+    sb->mulch_area_idx = -1;
 
     if (!scarletbook_read_master_toc(sb))
     {
@@ -77,43 +77,43 @@ scarletbook_handle_t *scarletbook_open(sacd_reader_t *sacd, int title)
         return NULL;
     }
 
-    if (sb->master_toc->channel_1_toc_area_1_start)
+    if (sb->master_toc->area_1_toc_1_start)
     {
-        sb->channel_data[sb->channel_count] = malloc(sb->master_toc->channel_1_toc_area_size * SACD_LSN_SIZE);
-        if (!sb->channel_data[sb->channel_count])
+        sb->area_data[sb->area_count] = malloc(sb->master_toc->area_1_toc_size * SACD_LSN_SIZE);
+        if (!sb->area_data[sb->area_count])
         {
             scarletbook_close(sb);
             return 0;
         }
 
-        if (!sacd_read_block_raw(sacd, sb->master_toc->channel_1_toc_area_1_start, sb->master_toc->channel_1_toc_area_size, sb->channel_data[sb->channel_count]))
+        if (!sacd_read_block_raw(sacd, sb->master_toc->area_1_toc_1_start, sb->master_toc->area_1_toc_size, sb->area_data[sb->area_count]))
             return 0;
 
-        if (!scarletbook_read_channel_toc(sb, sb->channel_count))
+        if (!scarletbook_read_area_toc(sb, sb->area_count))
         {
-            fprintf(stderr, "libsacdread: Can't read Channel TOC 1.\n");
+            fprintf(stderr, "libsacdread: Can't read Area TOC 1.\n");
         }
         else
-            ++sb->channel_count;
+            ++sb->area_count;
     }
-    if (sb->master_toc->channel_2_toc_area_1_start)
+    if (sb->master_toc->area_2_toc_1_start)
     {
-        sb->channel_data[sb->channel_count] = malloc(sb->master_toc->channel_2_toc_area_size * SACD_LSN_SIZE);
-        if (!sb->channel_data[sb->channel_count])
+        sb->area_data[sb->area_count] = malloc(sb->master_toc->area_2_toc_size * SACD_LSN_SIZE);
+        if (!sb->area_data[sb->area_count])
         {
             scarletbook_close(sb);
             return 0;
         }
 
-        if (!sacd_read_block_raw(sacd, sb->master_toc->channel_2_toc_area_1_start, sb->master_toc->channel_2_toc_area_size, sb->channel_data[sb->channel_count]))
+        if (!sacd_read_block_raw(sacd, sb->master_toc->area_2_toc_1_start, sb->master_toc->area_2_toc_size, sb->area_data[sb->area_count]))
             return 0;
 
-        if (!scarletbook_read_channel_toc(sb, sb->channel_count))
+        if (!scarletbook_read_area_toc(sb, sb->area_count))
         {
-            fprintf(stderr, "libsacdread: Can't read Channel TOC 2.\n");
+            fprintf(stderr, "libsacdread: Can't read Area TOC 2.\n");
         }
         else
-            ++sb->channel_count;
+            ++sb->area_count;
     }
 
 
@@ -128,11 +128,11 @@ void scarletbook_close(scarletbook_handle_t *handle)
     if (handle->master_data)
         free(handle->master_data);
 
-    if (handle->channel_data[0])
-        free(handle->channel_data[0]);
+    if (handle->area_data[0])
+        free(handle->area_data[0]);
 
-    if (handle->channel_data[1])
-        free(handle->channel_data[1]);
+    if (handle->area_data[1])
+        free(handle->area_data[1]);
 
     memset(handle, 0, sizeof(scarletbook_handle_t));
 
@@ -164,12 +164,12 @@ static int scarletbook_read_master_toc(scarletbook_handle_t *handle)
     SWAP16(master_toc->disc_version);
     SWAP16(master_toc->album_set_size);
     SWAP16(master_toc->album_sequence_number);
-    SWAP32(master_toc->channel_1_toc_area_1_start);
-    SWAP32(master_toc->channel_1_toc_area_2_start);
-    SWAP16(master_toc->channel_1_toc_area_size);
-    SWAP32(master_toc->channel_2_toc_area_1_start);
-    SWAP32(master_toc->channel_2_toc_area_2_start);
-    SWAP16(master_toc->channel_2_toc_area_size);
+    SWAP32(master_toc->area_1_toc_1_start);
+    SWAP32(master_toc->area_1_toc_2_start);
+    SWAP16(master_toc->area_1_toc_size);
+    SWAP32(master_toc->area_2_toc_1_start);
+    SWAP32(master_toc->area_2_toc_2_start);
+    SWAP16(master_toc->area_2_toc_size);
     SWAP16(master_toc->disc_date_year);
 
     if (master_toc->disc_version > SUPPORT_SCARLETBOOK_VERSION)
@@ -194,7 +194,7 @@ static int scarletbook_read_master_toc(scarletbook_handle_t *handle)
         CHECK_VALUE(master_toc->disc_genre[i].genre <= MAX_GENRE_COUNT);
     }
 
-    CHECK_VALUE(master_toc->text_channel_count <= MAX_LANGUAGE_COUNT);
+    CHECK_VALUE(master_toc->text_area_count <= MAX_LANGUAGE_COUNT);
 
     // point to eof master header
     p = handle->master_data + SACD_LSN_SIZE;
@@ -241,78 +241,78 @@ static int scarletbook_read_master_toc(scarletbook_handle_t *handle)
     return 1;
 }
 
-static int scarletbook_read_channel_toc(scarletbook_handle_t *handle, int channel_nr)
+static int scarletbook_read_area_toc(scarletbook_handle_t *handle, int area)
 {
     int           i, j;
-    channel_toc_t *channel_toc;
-    uint8_t       *channel_data;
+    area_toc_t *area_toc;
+    uint8_t       *area_data;
     uint8_t       *p;
 
-    p           = channel_data = handle->channel_data[channel_nr];
-    channel_toc = handle->channel_toc[channel_nr] = (channel_toc_t *) channel_data;
+    p           = area_data = handle->area_data[area];
+    area_toc = handle->area_toc[area] = (area_toc_t *) area_data;
 
-    if (strncmp("TWOCHTOC", channel_toc->id, 8) != 0 && strncmp("MULCHTOC", channel_toc->id, 8) != 0)
+    if (strncmp("TWOCHTOC", area_toc->id, 8) != 0 && strncmp("MULCHTOC", area_toc->id, 8) != 0)
     {
-        fprintf(stderr, "libsacdread: Not a valid Channel TOC!\n");
+        fprintf(stderr, "libsacdread: Not a valid Area TOC!\n");
         return 0;
     }
 
-    SWAP16(channel_toc->version);
-    SWAP16(channel_toc->size);
-    SWAP16(channel_toc->track_count);
-    SWAP32(channel_toc->track_start);
-    SWAP32(channel_toc->track_end);
-    SWAP16(channel_toc->area_description_offset);
-    SWAP16(channel_toc->copyright_offset);
-    SWAP16(channel_toc->area_description_phonetic_offset);
-    SWAP16(channel_toc->copyright_phonetic_offset);
-    SWAP32(channel_toc->max_byte_rate);
-    SWAP16(channel_toc->track_text_offset);
-    SWAP16(channel_toc->index_list_offset);
-    SWAP16(channel_toc->access_list_offset);
+    SWAP16(area_toc->version);
+    SWAP16(area_toc->size);
+    SWAP16(area_toc->track_count);
+    SWAP32(area_toc->track_start);
+    SWAP32(area_toc->track_end);
+    SWAP16(area_toc->area_description_offset);
+    SWAP16(area_toc->copyright_offset);
+    SWAP16(area_toc->area_description_phonetic_offset);
+    SWAP16(area_toc->copyright_phonetic_offset);
+    SWAP32(area_toc->max_byte_rate);
+    SWAP16(area_toc->track_text_offset);
+    SWAP16(area_toc->index_list_offset);
+    SWAP16(area_toc->access_list_offset);
 
-    CHECK_ZERO(channel_toc->reserved01);
-    CHECK_ZERO(channel_toc->reserved03);
-    CHECK_ZERO(channel_toc->reserved04);
-    CHECK_ZERO(channel_toc->reserved06);
-    CHECK_ZERO(channel_toc->reserved07);
-    CHECK_ZERO(channel_toc->reserved08);
-    CHECK_ZERO(channel_toc->reserved09);
-    CHECK_ZERO(channel_toc->reserved10);
+    CHECK_ZERO(area_toc->reserved01);
+    CHECK_ZERO(area_toc->reserved03);
+    CHECK_ZERO(area_toc->reserved04);
+    CHECK_ZERO(area_toc->reserved06);
+    CHECK_ZERO(area_toc->reserved07);
+    CHECK_ZERO(area_toc->reserved08);
+    CHECK_ZERO(area_toc->reserved09);
+    CHECK_ZERO(area_toc->reserved10);
 
-    if (channel_toc->version > SUPPORT_SCARLETBOOK_VERSION)
+    if (area_toc->version > SUPPORT_SCARLETBOOK_VERSION)
     {
-        fprintf(stderr, "libsacdread: Unsupported version: %2i.%2i\n", (channel_toc->version >> 8) & 0xff, channel_toc->version & 0xff);
+        fprintf(stderr, "libsacdread: Unsupported version: %2i.%2i\n", (area_toc->version >> 8) & 0xff, area_toc->version & 0xff);
         return 0;
     }
 
     // is this the 2 channel?
-    if (channel_toc->channel_count == 2 && channel_toc->loudspeaker_config == 0)
+    if (area_toc->channel_count == 2 && area_toc->loudspeaker_config == 0)
     {
-        handle->twoch_idx = channel_nr;
+        handle->twoch_area_idx = area;
     }
     else
     {
-        handle->mulch_idx = channel_nr;
+        handle->mulch_area_idx = area;
     }
 
-    // Channel TOC size is SACD_LSN_SIZE
+    // Area TOC size is SACD_LSN_SIZE
     p += SACD_LSN_SIZE;
 
-    while (p < (channel_data + channel_toc->size * SACD_LSN_SIZE))
+    while (p < (area_data + area_toc->size * SACD_LSN_SIZE))
     {
         if (strncmp((char *) p, "SACDTTxt", 8) == 0)
         {
-            for (i = 0; i < channel_toc->track_count; i++)
+            for (i = 0; i < area_toc->track_count; i++)
             {
-                channel_text_t *channel_text;
+                area_text_t *area_text;
                 uint8_t        track_type, track_amount;
                 char           *track_ptr;
-                channel_text = handle->channel_text[channel_nr] = (channel_text_t *) p;
-                SWAP16(channel_text->track_text_position[i]);
-                if (channel_text->track_text_position[i] > 0)
+                area_text = handle->area_text[area] = (area_text_t *) p;
+                SWAP16(area_text->track_text_position[i]);
+                if (area_text->track_text_position[i] > 0)
                 {
-                    track_ptr    = (char *) (p + channel_text->track_text_position[i]);
+                    track_ptr    = (char *) (p + area_text->track_text_position[i]);
                     track_amount = *track_ptr;
                     track_ptr   += 4;
                     for (j = 0; j < track_amount; j++)
@@ -325,46 +325,46 @@ static int scarletbook_read_channel_toc(scarletbook_handle_t *handle, int channe
                             switch (track_type)
                             {
                             case TRACK_TYPE_TITLE:
-                                handle->channel_track_text[channel_nr][i].track_type_title = track_ptr;
+                                handle->area_track_text[area][i].track_type_title = track_ptr;
                                 break;
                             case TRACK_TYPE_PERFORMER:
-                                handle->channel_track_text[channel_nr][i].track_type_performer = track_ptr;
+                                handle->area_track_text[area][i].track_type_performer = track_ptr;
                                 break;
                             case TRACK_TYPE_SONGWRITER:
-                                handle->channel_track_text[channel_nr][i].track_type_songwriter = track_ptr;
+                                handle->area_track_text[area][i].track_type_songwriter = track_ptr;
                                 break;
                             case TRACK_TYPE_COMPOSER:
-                                handle->channel_track_text[channel_nr][i].track_type_composer = track_ptr;
+                                handle->area_track_text[area][i].track_type_composer = track_ptr;
                                 break;
                             case TRACK_TYPE_ARRANGER:
-                                handle->channel_track_text[channel_nr][i].track_type_arranger = track_ptr;
+                                handle->area_track_text[area][i].track_type_arranger = track_ptr;
                                 break;
                             case TRACK_TYPE_MESSAGE:
-                                handle->channel_track_text[channel_nr][i].track_type_message = track_ptr;
+                                handle->area_track_text[area][i].track_type_message = track_ptr;
                                 break;
                             case TRACK_TYPE_EXTRA_MESSAGE:
-                                handle->channel_track_text[channel_nr][i].track_type_extra_message = track_ptr;
+                                handle->area_track_text[area][i].track_type_extra_message = track_ptr;
                                 break;
                             case TRACK_TYPE_TITLE_PHONETIC:
-                                handle->channel_track_text[channel_nr][i].track_type_title_phonetic = track_ptr;
+                                handle->area_track_text[area][i].track_type_title_phonetic = track_ptr;
                                 break;
                             case TRACK_TYPE_PERFORMER_PHONETIC:
-                                handle->channel_track_text[channel_nr][i].track_type_performer_phonetic = track_ptr;
+                                handle->area_track_text[area][i].track_type_performer_phonetic = track_ptr;
                                 break;
                             case TRACK_TYPE_SONGWRITER_PHONETIC:
-                                handle->channel_track_text[channel_nr][i].track_type_songwriter_phonetic = track_ptr;
+                                handle->area_track_text[area][i].track_type_songwriter_phonetic = track_ptr;
                                 break;
                             case TRACK_TYPE_COMPOSER_PHONETIC:
-                                handle->channel_track_text[channel_nr][i].track_type_composer_phonetic = track_ptr;
+                                handle->area_track_text[area][i].track_type_composer_phonetic = track_ptr;
                                 break;
                             case TRACK_TYPE_ARRANGER_PHONETIC:
-                                handle->channel_track_text[channel_nr][i].track_type_arranger_phonetic = track_ptr;
+                                handle->area_track_text[area][i].track_type_arranger_phonetic = track_ptr;
                                 break;
                             case TRACK_TYPE_MESSAGE_PHONETIC:
-                                handle->channel_track_text[channel_nr][i].track_type_message_phonetic = track_ptr;
+                                handle->area_track_text[area][i].track_type_message_phonetic = track_ptr;
                                 break;
                             case TRACK_TYPE_EXTRA_MESSAGE_PHONETIC:
-                                handle->channel_track_text[channel_nr][i].track_type_extra_message_phonetic = track_ptr;
+                                handle->area_track_text[area][i].track_type_extra_message_phonetic = track_ptr;
                                 break;
                             }
                         }
@@ -383,7 +383,7 @@ static int scarletbook_read_channel_toc(scarletbook_handle_t *handle, int channe
         }
         else if (strncmp((char *) p, "SACD_IGL", 8) == 0)
         {
-            handle->channel_isrc[channel_nr] = (channel_isrc_t *) p;
+            handle->area_isrc_genre[area] = (area_isrc_genre_t *) p;
             p += SACD_LSN_SIZE * 2;
         }
         else if (strncmp((char *) p, "SACD_ACC", 8) == 0)
@@ -393,9 +393,9 @@ static int scarletbook_read_channel_toc(scarletbook_handle_t *handle, int channe
         }
         else if (strncmp((char *) p, "SACDTRL1", 8) == 0)
         {
-            channel_tracklist_offset_t *tracklist;
-            tracklist = handle->channel_tracklist_offset[channel_nr] = (channel_tracklist_offset_t *) p;
-            for (i = 0; i < channel_toc->track_count; i++)
+            area_tracklist_offset_t *tracklist;
+            tracklist = handle->area_tracklist_offset[area] = (area_tracklist_offset_t *) p;
+            for (i = 0; i < area_toc->track_count; i++)
             {
                 SWAP32(tracklist->track_start_lsn[i]);
                 SWAP32(tracklist->track_length_lsn[i]);
@@ -404,8 +404,8 @@ static int scarletbook_read_channel_toc(scarletbook_handle_t *handle, int channe
         }
         else if (strncmp((char *) p, "SACDTRL2", 8) == 0)
         {
-            channel_tracklist_time_t *tracklist;
-            tracklist = handle->channel_tracklist_time[channel_nr] = (channel_tracklist_time_t *) p;
+            area_tracklist_time_t *tracklist;
+            tracklist = handle->area_tracklist_time[area] = (area_tracklist_time_t *) p;
             p += SACD_LSN_SIZE;
         }
         else

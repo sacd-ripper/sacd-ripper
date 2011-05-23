@@ -37,7 +37,7 @@ void scarletbook_print_album_text(scarletbook_handle_t *handle)
     int          i;
     master_toc_t *master_toc = handle->master_toc;
 
-    for (i = 0; i < master_toc->text_channel_count; i++)
+    for (i = 0; i < master_toc->text_area_count; i++)
     {
         master_text_t *master_text = handle->master_text[i];
         fprintf(stdout, "\tLocale: %c%c\n", master_toc->locales[i].language_code[0], master_toc->locales[i].language_code[1]);
@@ -66,7 +66,7 @@ void scarletbook_print_disc_text(scarletbook_handle_t *handle)
     int          i;
     master_toc_t *master_toc = handle->master_toc;
 
-    for (i = 0; i < master_toc->text_channel_count; i++)
+    for (i = 0; i < master_toc->text_area_count; i++)
     {
         master_text_t *master_text = handle->master_text[i];
         fprintf(stdout, "\tLocale: %c%c\n", master_toc->locales[i].language_code[0], master_toc->locales[i].language_code[1]);
@@ -142,13 +142,13 @@ void scarletbook_print_master_toc(scarletbook_handle_t *handle)
     scarletbook_print_album_text(handle);
 }
 
-void scarletbook_print_track_text(scarletbook_handle_t *handle, int channel_nr)
+void scarletbook_print_area_text(scarletbook_handle_t *handle, int area)
 {
     int i;
-    fprintf(stdout, "\tTrack list [%d]:\n", channel_nr);
-    for (i = 0; i < handle->channel_toc[channel_nr]->track_count; i++)
+    fprintf(stdout, "\tTrack list [%d]:\n", area);
+    for (i = 0; i < handle->area_toc[area]->track_count; i++)
     {
-        channel_track_text_t *track_text = &handle->channel_track_text[channel_nr][i];
+        area_track_text_t *track_text = &handle->area_track_text[area][i];
         if (track_text->track_type_title)
             fprintf(stdout, "\t\tTitle[%d]: %s\n", i, substr(track_text->track_type_title, 0, 48));
         if (track_text->track_type_title_phonetic)
@@ -180,40 +180,40 @@ void scarletbook_print_track_text(scarletbook_handle_t *handle, int channel_nr)
     }
 }
 
-void scarletbook_print_channel_toc(scarletbook_handle_t *handle, int channel_nr)
+void scarletbook_print_area_toc(scarletbook_handle_t *handle, int area)
 {
     int                        i;
-    channel_isrc_t             *channel_isrc;
-    channel_tracklist_offset_t *channel_offset;
-    channel_tracklist_time_t   *channel_time;
-    channel_toc_t              *channel = handle->channel_toc[channel_nr];
-    channel_isrc   = handle->channel_isrc[channel_nr];
-    channel_offset = handle->channel_tracklist_offset[channel_nr];
-    channel_time   = handle->channel_tracklist_time[channel_nr];
+    area_isrc_genre_t             *area_isrc_genre;
+    area_tracklist_offset_t *area_tracklist_offset;
+    area_tracklist_time_t   *area_tracklist_time;
+    area_toc_t              *area_toc = handle->area_toc[area];
+    area_isrc_genre   = handle->area_isrc_genre[area];
+    area_tracklist_offset = handle->area_tracklist_offset[area];
+    area_tracklist_time   = handle->area_tracklist_time[area];
 
-    fprintf(stdout, "\nChannel Information [%i]:\n\n", channel_nr);
-    fprintf(stdout, "\tVersion: %2i.%02i\n", (channel->version >> 8) & 0xff, channel->version & 0xff);
+    fprintf(stdout, "\tArea Information [%i]:\n\n", area);
+    fprintf(stdout, "\tVersion: %2i.%02i\n", (area_toc->version >> 8) & 0xff, area_toc->version & 0xff);
 
-    if (channel->copyright_offset)
-        fprintf(stdout, "\tCopyright: %s\n", substr((char *) channel + channel->copyright_offset, 0, 60));
-    if (channel->copyright_phonetic_offset)
-        fprintf(stdout, "\tCopyright Phonetic: %s\n", substr((char *) channel + channel->copyright_phonetic_offset, 0, 60));
-    if (channel->area_description_offset)
-        fprintf(stdout, "\tArea Description: %s\n", substr((char *) channel + channel->area_description_offset, 0, 60));
-    if (channel->area_description_phonetic_offset)
-        fprintf(stdout, "\tArea Description Phonetic: %s\n", substr((char *) channel + channel->area_description_phonetic_offset, 0, 50));
+    if (area_toc->copyright_offset)
+        fprintf(stdout, "\tCopyright: %s\n", substr((char *) area_toc + area_toc->copyright_offset, 0, 60));
+    if (area_toc->copyright_phonetic_offset)
+        fprintf(stdout, "\tCopyright Phonetic: %s\n", substr((char *) area_toc + area_toc->copyright_phonetic_offset, 0, 60));
+    if (area_toc->area_description_offset)
+        fprintf(stdout, "\tArea Description: %s\n", substr((char *) area_toc + area_toc->area_description_offset, 0, 60));
+    if (area_toc->area_description_phonetic_offset)
+        fprintf(stdout, "\tArea Description Phonetic: %s\n", substr((char *) area_toc + area_toc->area_description_phonetic_offset, 0, 50));
 
-    fprintf(stdout, "\tTrack Count: %i\n", channel->track_count);
+    fprintf(stdout, "\tTrack Count: %i\n", area_toc->track_count);
     fprintf(stdout, "\tSpeaker config: ");
-    if (channel->channel_count == 2 && channel->loudspeaker_config == 0)
+    if (area_toc->channel_count == 2 && area_toc->loudspeaker_config == 0)
     {
         fprintf(stdout, "2 Channel\n");
     }
-    else if (channel->channel_count == 5 && channel->loudspeaker_config == 3)
+    else if (area_toc->channel_count == 5 && area_toc->loudspeaker_config == 3)
     {
         fprintf(stdout, "5 Channel\n");
     }
-    else if (channel->channel_count == 6 && channel->loudspeaker_config == 4)
+    else if (area_toc->channel_count == 6 && area_toc->loudspeaker_config == 4)
     {
         fprintf(stdout, "6 Channel\n");
     }
@@ -222,19 +222,17 @@ void scarletbook_print_channel_toc(scarletbook_handle_t *handle, int channel_nr)
         fprintf(stdout, "Unknown\n");
     }
 
-    scarletbook_print_track_text(handle, channel_nr);
+    scarletbook_print_area_text(handle, area);
 
-    for (i = 0; i < channel->track_count; i++)
+    for (i = 0; i < area_toc->track_count; i++)
     {
-        isrc_t *isrc = &channel_isrc->isrc[i];
+        isrc_t *isrc = &area_isrc_genre->isrc[i];
         fprintf(stdout, "\tISRC Track [%d]:\n\t  ", i);
         fprintf(stdout, "Country: %s, ", substr(isrc->country_code, 0, 2));
         fprintf(stdout, "Owner: %s, ", substr(isrc->owner_code, 0, 3));
         fprintf(stdout, "Year: %s, ", substr(isrc->recording_year, 0, 2));
         fprintf(stdout, "Designation: %s\n", substr(isrc->designation_code, 0, 5));
     }
-
-    //fprintf(stdout, "Track %i, %02:%02i:%02i\n", i, channel_time->track_start_time[i], channel_time->track_stop_time[i], i);
 }
 
 void scarletbook_print(scarletbook_handle_t *handle)
@@ -252,12 +250,12 @@ void scarletbook_print(scarletbook_handle_t *handle)
         scarletbook_print_master_toc(handle);
     }
 
-    fprintf(stdout, "\nChannel count: %i\n", handle->channel_count);
-    if (handle->channel_count > 0)
+    fprintf(stdout, "\nArea count: %i\n", handle->area_count);
+    if (handle->area_count > 0)
     {
-        for (i = 0; i < handle->channel_count; i++)
+        for (i = 0; i < handle->area_count; i++)
         {
-            scarletbook_print_channel_toc(handle, i);
+            scarletbook_print_area_toc(handle, i);
         }
     }
 }

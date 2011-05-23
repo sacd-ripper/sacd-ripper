@@ -28,6 +28,8 @@
 #include "config.h"
 #include "scarletbook.h"
 
+#ifndef NO_ID3
+
 #include "id3tag.h"
 
 static void update_id3_frame(struct id3_tag *tag, const char *frame_name, const char *data)
@@ -84,9 +86,11 @@ static void update_id3_frame(struct id3_tag *tag, const char *frame_name, const 
         fprintf(stderr, "error setting id3 field: %s\n", frame_name);
     }
 }
+#endif
 
-int scarletbook_id3_tag_render(scarletbook_handle_t *handle, uint8_t *buffer, int channel, int track)
+int scarletbook_id3_tag_render(scarletbook_handle_t *handle, uint8_t *buffer, int area, int track)
 {
+#ifndef NO_ID3
     const int      sacd_id3_genres[] = {
         12,  12,  40, 12, 32, 140,  2,  3,
         98,  12,  80, 38,  7,   8, 86, 77,
@@ -103,17 +107,17 @@ int scarletbook_id3_tag_render(scarletbook_handle_t *handle, uint8_t *buffer, in
 
     memset(tmp, 0, sizeof(tmp));
 
-    if (handle->channel_track_text[channel]->track_type_title)
-        update_id3_frame(id3tag, ID3_FRAME_TITLE, handle->channel_track_text[channel]->track_type_title);
-    if (handle->channel_track_text[channel]->track_type_performer)
-        update_id3_frame(id3tag, ID3_FRAME_ARTIST, handle->channel_track_text[channel]->track_type_performer);
+    if (handle->area_track_text[area]->track_type_title)
+        update_id3_frame(id3tag, ID3_FRAME_TITLE, handle->area_track_text[area]->track_type_title);
+    if (handle->area_track_text[area]->track_type_performer)
+        update_id3_frame(id3tag, ID3_FRAME_ARTIST, handle->area_track_text[area]->track_type_performer);
     if (handle->master_text[0]->album_title_position)
     {
         snprintf(tmp, 200, "%s", (char *) handle->master_text[0] + handle->master_text[0]->album_title_position);
         update_id3_frame(id3tag, ID3_FRAME_ALBUM, tmp);
     }
-    if (handle->channel_track_text[channel]->track_type_message)
-        update_id3_frame(id3tag, ID3_FRAME_COMMENT, handle->channel_track_text[channel]->track_type_message);
+    if (handle->area_track_text[area]->track_type_message)
+        update_id3_frame(id3tag, ID3_FRAME_COMMENT, handle->area_track_text[area]->track_type_message);
 
     snprintf(tmp, 200, "%04d", handle->master_toc->disc_date_year);
     update_id3_frame(id3tag, ID3_FRAME_YEAR, tmp);
@@ -121,7 +125,7 @@ int scarletbook_id3_tag_render(scarletbook_handle_t *handle, uint8_t *buffer, in
     snprintf(tmp, 200, "%d", track + 1);     // internally tracks start from 0
     update_id3_frame(id3tag, ID3_FRAME_TRACK, tmp);
 
-    snprintf(tmp, 200, "%d", sacd_id3_genres[handle->channel_isrc[channel]->track_genre[track].genre & 0x1f]);
+    snprintf(tmp, 200, "%d", sacd_id3_genres[handle->area_isrc_genre[area]->track_genre[track].genre & 0x1f]);
     update_id3_frame(id3tag, ID3_FRAME_GENRE, tmp);
 
     len = id3_tag_render(id3tag, buffer);
@@ -129,4 +133,7 @@ int scarletbook_id3_tag_render(scarletbook_handle_t *handle, uint8_t *buffer, in
     id3_tag_delete(id3tag);
 
     return len;
+#else
+	return 0;
+#endif
 }

@@ -46,9 +46,6 @@
  *  - SACDRTOC (revocation toc)
  *  - SACD_WLL (track weblink list)
  *  - SACDPLAY (set of playlists)
- *
- * TODO:
- *  - replace name "channel" with area
  */
 
 /**
@@ -163,7 +160,7 @@ track_type_t;
 /**
  * Common
  *
- * The following structures are used in both the Master and Channel TOC.
+ * The following structures are used in both the Master and area TOCs.
  */
 
 /**
@@ -204,22 +201,27 @@ typedef struct
     char           album_catalog_number[16];  // 0x00 when empty, else padded with spaces for short strings
     genre_table_t  album_genre[4];
     uint8_t        reserved03[8];
-    uint32_t       channel_1_toc_area_1_start;
-    uint32_t       channel_1_toc_area_2_start;
-    uint32_t       channel_2_toc_area_1_start;
-    uint32_t       channel_2_toc_area_2_start;
+    uint32_t       area_1_toc_1_start;
+    uint32_t       area_1_toc_2_start;
+    uint32_t       area_2_toc_1_start;
+    uint32_t       area_2_toc_2_start;
+#if defined(__BIG_ENDIAN__)
     uint8_t        disc_type_hybrid     : 1;
     uint8_t        disc_type_reserved   : 7;
-    uint8_t        reserved04[3];
-    uint16_t       channel_1_toc_area_size;
-    uint16_t       channel_2_toc_area_size;
+#else
+	uint8_t        disc_type_reserved   : 7;
+	uint8_t        disc_type_hybrid     : 1;
+#endif
+	uint8_t        reserved04[3];
+    uint16_t       area_1_toc_size;
+    uint16_t       area_2_toc_size;
     char           disc_catalog_number[16];   // 0x00 when empty, else padded with spaces for short strings
     genre_table_t  disc_genre[4];
     uint16_t       disc_date_year;
     uint8_t        disc_date_month;
     uint8_t        disc_date_day;
     uint8_t        reserved05[4];
-    uint8_t        text_channel_count;
+    uint8_t        text_area_count;
     uint8_t        reserved06[7];
     locale_table_t locales[8];
 }
@@ -263,9 +265,9 @@ typedef struct
 ATTRIBUTE_PACKED master_man_t;
 
 /**
- * Channel TOC
+ * Area TOC
  *
- * The following structures are needed for Channel TOC information.
+ * The following structures are needed for Area TOC information.
  *
  */
 typedef struct
@@ -276,18 +278,33 @@ typedef struct
     uint8_t        reserved01[4];
     uint32_t       max_byte_rate;
     uint8_t        sample_frequency;          // 0x04 = (64 * 44.1 kHz) (physically there can be no other values, or..? :)
+#if defined(__BIG_ENDIAN__)
     uint8_t        reserved02   : 4;
     uint8_t        frame_format : 4;
+#else
+	uint8_t        frame_format : 4;
+	uint8_t        reserved02   : 4;
+#endif
     uint8_t        reserved03[10];
     uint8_t        channel_count;
+#if defined(__BIG_ENDIAN__)
     uint8_t        loudspeaker_config : 5;
     uint8_t        extra_settings : 3;
-    uint8_t        max_available_channels;
+#else
+	uint8_t        extra_settings : 3;
+	uint8_t        loudspeaker_config : 5;
+#endif
+	uint8_t        max_available_channels;
     uint8_t        area_mute_flags;
     uint8_t        reserved04[12];
+#if defined(__BIG_ENDIAN__)
     uint8_t        reserved05 : 4;
     uint8_t        track_attribute : 4;
-    uint8_t        reserved06[15];
+#else
+	uint8_t        track_attribute : 4;
+	uint8_t        reserved05 : 4;
+#endif
+	uint8_t        reserved06[15];
     uint8_t        total_area_play_time[3];
     uint8_t        reserved07;
     uint8_t        track_offset;
@@ -295,7 +312,7 @@ typedef struct
     uint8_t        reserved08[2];
     uint32_t       track_start;
     uint32_t       track_end;
-    uint8_t        text_channel_count;
+    uint8_t        text_area_count;
     uint8_t        reserved09[7];
     locale_table_t languages[10];
     uint16_t       track_text_offset;
@@ -308,7 +325,7 @@ typedef struct
     uint16_t       copyright_phonetic_offset;
     uint8_t        data[1896];
 }
-ATTRIBUTE_PACKED channel_toc_t;
+ATTRIBUTE_PACKED area_toc_t;
 
 typedef struct
 {
@@ -327,14 +344,14 @@ typedef struct
     char *track_type_message_phonetic;
     char *track_type_extra_message_phonetic;
 } 
-channel_track_text_t;
+area_track_text_t;
 
 typedef struct
 {
     char     id[8];                           // SACDTTxt, Track Text
     uint16_t track_text_position[];
 }
-ATTRIBUTE_PACKED channel_text_t;
+ATTRIBUTE_PACKED area_text_t;
 
 typedef struct
 {
@@ -352,7 +369,7 @@ typedef struct
     uint32_t      reserved;
     genre_table_t track_genre[255];
 }
-ATTRIBUTE_PACKED channel_isrc_t;
+ATTRIBUTE_PACKED area_isrc_genre_t;
 
 typedef struct
 {
@@ -364,7 +381,7 @@ typedef struct
     uint8_t     reserved02[2];
     uint8_t     detailed_access_list[32768];
 }
-ATTRIBUTE_PACKED channel_index_t;
+ATTRIBUTE_PACKED area_access_list_t;
 
 typedef struct
 {
@@ -372,15 +389,20 @@ typedef struct
     uint32_t track_start_lsn[255];
     uint32_t track_length_lsn[255];
 }
-ATTRIBUTE_PACKED channel_tracklist_offset_t;
+ATTRIBUTE_PACKED area_tracklist_offset_t;
 
 typedef struct
 {
     uint8_t hour;
     uint8_t minute;
     uint8_t second;
+#if defined(__BIG_ENDIAN__)
     uint8_t extra_use : 3;
     uint8_t reserved : 5;
+#else
+	uint8_t reserved : 5;
+	uint8_t extra_use : 3;
+#endif
 }
 ATTRIBUTE_PACKED start_time_t;
 
@@ -389,12 +411,21 @@ typedef struct
     uint8_t hour;
     uint8_t minute;
     uint8_t second;
+#if defined(__BIG_ENDIAN__)
     uint8_t track_flags_ilp : 1;
     uint8_t track_flags_tmf4 : 1;
     uint8_t track_flags_tmf3 : 1;
     uint8_t track_flags_tmf2 : 1;
     uint8_t track_flags_tmf1 : 1;
     uint8_t reserved : 3;
+#else
+	uint8_t reserved : 3;
+	uint8_t track_flags_tmf1 : 1;
+	uint8_t track_flags_tmf2 : 1;
+	uint8_t track_flags_tmf3 : 1;
+	uint8_t track_flags_tmf4 : 1;
+	uint8_t track_flags_ilp : 1;
+#endif
 }
 ATTRIBUTE_PACKED time_length_t;
 
@@ -404,14 +435,21 @@ typedef struct
     start_time_t    start_time[255];
     time_length_t   length[255];
 } 
-ATTRIBUTE_PACKED channel_tracklist_time_t;
+ATTRIBUTE_PACKED area_tracklist_time_t;
 
 typedef struct
 {
+#if defined(__BIG_ENDIAN__)
     uint8_t  frame_start   : 1;
     uint8_t  reserved      : 1;
     uint8_t  data_type     : 3;
     uint16_t packet_length : 11;
+#else
+	uint16_t packet_length : 11;
+	uint8_t  data_type     : 3;
+	uint8_t  reserved      : 1;
+	uint8_t  frame_start   : 1;
+#endif
 } 
 ATTRIBUTE_PACKED audio_packet_info_t;
 
@@ -419,23 +457,38 @@ typedef struct
 {
     struct
     {
-        uint8_t minutes : 8;
-        uint8_t seconds : 8;
-        uint8_t frames  : 8;
+        uint8_t minutes;
+        uint8_t seconds;
+        uint8_t frames;
     } ATTRIBUTE_PACKED timecode;
+
+#if defined(__BIG_ENDIAN__)
     uint8_t channel_bit_1 : 1;
     uint8_t sector_count  : 5;
     uint8_t channel_bit_2 : 1;
     uint8_t channel_bit_3 : 1;  // (1 = 5 channels, 0 = Stereo)
+#else
+	uint8_t channel_bit_3 : 1;  // (1 = 5 channels, 0 = Stereo)
+	uint8_t channel_bit_2 : 1;
+	uint8_t sector_count  : 5;
+	uint8_t channel_bit_1 : 1;
+#endif
 } 
 ATTRIBUTE_PACKED audio_frame_info_t;
 
 typedef struct
 {
+#if defined(__BIG_ENDIAN__)
     uint8_t packet_info_count : 3;
     uint8_t frame_info_count  : 3;
     uint8_t reserved          : 1;
     uint8_t dst_encoded       : 1;
+#else
+	uint8_t dst_encoded       : 1;
+	uint8_t reserved          : 1;
+	uint8_t frame_info_count  : 3;
+	uint8_t packet_info_count : 3;
+#endif
 }
 ATTRIBUTE_PACKED audio_sector_header_t;
 
@@ -447,6 +500,18 @@ typedef struct
 } 
 audio_sector_t;
 
+typedef struct  
+{
+	uint8_t                    * area_data;
+	area_toc_t				   * area_toc;
+	area_tracklist_offset_t    * area_tracklist_offset;
+	area_tracklist_time_t      * area_tracklist_time;
+	area_text_t                * area_text;
+	area_track_text_t            area_track_text[255];                      // max of 255 supported tracks
+	area_isrc_genre_t          * area_isrc_genre;
+}
+area_t;
+
 typedef struct
 {
     void                       * sacd;                                  //sacd_reader_t
@@ -456,53 +521,53 @@ typedef struct
     master_text_t              * master_text[8];
     master_man_t               * master_man;
 
-    int                        twoch_idx;
-    int                        mulch_idx;
+    int                        twoch_area_idx;
+    int                        mulch_area_idx;
+	int                        area_count;
 
-    uint8_t                    * channel_data[2];
-    int                        channel_count;
-    channel_toc_t              * channel_toc[2];
-    channel_tracklist_offset_t * channel_tracklist_offset[2];
-    channel_tracklist_time_t   * channel_tracklist_time[2];
-    channel_text_t             * channel_text[2];
-    channel_track_text_t       channel_track_text[2][255];                      // max of 255 supported tracks
-
-    channel_isrc_t             * channel_isrc[2];
+	uint8_t                    * area_data[2];
+    area_toc_t              * area_toc[2];
+    area_tracklist_offset_t * area_tracklist_offset[2];
+    area_tracklist_time_t   * area_tracklist_time[2];
+    area_text_t             * area_text[2];
+    area_track_text_t       area_track_text[2][255];                      // max of 255 supported tracks
+    area_isrc_genre_t             * area_isrc_genre[2];
 } 
 scarletbook_handle_t;
 
 /**
  * helper functions..
  */
-
+#if defined(__lv2ppu__)
 static inline int has_two_channel(scarletbook_handle_t *handle)
 {
-    return handle->twoch_idx != -1;
+    return handle->twoch_area_idx != -1;
 }
 
 static inline int has_multi_channel(scarletbook_handle_t *handle)
 {
-    return handle->mulch_idx != -1;
+    return handle->mulch_area_idx != -1;
 }
 
 static inline int has_both_channels(scarletbook_handle_t *handle)
 {
-    return handle->twoch_idx != -1 && handle->mulch_idx != -1;
+    return handle->twoch_area_idx != -1 && handle->mulch_area_idx != -1;
 }
 
-static inline channel_toc_t* get_two_channel(scarletbook_handle_t *handle)
+static inline area_toc_t* get_two_channel(scarletbook_handle_t *handle)
 {
-    return(handle->twoch_idx == -1 ? 0 : handle->channel_toc[handle->twoch_idx]);
+    return(handle->twoch_area_idx == -1 ? 0 : handle->area_toc[handle->twoch_area_idx]);
 }
 
-static inline channel_toc_t* get_multi_channel(scarletbook_handle_t *handle)
+static inline area_toc_t* get_multi_channel(scarletbook_handle_t *handle)
 {
-    return(handle->mulch_idx == -1 ? 0 : handle->channel_toc[handle->mulch_idx]);
+    return(handle->mulch_area_idx == -1 ? 0 : handle->area_toc[handle->mulch_area_idx]);
 }
+#endif
 
-char *get_speaker_config_string(channel_toc_t *channel);
+char *get_speaker_config_string(area_toc_t *);
 
-char *get_frame_format_string(channel_toc_t *channel);
+char *get_frame_format_string(area_toc_t *);
 
 
 #if PRAGMA_PACK
