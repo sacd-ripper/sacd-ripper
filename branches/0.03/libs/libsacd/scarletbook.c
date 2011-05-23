@@ -82,17 +82,17 @@ char *get_speaker_config_string(channel_toc_t *channel)
     }
 }
 
-char *get_encoding_string(channel_toc_t *channel) 
+char *get_frame_format_string(channel_toc_t *channel) 
 {
-    if (channel->encoding == ENCODING_DSD_3_IN_14)
+    if (channel->frame_format == FRAME_FORMAT_DSD_3_IN_14)
     {
         return "DSD 3 in 14";
     }
-    else if (channel->encoding == ENCODING_DSD_3_IN_16)
+    else if (channel->frame_format == FRAME_FORMAT_DSD_3_IN_16)
     {
         return "DSD 3 in 16";
     }
-    else if (channel->encoding == ENCODING_DST)
+    else if (channel->frame_format == FRAME_FORMAT_DST)
     {
         return "Lossless DST";
     }

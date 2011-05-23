@@ -245,15 +245,15 @@ dsdiff_handle_t *dsdiff_create(scarletbook_handle_t *sb_handle, char *filename, 
     property_chunk->chunk_data_size = CALC_CHUNK_SIZE(write_ptr - prop_ptr - CHUNK_HEADER_SIZE);
 
     track_size = sb_handle->channel_tracklist_offset[channel]->track_length_lsn[track] - 1;
-    switch (sb_handle->channel_toc[0]->encoding)
+    switch (sb_handle->channel_toc[0]->frame_format)
     {
-    case ENCODING_DSD_3_IN_14:
+    case FRAME_FORMAT_DSD_3_IN_14:
         track_size *= (SACD_LSN_SIZE - 32);
         break;
-    case ENCODING_DSD_3_IN_16:
+    case FRAME_FORMAT_DSD_3_IN_16:
         track_size *= (SACD_LSN_SIZE - 284);
         break;
-    case ENCODING_DST:
+    case FRAME_FORMAT_DST:
         break;
     }
 

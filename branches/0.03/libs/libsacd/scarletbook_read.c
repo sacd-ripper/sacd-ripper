@@ -178,16 +178,16 @@ static int scarletbook_read_master_toc(scarletbook_handle_t *handle)
         return 0;
     }
 
-    CHECK_ZERO(master_toc->zero_01);
-    CHECK_ZERO(master_toc->zero_02);
-    CHECK_ZERO(master_toc->zero_03);
-    CHECK_ZERO(master_toc->zero_04);
-    CHECK_ZERO(master_toc->zero_05);
-    CHECK_ZERO(master_toc->zero_06);
+    CHECK_ZERO(master_toc->reserved01);
+    CHECK_ZERO(master_toc->reserved02);
+    CHECK_ZERO(master_toc->reserved03);
+    CHECK_ZERO(master_toc->reserved04);
+    CHECK_ZERO(master_toc->reserved05);
+    CHECK_ZERO(master_toc->reserved06);
     for (i = 0; i < 4; i++)
     {
-        CHECK_ZERO(master_toc->album_genre[i].zero_01);
-        CHECK_ZERO(master_toc->disc_genre[i].zero_01);
+        CHECK_ZERO(master_toc->album_genre[i].reserved);
+        CHECK_ZERO(master_toc->disc_genre[i].reserved);
         CHECK_VALUE(master_toc->album_genre[i].category <= MAX_CATEGORY_COUNT);
         CHECK_VALUE(master_toc->disc_genre[i].category <= MAX_CATEGORY_COUNT);
         CHECK_VALUE(master_toc->album_genre[i].genre <= MAX_GENRE_COUNT);
@@ -210,7 +210,7 @@ static int scarletbook_read_master_toc(scarletbook_handle_t *handle)
             return 0;
         }
 
-        CHECK_ZERO(master_text->zero_01);
+        CHECK_ZERO(master_text->reserved);
 
         SWAP16(master_text->album_title_position);
         SWAP16(master_text->album_title_phonetic_position);
@@ -267,17 +267,18 @@ static int scarletbook_read_channel_toc(scarletbook_handle_t *handle, int channe
     SWAP16(channel_toc->area_description_phonetic_offset);
     SWAP16(channel_toc->copyright_phonetic_offset);
     SWAP32(channel_toc->max_byte_rate);
+    SWAP16(channel_toc->track_text_offset);
+    SWAP16(channel_toc->index_list_offset);
+    SWAP16(channel_toc->access_list_offset);
 
-    SWAP32(channel_toc->unknown_02);
-    SWAP32(channel_toc->unknown_03);
-    SWAP16(channel_toc->unknown_04);
-
-    CHECK_ZERO(channel_toc->zero_01);
-    CHECK_ZERO(channel_toc->zero_02);
-    CHECK_ZERO(channel_toc->zero_03);
-    CHECK_ZERO(channel_toc->zero_04);
-    CHECK_ZERO(channel_toc->zero_05);
-    CHECK_ZERO(channel_toc->zero_06);
+    CHECK_ZERO(channel_toc->reserved01);
+    CHECK_ZERO(channel_toc->reserved03);
+    CHECK_ZERO(channel_toc->reserved04);
+    CHECK_ZERO(channel_toc->reserved06);
+    CHECK_ZERO(channel_toc->reserved07);
+    CHECK_ZERO(channel_toc->reserved08);
+    CHECK_ZERO(channel_toc->reserved09);
+    CHECK_ZERO(channel_toc->reserved10);
 
     if (channel_toc->version > SUPPORT_SCARLETBOOK_VERSION)
     {
@@ -396,20 +397,15 @@ static int scarletbook_read_channel_toc(scarletbook_handle_t *handle, int channe
             tracklist = handle->channel_tracklist_offset[channel_nr] = (channel_tracklist_offset_t *) p;
             for (i = 0; i < channel_toc->track_count; i++)
             {
-                SWAP32(tracklist->track_pos_lsn[i]);
+                SWAP32(tracklist->track_start_lsn[i]);
                 SWAP32(tracklist->track_length_lsn[i]);
             }
             p += SACD_LSN_SIZE;
         }
         else if (strncmp((char *) p, "SACDTRL2", 8) == 0)
         {
-            channel_tracklist_abs_t *tracklist;
-            tracklist = handle->channel_tracklist_time[channel_nr] = (channel_tracklist_abs_t *) p;
-            for (i = 0; i < channel_toc->track_count; i++)
-            {
-                SWAP32(tracklist->track_pos_abs[i]);
-                SWAP32(tracklist->track_length_abs[i]);
-            }
+            channel_tracklist_time_t *tracklist;
+            tracklist = handle->channel_tracklist_time[channel_nr] = (channel_tracklist_time_t *) p;
             p += SACD_LSN_SIZE;
         }
         else

@@ -29,6 +29,7 @@
 #include <sys/file.h>
 #include <sys/mutex.h>
 #include <sys/cond.h>
+#include <sys/stat.h>
 #include <ppu-asm.h>
 
 #include <sys/storage.h>
@@ -95,14 +96,16 @@ typedef struct
 
 typedef struct sacd_accessor_t
 {
-    sys_ppu_thread_t        thread_id;
-    sys_event_queue_t       queue;
-    sys_io_buffer_t         io_buffer;
+    sys_ppu_thread_t    thread_id;
+    sys_event_queue_t   queue;
+    sys_io_buffer_t     io_buffer;
 
-    sys_cond_t              processing_cond;
-    sys_mutex_t             processing_mutex;
+    sys_cond_t          processing_cond;
+    sys_mutex_t         processing_mutex;
 
-    sacd_aio_packet_t       aio_packet[AIO_MAXIO];
+    sacd_aio_packet_t   aio_packet[AIO_MAXIO];
+    
+    int                 fd_out[AIO_MAXIO];
 } sacd_accessor_t;
 
 enum
@@ -113,7 +116,7 @@ enum
     , CONVERT_DSD_3_IN_16 = 1 << 3
 } conversion_t;
 
-static void sacd_accessor_event_receive(void *arg)
+static void sacd_accessor_handle_read(void *arg)
 {
     sacd_accessor_t     *accessor = (sacd_accessor_t *) arg;
     sacd_aio_packet_t   *packet = 0;
@@ -121,13 +124,9 @@ static void sacd_accessor_event_receive(void *arg)
     int                 ret, block_number;
     uint64_t            nrw;
 
-    LOG(lm_main, LOG_DEBUG, ("sacd_accessor_event_receive %p", arg));
-
     while (1)
     {
         ret = sysEventQueueReceive(accessor->queue, &event, SYS_NO_TIMEOUT);
-        LOG(lm_main, LOG_DEBUG, ("received event..\n"));
-
         if (ret != 0)
         {
             if (ret == ECANCELED || ret == ESRCH)
@@ -138,20 +137,19 @@ static void sacd_accessor_event_receive(void *arg)
             else
             {
                 // An unexpected error
-                LOG(lm_main, LOG_ERROR, ("sacd_accessor_event_receive: sys_event_queue_receive failed (%#x)\n", ret));
+                LOG(lm_main, LOG_ERROR, ("sacd_accessor_handle_read: sys_event_queue_receive failed (%#x)\n", ret));
                 sysThreadExit(-1);
-                return;
             }
         }
 
+        // our packet is the first event argument
         packet = (sacd_aio_packet_t *) event.data_1;
         if (!packet)
         {
             sysThreadExit(-1);
         }
 
-        LOG(lm_main, LOG_DEBUG, ("sacd_accessor_event_receive: offset = %d, blocks = %d", packet->read_position, packet->read_size));
-
+        LOG(lm_main, LOG_DEBUG, ("sacd_accessor_handle_read: offset = %d, blocks = %d", packet->read_position, packet->read_size));
     	if (packet->encrypted)
     	{
             // decrypt the data
@@ -171,30 +169,36 @@ static void sacd_accessor_event_receive(void *arg)
         	}
         }
 
+        // copy read into write buffer
         memcpy(packet->write_buffer, (uint8_t *) (uint64_t) packet->read_buffer, packet->read_size * SACD_LSN_SIZE);
 
-        sysFsWrite(packet->write_fd, (uint8_t *) packet->write_buffer, packet->read_size * SACD_LSN_SIZE, &nrw);
+        ret = sysFsWrite(packet->write_fd, (uint8_t *) packet->write_buffer, packet->read_size * SACD_LSN_SIZE, &nrw);
+        if (ret != 0)
+        {
+            // TODO, report writing errors to processing thread
+        }
 
+        // amount of read requests can now be decreased
         atomic_dec(&outstanding_read_requests);
 
+        // maintain total block statistics
         atomic_add(packet->read_size, &total_blocks_processed);
 
         // we are done with processing this packet
         atomic_set(&packet->processing, 0);
         
+        // processing thread is still waiting, signal it can continue
         ret = sysMutexLock(accessor->processing_mutex, 0);
         if (ret != 0)
         {
             sysThreadExit(-1);
         }
-        
         ret = sysCondSignal(accessor->processing_cond);
         if (ret != 0)
         {
             sysMutexUnlock(accessor->processing_mutex);
             sysThreadExit(-1);
         }
-        
         ret = sysMutexUnlock(accessor->processing_mutex);
         if (ret != 0)
         {
@@ -202,7 +206,6 @@ static void sacd_accessor_event_receive(void *arg)
         }
     }
 
-    LOG(lm_main, LOG_DEBUG, ("sacd_accessor_event_receive: Exit\n"));
     sysThreadExit(0);
 }
 
@@ -298,27 +301,27 @@ int sacd_accessor_open(sacd_accessor_t *accessor, sacd_reader_t *reader)
 
     if (sysMutexCreate(&accessor->processing_mutex, &mutex_attr) != 0)
     {
-        LOG(lm_main, LOG_ERROR, "create processing_mutex failed."));
+        LOG(lm_main, LOG_ERROR, ("create processing_mutex failed."));
         return -1;
     }
 
     if (sysCondCreate(&accessor->processing_cond, accessor->processing_mutex, &cond_attr) != 0)
     {
-        LOG(lm_main, LOG_ERROR ("create processing_cond failed."));
+        LOG(lm_main, LOG_ERROR, ("create processing_cond failed."));
         return -1;
     }
 
     // Initialze input thread
     ret = sysThreadCreate(&accessor->thread_id,
-                          sacd_accessor_event_receive,
+                          sacd_accessor_handle_read,
                           (void *) accessor,
                           1050,
                           8192,
                           THREAD_JOINABLE,
-                          "accessor_sacd_accessor_event_receive");
+                          "accessor_sacd_accessor_handle_read");
     if (ret != 0)
     {
-        LOG(lm_main, LOG_ERROR, ("sys_ppu_thread_create\n"));
+        LOG(lm_main, LOG_ERROR, ("sys_ppu_thread_create"));
         return ret;
     }
     return 0;
@@ -409,12 +412,12 @@ static void processing_thread(void *arg)
     int ret, i, fd;
 	sacd_reader_t *sacd_reader = 0;
 	scarletbook_handle_t *sb_handle = 0;
-    sacd_accessor_t sacd_accessor;
+    sacd_accessor_t *accessor = 0;
     uint32_t current_position = 0;
     uint32_t decrypt_start[2];
     uint32_t decrypt_end[2];
     int block_size;
-    char path[255];
+    char file_path[255];
 
 	sacd_reader = sacd_open("/dev_bdvd");
 	if (!sacd_reader)
@@ -430,13 +433,16 @@ static void processing_thread(void *arg)
         goto close_thread;
 	}
 
-    ret = sacd_accessor_open(&sacd_accessor, sacd_reader);
+    accessor = (sacd_accessor_t *) malloc(sizeof(sacd_accessor_t));
+    memset(accessor, 0, sizeof(sacd_accessor_t));
+
+    ret = sacd_accessor_open(accessor, sacd_reader);
     if (ret != 0)
     {
         LOG(lm_main, LOG_ERROR, ("could not open accessor (%#x)\n", ret));
         goto close_thread;
     }
-    sacd_accessor.aio_packet->accessor = &sacd_accessor;
+    accessor->aio_packet->accessor = accessor;
     
     for (i = 0; i < sb_handle->channel_count; i++)
     {
@@ -449,22 +455,33 @@ static void processing_thread(void *arg)
     // set total amount of blocks to process
     atomic_set(&total_blocks, (uint32_t) device_info.total_sectors);
 
-    snprintf(path, 255, "%s/dump.iso", output_device);
-    ret = sysFsAioInit(output_device);
-    ret = sysFsOpen(path, SYS_O_RDWR|SYS_O_CREAT|SYS_O_TRUNC, &fd, NULL, 0);
-   
+    snprintf(file_path, 255, "%s/dump.iso", output_device);
+    ret = sysFsOpen(file_path, SYS_O_WRONLY|SYS_O_CREAT|SYS_O_TRUNC, &fd, NULL, 0);
+	sysFsChmod(file_path, S_IFMT | 0777); 
+				   
     while (atomic_read(&stop_processing) == 0)
     {
+
+    // determine how many files to write
+    // generate first file
+    // update status bar
+
+    // loop:
+        // has the current file been written? (no outstanding read requests)
+            // generate new file
+        
+        
+        
         // are we still within the boundaries of the disc?
         if (current_position < device_info.total_sectors)
         {
             for (i = 0; i < AIO_MAXIO; i++)
             {
-                if (atomic_cmpxchg(&sacd_accessor.aio_packet[i].processing, 0, 1) == 0)
+                if (atomic_cmpxchg(&accessor->aio_packet[i].processing, 0, 1) == 0)
                 {
-                    sacd_accessor.aio_packet[i].encrypted = 0;
+                    accessor->aio_packet[i].encrypted = 0;
     
-                    // check what parts need to be decrypted..
+                    // check what parts are encrypted..
             		if (is_between_inclusive(current_position + MAX_BLOCK_SIZE, decrypt_start[0], decrypt_end[0])
              		 || is_between_exclusive(current_position, decrypt_start[0], decrypt_end[0])
             			)
@@ -476,7 +493,7 @@ static void processing_thread(void *arg)
             			else
             			{
             				block_size = min(decrypt_end[0] - current_position + 1, MAX_BLOCK_SIZE);
-                            sacd_accessor.aio_packet[i].encrypted = 1;
+                            accessor->aio_packet[i].encrypted = 1;
             			}
             		}
             		else if (is_between_inclusive(current_position + MAX_BLOCK_SIZE, decrypt_start[1], decrypt_end[1])
@@ -490,7 +507,7 @@ static void processing_thread(void *arg)
             			else
             			{
             				block_size = min(decrypt_end[1] - current_position + 1, MAX_BLOCK_SIZE);
-                            sacd_accessor.aio_packet[i].encrypted = 1;
+                            accessor->aio_packet[i].encrypted = 1;
             			}
             		}
             		else 
@@ -498,16 +515,18 @@ static void processing_thread(void *arg)
             			 block_size = min(device_info.total_sectors - current_position, MAX_BLOCK_SIZE);
             		}
                  
-                    sacd_accessor.aio_packet[i].read_position = current_position;
-                    sacd_accessor.aio_packet[i].read_size = block_size;
-                    sacd_accessor.aio_packet[i].write_fd = fd;
+                    accessor->aio_packet[i].read_position = current_position;
+                    accessor->aio_packet[i].read_size = block_size;
+                    accessor->aio_packet[i].write_fd = fd;
     
-                    LOG(lm_main, LOG_NOTICE, ("triggering async_read %x pos: %d, size: %d", (uint32_t) (uint64_t) &sacd_accessor.aio_packet[i], current_position, block_size));
+                    LOG(lm_main, LOG_NOTICE, ("triggering async_read pos: %d, size: %d", current_position, block_size));
 
                     ret = sacd_async_read_block_raw(sacd_reader, current_position, block_size,
-                                              sacd_accessor.aio_packet[i].read_buffer, (uint64_t) &sacd_accessor.aio_packet[i]);
+                                              accessor->aio_packet[i].read_buffer, (uint64_t) &accessor->aio_packet[i]);
                     if (ret != 0)
                     {
+                        // TODO: handle this error
+                        LOG(lm_main, LOG_ERROR, ("could trigger async block read"));
                         break;
                     }
                     else
@@ -525,23 +544,23 @@ static void processing_thread(void *arg)
             break;
         }
 
-        ret = sysMutexLock(sacd_accessor.processing_mutex, 0);
+        ret = sysMutexLock(accessor->processing_mutex, 0);
         if (ret != 0)
         {
             LOG(lm_main, LOG_NOTICE, ("error sysMutexLock"));
             goto close_thread;
         }
 
-        LOG(lm_main, LOG_NOTICE, ("waiting for async read result (10 sec)"));
-        ret = sysCondWait(sacd_accessor.processing_cond, 6000000);
+        LOG(lm_main, LOG_NOTICE, ("waiting for async read result (6 sec)"));
+        ret = sysCondWait(accessor->processing_cond, 6000000);
         if (ret != 0)
         {
             LOG(lm_main, LOG_NOTICE, ("error sysCondWait"));
-            sysMutexUnlock(sacd_accessor.processing_mutex);
+            sysMutexUnlock(accessor->processing_mutex);
             goto close_thread;
         }
 
-        ret = sysMutexUnlock(sacd_accessor.processing_mutex);
+        ret = sysMutexUnlock(accessor->processing_mutex);
         if (ret != 0)
         {
             LOG(lm_main, LOG_NOTICE, ("error sysMutexUnlock"));
@@ -551,12 +570,12 @@ static void processing_thread(void *arg)
 
 close_thread:
 
-    ret = sysFsAioFinish(output_device);
     sysFsClose(fd);
 
     scarletbook_close(sb_handle);
     sacd_close(sacd_reader);
-    sacd_accessor_close(&sacd_accessor); // closing accessor comes after closing device
+    sacd_accessor_close(accessor); // closing accessor comes after closing device
+    free(accessor);
 
     atomic_set(&stop_processing, 1);
 
