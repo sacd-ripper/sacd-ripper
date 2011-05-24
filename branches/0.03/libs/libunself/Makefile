@@ -46,6 +46,7 @@ VPATH :=	$(BASEDIR)
 OBJS		:= \
 			aes.o \
             self.o \
+            unself.o \
             tools.o 
 all: ppu
 

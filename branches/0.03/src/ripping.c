@@ -158,7 +158,7 @@ static void sacd_accessor_handle_read(void *arg)
             {
                 int block_size = min(packet->read_size - block_number, 3);     // SacModule has an internal max of 3*2048 to process
                 ret = sac_exec_decrypt_data((uint8_t *) (uint64_t) packet->read_buffer + block_number * SACD_LSN_SIZE, 
-                                            block_size * SACD_LSN_SIZE, (uint8_t *) (uint64_t) packet->read_buffer + (block_number * SACD_LSN_SIZE));
+                                            block_size * SACD_LSN_SIZE, packet->write_buffer + (block_number * SACD_LSN_SIZE));
                 if (ret != 0)
                 {
                     LOG(lm_main, LOG_ERROR, ("sac_exec_decrypt_data: (%#x)\n", ret));
@@ -168,9 +168,11 @@ static void sacd_accessor_handle_read(void *arg)
                 block_number += block_size;
             }
         }
-
-        // copy read into write buffer
-        memcpy(packet->write_buffer, (uint8_t *) (uint64_t) packet->read_buffer, packet->read_size * SACD_LSN_SIZE);
+        else
+        {
+            // copy read into write buffer
+            memcpy(packet->write_buffer, (uint8_t *) (uint64_t) packet->read_buffer, packet->read_size * SACD_LSN_SIZE);
+        }
 
         ret = sysFsWrite(packet->write_fd, (uint8_t *) packet->write_buffer, packet->read_size * SACD_LSN_SIZE, &nrw);
         if (ret != 0)
