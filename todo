@@ -1,7 +1,6 @@
 todo:
 
   core:
-    - fix sac_module.elf
     - finish ripping pipeline
         - create item queue
         - write synchronous & asynchronous processing loops
