@@ -69,7 +69,7 @@
 
 enum
 {
-    FRAME_FORMAT_DST           = 0
+      FRAME_FORMAT_DST         = 0
     , FRAME_FORMAT_DSD_3_IN_14 = 2
     , FRAME_FORMAT_DSD_3_IN_16 = 3
 } 
@@ -77,7 +77,7 @@ frame_format_t;
 
 enum
 {
-    CHAR_SET_UNKNOWN         = 0
+      CHAR_SET_UNKNOWN       = 0
     , CHAR_SET_ISO646        = 1
     , CHAR_SET_ISO8859_1     = 2
     , CHAR_SET_RIS506        = 3
@@ -92,7 +92,7 @@ extern const char *album_genre[];
 
 enum
 {
-    GENRE_NOT_USED                 = 0       // 12
+      GENRE_NOT_USED               = 0       // 12
     , GENRE_NOT_DEFINED            = 1       // 12
     , GENRE_ADULT_CONTEMPORARY     = 2       // 12
     , GENRE_ALTERNATIVE_ROCK       = 3       // 40
@@ -127,7 +127,7 @@ genre_t;
 
 enum
 {
-    CATEGORY_NOT_USED   = 0
+      CATEGORY_NOT_USED = 0
     , CATEGORY_GENERAL  = 1
     , CATEGORY_JAPANESE = 2
 }                 
@@ -137,7 +137,7 @@ extern const char *album_category[];
 
 enum
 {
-    TRACK_TYPE_TITLE                    = 0x01
+      TRACK_TYPE_TITLE                  = 0x01
     , TRACK_TYPE_PERFORMER              = 0x02
     , TRACK_TYPE_SONGWRITER             = 0x03
     , TRACK_TYPE_COMPOSER               = 0x04
@@ -452,21 +452,25 @@ typedef struct
 } 
 ATTRIBUTE_PACKED area_tracklist_time_t;
 
+enum
+{
+      DATA_TYPE_AUDIO           = 2
+    , DATA_TYPE_SUPPLEMENTARY   = 3
+    , DATA_TYPE_PADDING         = 7
+} 
+audio_packet_data_type_t;
+
+// It's no use to make a little & big endian struct. On little 
+// endian systems this needs to be filled manually anyway.
 typedef struct
 {
-#if defined(__BIG_ENDIAN__)
     uint8_t  frame_start   : 1;
     uint8_t  reserved      : 1;
     uint8_t  data_type     : 3;
     uint16_t packet_length : 11;
-#else
-    uint16_t packet_length : 11;
-    uint8_t  data_type     : 3;
-    uint8_t  reserved      : 1;
-    uint8_t  frame_start   : 1;
-#endif
 } 
 ATTRIBUTE_PACKED audio_packet_info_t;
+#define AUDIO_PACKET_INFO_SIZE    2U
 
 typedef struct
 {
@@ -490,6 +494,7 @@ typedef struct
 #endif
 } 
 ATTRIBUTE_PACKED audio_frame_info_t;
+#define AUDIO_FRAME_INFO_SIZE    4U
 
 typedef struct
 {
@@ -506,14 +511,15 @@ typedef struct
 #endif
 }
 ATTRIBUTE_PACKED audio_sector_header_t;
+#define AUDIO_SECTOR_HEADER_SIZE    1U
 
 typedef struct
 {
     audio_sector_header_t header;
-    audio_packet_info_t   packet[8];
-    audio_frame_info_t    frame[8];
+    audio_packet_info_t   packet[7];
+    audio_frame_info_t    frame[7];
 } 
-audio_sector_t;
+ATTRIBUTE_PACKED audio_sector_t;
 
 typedef struct  
 {
@@ -574,7 +580,6 @@ static inline area_toc_t* get_multi_channel(scarletbook_handle_t *handle)
 char *get_speaker_config_string(area_toc_t *);
 
 char *get_frame_format_string(area_toc_t *);
-
 
 #if PRAGMA_PACK
 #pragma pack()

@@ -51,4 +51,14 @@ void decompress(uint8_t *in, uint64_t in_len, uint8_t *out, uint64_t out_len);
 
 struct keylist_t *keys_get(enum sce_key type);
 
+int elf_read_hdr(uint8_t *hdr, struct elf_hdr *h);
+void elf_read_phdr(int arch64, uint8_t *phdr, struct elf_phdr *p);
+void elf_read_shdr(int arch64, uint8_t *shdr, struct elf_shdr *s);
+void elf_write_shdr(int arch64, uint8_t *shdr, struct elf_shdr *s);
+
+int sce_decrypt_header(uint8_t *ptr, struct keylist_t *klist);
+int sce_decrypt_data(uint8_t *ptr);
+
+void *read_file(const char *path); 
+
 #endif

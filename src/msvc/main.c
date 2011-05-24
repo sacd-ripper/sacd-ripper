@@ -35,6 +35,8 @@
 #include "scarletbook_print.h"
 #include "scarletbook_id3.h"
 #include "dsdiff_writer.h"
+#include "endianess.h"
+#include "utils.h"
 
 log_module_info_t * lm_main = 0;  
 
@@ -186,7 +188,6 @@ int main(int argc, char* argv[]) {
 
         sacd_reader = sacd_open(opts.input_device);
         if (sacd_reader) {
-            uint8_t buffer[2048];
 
             handle = scarletbook_open(sacd_reader, 0);
             if (opts.print_only) {
@@ -196,6 +197,8 @@ int main(int argc, char* argv[]) {
             if (opts.output_dsdiff) {
                 uint32_t block_count;
                 uint8_t buffer[2048];
+                uint8_t *buffer_ptr;
+                audio_sector_t audio_sector;
                 dsdiff_handle_t *dsdiff_handle;
                 int area_idx = 0; //(opts.multi_channel ? );
 
@@ -205,22 +208,36 @@ int main(int argc, char* argv[]) {
                         break;
                     }
 
-                    /*sacd_seek_block(sacd_reader, handle->area[area].area_tracklist_offset->track_pos_lsn[i]);
-                    block_count = handle->area[area].area_tracklist_offset->track_length_lsn[i];
-                    while (--block_count) {
-                        sacd_read_block(sacd_reader, 1, buffer);
-                        switch (handle->area[area].area_toc->frame_format) {
-                            case FRAME_FORMAT_DSD_3_IN_14:
-                                write(dsdiff_handle->fd, buffer + 32, SACD_LSN_SIZE - 32);
-                                break;
-                            case FRAME_FORMAT_DSD_3_IN_16:
-                                write(dsdiff_handle->fd, buffer + 284, SACD_LSN_SIZE - 284);
-                                break;
-                            case FRAME_FORMAT_DST:
-                                break;
+                    block_count = handle->area[area_idx].area_tracklist_offset->track_length_lsn[i];
+                    while(--block_count) 
+                    {
+                        buffer_ptr = buffer;
+                        sacd_read_block_raw(sacd_reader, handle->area[area_idx].area_tracklist_offset->track_start_lsn[i], 1, buffer);
+                        memset(&audio_sector, 0, sizeof(audio_sector_t));
+                        memcpy(&audio_sector.header, buffer, AUDIO_SECTOR_HEADER_SIZE);
+                        buffer_ptr += AUDIO_SECTOR_HEADER_SIZE;
+#if defined(__BIG_ENDIAN__)
+                        memcpy(&audio_sector.packet, buffer_ptr, AUDIO_PACKET_INFO_SIZE * audio_sector.header.packet_info_count);
+                        buffer_ptr += AUDIO_PACKET_INFO_SIZE * audio_sector.header.packet_info_count;
+#else
+                        // Little Endian systems cannot properly deal with audio_packet_info_t
+                        {
+                            int j;
+                            for (j = 0; j < audio_sector.header.packet_info_count; j++)
+                            {
+                                audio_sector.packet[j].frame_start = (buffer_ptr[0] >> 7) & 1;
+                                audio_sector.packet[j].data_type = (buffer_ptr[0] >> 3) & 7;
+                                audio_sector.packet[j].packet_length = (buffer_ptr[0] & 7) << 8 | buffer_ptr[1];
+                                buffer_ptr += AUDIO_PACKET_INFO_SIZE;
+                            }
                         }
-                    }*/
+#endif
+                        memcpy(&audio_sector.frame, buffer_ptr, AUDIO_FRAME_INFO_SIZE * audio_sector.header.frame_info_count);
+                        buffer_ptr += AUDIO_FRAME_INFO_SIZE * audio_sector.header.frame_info_count;
 
+
+                    }
+                    
                     dsdiff_close(dsdiff_handle);
                 }
 

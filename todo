@@ -1,10 +1,16 @@
 todo:
 
   core:
+    - fix sac_module.elf
     - finish ripping pipeline
-        - add proper file writing & file naming
-        - add splitted iso image support
+        - create item queue
+        - write synchronous & asynchronous processing loops
+        - write iso writer
+            - add splitted iso image support
+        - add plugin like structures to dsdiff, and iso
         - add dsdiff encoding
+        - merge ripping logic into libsacd
+        - add proper file writing & file naming
     
     - write log along each consecutive rip
 
@@ -14,7 +20,3 @@ todo:
 
 - add dst decoding
 - add sony dsf export support
-
-refactoring:
-
-    - merge ripping logic into libsacd

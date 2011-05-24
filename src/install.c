@@ -23,6 +23,7 @@
 #include <sysutil/sysutil.h>
 
 #include <self.h>
+#include <unself.h>
 
 #include "rsxutil.h"
 #include "exit_handler.h"
@@ -34,6 +35,7 @@ static const char FILE_DECODER[]            = "/dev_hdd0/game/SACDRIP01/USRDIR/d
 
 static int install_sac_module(void)
 {
+#if 0
     FILE                      *in  = NULL;
     FILE                      *out = NULL;
     self_ehdr_t               self;
@@ -96,15 +98,6 @@ static int install_sac_module(void)
         }
     }
     fclose(out);
-
-    isoself_size = find_isoself(sections, num_sections, "decoder.spu", &isoself_data);
-    if (isoself_size)
-    {
-        out = fopen("decoder.spu.elf", "wb");
-        fwrite(isoself_data, isoself_size, 1, out);
-        fclose(out);
-    }
-
     fclose(in);
     self_free_sections(&sections, num_sections);
 
@@ -116,6 +109,9 @@ static int install_sac_module(void)
     self_free_sections(&sections, num_sections);
 
     return -1;
+#else
+    return unself(FILE_SAC_MODULE_SOURCE, FILE_SAC_MODULE);
+#endif
 }
 
 static int install_decoder_module(void)

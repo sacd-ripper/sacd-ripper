@@ -26,8 +26,6 @@
 extern "C" {
 #endif
 
-char *substr(const char *, int, int);
-
 #define max(a, b)    (((a) > (b)) ? (a) : (b))
 #define min(a, b)    (((a) < (b)) ? (a) : (b))
 
@@ -36,6 +34,8 @@ char *substr(const char *, int, int);
 
 #define is_between_inclusive(num,lowerbound,upperbound) \
     ( ((num) >= (lowerbound)) && ((num) <= (upperbound)) )
+
+char *substr(const char *, int, int);
 
 #ifdef __cplusplus
 };
