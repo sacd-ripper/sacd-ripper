@@ -45,9 +45,7 @@
 #endif
 
 #include <utils.h>
-#include <log.h>
-
-extern log_module_info_t * lm_main;
+#include <logging.h>
 
 #include "scarletbook.h"
 #include "sacd_input.h"

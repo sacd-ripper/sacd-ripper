@@ -51,9 +51,7 @@
 #include "output_device.h"
 #include "ripping.h"
 
-#include <log.h>
-
-log_module_info_t * lm_main = 0; 
+#include <logging.h>
 
 static int dialog_action = 0;
 static int bd_contains_sacd_disc = -1;      // information about the current disc
@@ -433,10 +431,7 @@ int main(int argc, char *argv[])
 
     load_modules();
 
-    setenv("LOG_MODULES", "all:5", 0);
-
-    lm_main = create_log_module("main");
-    log_init();
+    init_logging();
 
     init_screen(host_addr, HOST_SIZE);
     ioPadInit(7);
@@ -507,7 +502,7 @@ int main(int argc, char *argv[])
 
  quit:
 
-    log_destroy();
+    destroy_logging();
     unload_modules();
 
     return 0;

@@ -68,9 +68,9 @@ struct scarletbook_output_format_t
 
 scarletbook_format_handler_t const * sacd_find_output_format(char const *);
 
-void start_ripping(scarletbook_handle_t *);
+int start_ripping(scarletbook_handle_t *);
 void stop_ripping(scarletbook_handle_t *);
-int push_item_to_ripping_queue(int area, int track, char *file_path, char *fmt, 
+int queue_track_to_rip(int area, int track, char *file_path, char *fmt, 
                                 uint32_t start_lsn, uint32_t length_lsn, int dst_encoded);
 
 #endif /* SCARLETBOOK_OUTPUT_H_INCLUDED */

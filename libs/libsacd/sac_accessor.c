@@ -34,11 +34,9 @@
 #include <malloc.h>
 
 #include <utils.h>
-#include <log.h>
+#include <logging.h>
 #include "sac_accessor.h"
 #include "ioctl.h"
-
-extern log_module_info_t * lm_main;
 
 #ifdef USE_ISOSELF
 int file_alloc_load(const char *, uint8_t **, unsigned int *);

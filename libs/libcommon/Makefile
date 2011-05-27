@@ -45,6 +45,7 @@ VPATH :=	$(BASEDIR)
 #---------------------------------------------------------------------------------
 OBJS		:= \
             log.o \
+            logging.o \
             fileutils.o \
             utils.o
 all: ppu

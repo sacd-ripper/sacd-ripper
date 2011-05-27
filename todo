@@ -3,8 +3,6 @@ todo:
   core:
     - finish ripping pipeline
         - write statistics
-        - add interruption
-        - add sony dsf export support
         - write iso writer
             - add splitted iso image support
         - add proper file writing & file naming
@@ -19,3 +17,4 @@ todo:
     - show not enough disc space message (do fstat during ripping)
 
 - add dst decoding
+- add sony dsf export support
