@@ -26,7 +26,7 @@
 #include <signal.h>
 #include <io.h>
 
-#include <log.h>
+#include <logging.h>
 
 #include "getopt.h"
 
@@ -38,8 +38,6 @@
 #include <scarletbook_id3.h>
 #include <endianess.h>
 #include <utils.h>
-
-log_module_info_t * lm_main = 0;  
 
 static struct opts_s
 {
@@ -194,6 +192,8 @@ static void init(void) {
     sa.sa_handler = &handle_sigint;
     sigaction(SIGINT, &sa, NULL);
 #endif
+
+    init_logging();
 } 
 
 int main(int argc, char* argv[]) {
@@ -226,8 +226,7 @@ int main(int argc, char* argv[]) {
             // fill the queue with items to rip
             for (i = 0; i < handle->area[area_idx].area_toc->track_count; i++) 
             {
-                push_item_to_ripping_queue(area_idx, i, generate_trackname(i + 1), "dsdiff", 
-                
+                queue_track_to_rip(area_idx, i, generate_trackname(i + 1), "dsdiff", 
                     handle->area[area_idx].area_tracklist_offset->track_start_lsn[i], 
                     handle->area[area_idx].area_tracklist_offset->track_length_lsn[i], 1);
             }
@@ -240,5 +239,7 @@ int main(int argc, char* argv[]) {
         sacd_close(sacd_reader);
     }
 
+    destroy_logging();
+    
     return 0;
 }

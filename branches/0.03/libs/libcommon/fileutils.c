@@ -30,10 +30,8 @@
 #include <stdarg.h>
 #include <unistd.h>
 
-#include "log.h"
+#include "logging.h"
 #include "fileutils.h"
-
-extern log_module_info_t * lm_main;
 
 // construct a filename from various parts
 //

@@ -36,7 +36,7 @@
 #include <sys/io_buffer.h>
 #include <sys/atomic.h>
 #include <utils.h>
-#include <log.h>
+#include <logging.h>
 
 #include <sacd_reader.h>
 #include <scarletbook_read.h>
@@ -51,8 +51,6 @@
  * TODO, refactoring: almost all of this code (except GUI) need to be moved into libsacd,
  * but at this point I just want to get it done, let it be ugly..
  */
-
-extern log_module_info_t * lm_main;
 
 static int               dialog_action = 0;
 

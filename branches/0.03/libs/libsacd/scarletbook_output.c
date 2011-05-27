@@ -31,9 +31,7 @@
 #endif
 
 #include <utils.h>
-#include <log.h>
-
-extern log_module_info_t * lm_main;
+#include <logging.h>
 
 #include "scarletbook_output.h"
 #include "sacd_reader.h"
@@ -41,6 +39,12 @@ extern log_module_info_t * lm_main;
 static struct list_head ripping_queue;
 static int initialized_ripping_queue = 0;
 static int stop_processing = 0;
+
+// TODO, move to context
+audio_frame_t audio_sector;
+int current_audio_frame_size = 0;
+uint8_t current_audio_frame[SACD_LSN_SIZE * 40];
+uint8_t *current_audio_frame_ptr = current_audio_frame;
 
 extern scarletbook_format_handler_t const * dsdiff_format_fn(void);
 
@@ -92,7 +96,7 @@ static void destroy_ripping_queue()
     }
 }
 
-int push_item_to_ripping_queue(int area, int track, char *file_path, char *fmt, 
+int queue_track_to_rip(int area, int track, char *file_path, char *fmt, 
                                 uint32_t start_lsn, uint32_t length_lsn, int dst_encoded)
 {
     scarletbook_format_handler_t const * handler;
@@ -173,17 +177,15 @@ int close_output_file(scarletbook_output_format_t * ft)
 #else
         close(ft->fd);
 #endif
-    free(ft->filename);
-    free(ft->priv);
-    free(ft);
     return result;
 }
 
-// TODO, move to context
-audio_frame_t audio_sector;
-int current_audio_frame_size = 0;
-uint8_t current_audio_frame[SACD_LSN_SIZE * 40];
-uint8_t *current_audio_frame_ptr = current_audio_frame;
+void destroy_output_format(scarletbook_output_format_t * ft)
+{
+    free(ft->filename);
+    free(ft->priv);
+    free(ft);
+}
 
 static void scarletbook_process_frames_callback(uint8_t *buffer, int pos, int blocks, void *user_data)
 {
@@ -399,14 +401,13 @@ static int process_frames(scarletbook_output_format_t * ft)
     ft->current_lsn = ft->start_lsn;
     end_lsn = ft->start_lsn + ft->length_lsn;
 
+    stop_processing = 0;
     while (stop_processing == 0)
     {
         if (ft->current_lsn < end_lsn)
         {
-            {
-                block_size = min(end_lsn - ft->current_lsn, MAX_PROCESSING_BLOCK_SIZE);
-                ft->encrypted = 0;
-            }
+            block_size = min(end_lsn - ft->current_lsn, MAX_PROCESSING_BLOCK_SIZE);
+            ft->encrypted = 0;
 
             sacd_read_async_block_raw(ft->sb_handle->sacd, ft->current_lsn, block_size, scarletbook_process_frames_callback, ft);
 
@@ -414,19 +415,28 @@ static int process_frames(scarletbook_output_format_t * ft)
         }
         else 
         {
-            // we've reached the end
-            break;
+            return 0;
         }
     }
 
-    return 0;
+    return -1;
 }
 #endif
 
-void start_ripping(scarletbook_handle_t *handle)
+uint32_t stats_total_sectors;
+
+int start_ripping(scarletbook_handle_t *handle)
 {
     struct list_head * node_ptr;
     scarletbook_output_format_t * output_format_ptr;
+
+    // calculate the total amount of sectors to process
+    stats_total_sectors = 0;
+    list_for_each(node_ptr, &ripping_queue)
+    {
+        output_format_ptr = list_entry(node_ptr, scarletbook_output_format_t, siblings);
+        stats_total_sectors += output_format_ptr->length_lsn;
+    }
 
     while (!list_empty(&ripping_queue))
     {
@@ -439,11 +449,24 @@ void start_ripping(scarletbook_handle_t *handle)
         create_output_file(output_format_ptr);
         process_frames(output_format_ptr);
         close_output_file(output_format_ptr);
+
+        if (stop_processing)
+        {
+            // remove the file being worked on
+            remove(output_format_ptr->filename);
+            destroy_output_format(output_format_ptr);
+            destroy_ripping_queue();
+            return -1;
+        }
+
+        destroy_output_format(output_format_ptr);
     } 
     destroy_ripping_queue();
+
+    return 0;
 }
 
 void stop_ripping(scarletbook_handle_t *handle)
 {
-    destroy_ripping_queue();
+    stop_processing = 1;
 }

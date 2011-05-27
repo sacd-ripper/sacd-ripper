@@ -194,6 +194,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\libs\libcommon\logging.c"
+				>
+			</File>
+			<File
 				RelativePath=".\main.c"
 				>
 			</File>
@@ -249,6 +253,10 @@
 			</File>
 			<File
 				RelativePath="..\..\libs\libcommon\log.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\libs\libcommon\logging.h"
 				>
 			</File>
 			<File
