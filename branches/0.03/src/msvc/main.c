@@ -163,12 +163,20 @@ static char *generate_trackname(int track) {
 
 void handle_sigint(int sig_no)
 {
+    printf("\rUser interrupted..                                \n");
     stop_ripping(handle);
 }
 
-void handle_status_update_callback()
+void handle_status_update_callback(uint32_t stats_total_sectors, uint32_t stats_total_sectors_processed,
+                                 uint32_t stats_current_file_total_sectors, uint32_t stats_current_file_sectors_processed,
+                                 char *filename)
 {
-    printf("\rcompleted %d%%", 100);
+    if (filename)
+    {
+        printf("\rProcessing [%s]..\n", filename);
+    }
+    printf("\rCompleted: %d%%, Total: %d%%", (stats_current_file_sectors_processed*100/stats_current_file_total_sectors), 
+                                             (stats_total_sectors_processed*100/stats_total_sectors));
     fflush(stdout);
 }
 
@@ -230,10 +238,12 @@ int main(int argc, char* argv[]) {
                     handle->area[area_idx].area_tracklist_offset->track_start_lsn[i], 
                     handle->area[area_idx].area_tracklist_offset->track_length_lsn[i], 1);
             }
-
+            
+            init_stats(handle_status_update_callback);
             start_ripping(handle);
-
             scarletbook_close(handle);
+
+            printf("\rWe are done..                                     \n");
         }
 
         sacd_close(sacd_reader);
