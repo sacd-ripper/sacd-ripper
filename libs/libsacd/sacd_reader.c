@@ -368,20 +368,6 @@ void sacd_close(sacd_reader_t *sacd)
     }
 }
 
-#if defined(__lv2ppu__)
-inline int sacd_async_read_block_raw(sacd_reader_t *sacd, uint32_t lb_number,
-                            size_t block_count, sys_io_block_t bounce_buf, uint64_t user_data)
-{
-    return sacd_input_async_read(sacd->dev, (int) lb_number, (int) block_count, bounce_buf, user_data);
-}
-
-// hack, temporary
-inline int sacd_get_fd(sacd_reader_t *sacd)
-{
-    return sacd_input_get_fd(sacd->dev);
-}
-#endif
-
 ssize_t sacd_read_block_raw(sacd_reader_t *sacd, uint32_t lb_number,
                             size_t block_count, unsigned char *data)
 {
@@ -395,4 +381,17 @@ ssize_t sacd_read_block_raw(sacd_reader_t *sacd, uint32_t lb_number,
     ret = sacd_input_read(sacd->dev, (int) lb_number, (int) block_count, (char *) data);
 
     return ret;
+}
+
+ssize_t sacd_read_async_block_raw(sacd_reader_t *sacd, int pos, int blocks, sacd_aio_callback_t cb, void *user_data)
+{
+    return sacd_input_async_read(sacd->dev, pos, blocks, cb, user_data);
+}
+
+/**
+ * Decrypts audio sectors, only available on PS3
+ */
+int sacd_decrypt(sacd_reader_t *sacd, uint8_t *buffer, int blocks)
+{
+    return sacd_input_decrypt(sacd->dev, buffer, blocks);
 }

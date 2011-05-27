@@ -23,20 +23,21 @@
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <signal.h>
 #include <io.h>
 
 #include <log.h>
 
 #include "getopt.h"
 
-#include "sacd_reader.h"
-#include "scarletbook.h"
-#include "scarletbook_read.h"
-#include "scarletbook_print.h"
-#include "scarletbook_id3.h"
-#include "dsdiff_writer.h"
-#include "endianess.h"
-#include "utils.h"
+#include <sacd_reader.h>
+#include <scarletbook.h>
+#include <scarletbook_read.h>
+#include <scarletbook_output.h>
+#include <scarletbook_print.h>
+#include <scarletbook_id3.h>
+#include <endianess.h>
+#include <utils.h>
 
 log_module_info_t * lm_main = 0;  
 
@@ -51,6 +52,8 @@ static struct opts_s
     char          *input_device; /* Access method driver should use for control */
     char           output_file[512];
 } opts;
+
+scarletbook_handle_t *handle;
 
 /* Parse all options. */
 static int parse_options(int argc, char *argv[]) {
@@ -160,6 +163,17 @@ static char *generate_trackname(int track) {
     return outfile_name;
 }
 
+void handle_sigint(int sig_no)
+{
+    stop_ripping(handle);
+}
+
+void handle_status_update_callback()
+{
+    printf("\rcompleted %d%%", 100);
+    fflush(stdout);
+}
+
 /* Initialize global variables. */
 static void init(void) {
 
@@ -170,80 +184,56 @@ static void init(void) {
     opts.output_dsdiff = 1;
     opts.convert_dst   = 0;
     opts.print_only    = 0;
-    opts.input_device  = "/dev/sr0";
+    opts.input_device  = "/dev/cdrom";
+
+#ifdef _WIN32
+    signal(SIGINT, handle_sigint);
+#else
+    struct sigaction sa;
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_handler = &handle_sigint;
+    sigaction(SIGINT, &sa, NULL);
+#endif
 } 
 
 int main(int argc, char* argv[]) {
-    int i;
+    int i, area_idx;
     sacd_reader_t *sacd_reader;
-    scarletbook_handle_t *handle;
 
     init();
-    if (parse_options(argc, argv)) {
+    if (parse_options(argc, argv)) 
+    {
 
         // default to 2 channel
-        if (opts.two_channel == 0 && opts.multi_channel == 0) {
+        if (opts.two_channel == 0 && opts.multi_channel == 0) 
+        {
             opts.two_channel = 1;
         }
 
         sacd_reader = sacd_open(opts.input_device);
-        if (sacd_reader) {
+        if (sacd_reader) 
+        {
 
             handle = scarletbook_open(sacd_reader, 0);
-            if (opts.print_only) {
+            if (opts.print_only) 
+            {
                 scarletbook_print(handle);
             }
-            
-            if (opts.output_dsdiff) {
-                uint32_t block_count;
-                uint8_t buffer[2048];
-                uint8_t *buffer_ptr;
-                audio_sector_t audio_sector;
-                dsdiff_handle_t *dsdiff_handle;
-                int area_idx = 0; //(opts.multi_channel ? );
 
-                for (i = 0; i < handle->area[area_idx].area_toc->track_count; i++) {
-                    dsdiff_handle = dsdiff_create(handle, generate_trackname(i + 1), area_idx, i, opts.convert_dst);
-                    if (!dsdiff_handle) {
-                        break;
-                    }
+            // select the channel area
+            area_idx = (has_multi_channel(handle) && opts.multi_channel) ? handle->mulch_area_idx : handle->twoch_area_idx;
 
-                    block_count = handle->area[area_idx].area_tracklist_offset->track_length_lsn[i];
-                    while(--block_count) 
-                    {
-                        buffer_ptr = buffer;
-                        sacd_read_block_raw(sacd_reader, handle->area[area_idx].area_tracklist_offset->track_start_lsn[i], 1, buffer);
-                        memset(&audio_sector, 0, sizeof(audio_sector_t));
-                        memcpy(&audio_sector.header, buffer, AUDIO_SECTOR_HEADER_SIZE);
-                        buffer_ptr += AUDIO_SECTOR_HEADER_SIZE;
-#if defined(__BIG_ENDIAN__)
-                        memcpy(&audio_sector.packet, buffer_ptr, AUDIO_PACKET_INFO_SIZE * audio_sector.header.packet_info_count);
-                        buffer_ptr += AUDIO_PACKET_INFO_SIZE * audio_sector.header.packet_info_count;
-#else
-                        // Little Endian systems cannot properly deal with audio_packet_info_t
-                        {
-                            int j;
-                            for (j = 0; j < audio_sector.header.packet_info_count; j++)
-                            {
-                                audio_sector.packet[j].frame_start = (buffer_ptr[0] >> 7) & 1;
-                                audio_sector.packet[j].data_type = (buffer_ptr[0] >> 3) & 7;
-                                audio_sector.packet[j].packet_length = (buffer_ptr[0] & 7) << 8 | buffer_ptr[1];
-                                buffer_ptr += AUDIO_PACKET_INFO_SIZE;
-                            }
-                        }
-#endif
-                        memcpy(&audio_sector.frame, buffer_ptr, AUDIO_FRAME_INFO_SIZE * audio_sector.header.frame_info_count);
-                        buffer_ptr += AUDIO_FRAME_INFO_SIZE * audio_sector.header.frame_info_count;
-
-
-                    }
-                    
-                    dsdiff_close(dsdiff_handle);
-                }
-
-            } else if (opts.output_dsf) {
-                fprintf(stderr, "dsf has not been implemented yet");
+            // fill the queue with items to rip
+            for (i = 0; i < handle->area[area_idx].area_toc->track_count; i++) 
+            {
+                push_item_to_ripping_queue(area_idx, i, generate_trackname(i + 1), "dsdiff", 
+                
+                    handle->area[area_idx].area_tracklist_offset->track_start_lsn[i], 
+                    handle->area[area_idx].area_tracklist_offset->track_length_lsn[i], 1);
             }
+
+            start_ripping(handle);
+
             scarletbook_close(handle);
         }
 

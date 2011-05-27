@@ -2,14 +2,15 @@ todo:
 
   core:
     - finish ripping pipeline
-        - create item queue
-        - write synchronous & asynchronous processing loops
+        - write statistics
+        - add interruption
+        - add sony dsf export support
         - write iso writer
             - add splitted iso image support
-        - add plugin like structures to dsdiff, and iso
-        - add dsdiff encoding
-        - merge ripping logic into libsacd
         - add proper file writing & file naming
+        - add asynchronous processing loops and thread
+        - add title (DITI) & artist (DIAR) to DSDIFF
+        - test the incorrect output length (of by a couple of frames)
     
     - write log along each consecutive rip
 
@@ -18,4 +19,3 @@ todo:
     - show not enough disc space message (do fstat during ripping)
 
 - add dst decoding
-- add sony dsf export support

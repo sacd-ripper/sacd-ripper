@@ -45,11 +45,12 @@ VPATH :=	$(BASEDIR)
 #---------------------------------------------------------------------------------
 OBJS		:= \
 			scarletbook.o \
-			dsdiff_writer.o \
+			dsdiff.o \
             sacd_input.o \
             scarletbook_print.o \
             scarletbook_id3.o \
             scarletbook_read.o \
+            scarletbook_output.o \
             sac_accessor.o \
             ioctl.o \
             sacd_reader.o 

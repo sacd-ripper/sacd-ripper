@@ -23,6 +23,7 @@
 #define SCARLETBOOK_H_INCLUDED
 
 #include <inttypes.h>
+#include <list.h>
 #include "config.h"
 
 #undef ATTRIBUTE_PACKED
@@ -66,6 +67,8 @@
 
 #define MAX_GENRE_COUNT                29
 #define MAX_CATEGORY_COUNT             3
+
+#define MAX_PROCESSING_BLOCK_SIZE      512
 
 enum
 {
@@ -481,6 +484,8 @@ typedef struct
         uint8_t frames;
     } ATTRIBUTE_PACKED timecode;
 
+    // Note: the following byte is only filled 
+    // on DST encoded audio frames
 #if defined(__BIG_ENDIAN__)
     uint8_t channel_bit_1 : 1;
     uint8_t sector_count  : 5;
@@ -510,16 +515,16 @@ typedef struct
     uint8_t packet_info_count : 3;
 #endif
 }
-ATTRIBUTE_PACKED audio_sector_header_t;
+ATTRIBUTE_PACKED audio_frame_header_t;
 #define AUDIO_SECTOR_HEADER_SIZE    1U
 
 typedef struct
 {
-    audio_sector_header_t header;
+    audio_frame_header_t header;
     audio_packet_info_t   packet[7];
     audio_frame_info_t    frame[7];
 } 
-ATTRIBUTE_PACKED audio_sector_t;
+ATTRIBUTE_PACKED audio_frame_t;
 
 typedef struct  
 {

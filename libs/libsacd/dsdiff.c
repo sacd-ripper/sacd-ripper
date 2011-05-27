@@ -29,7 +29,7 @@
 #include <unistd.h>
 #include <time.h>
 
-#if defined(__lv2ppu__)
+#ifdef __lv2ppu__
 #include <sys/file.h>
 #elif defined(WIN32)
 #include <io.h>
@@ -37,12 +37,25 @@
 
 #include "sacd_reader.h"
 #include "scarletbook_id3.h"
+#include "scarletbook_output.h"
 #include "endianess.h"
-#include "dsdiff_writer.h"
 #include "dsdiff.h"
+#include "scarletbook.h"
 #include "version.h"
 
 #define DSDFIFF_BUFFER_SIZE    8192
+
+typedef struct
+{
+    uint8_t            *header;
+    size_t              header_size;
+    uint8_t            *footer;
+    size_t              footer_size;
+
+    size_t              frame_count;
+    ssize_t             audio_data_size;
+} 
+dsdiff_handle_t;
 
 static char *get_mtoc_title_text(scarletbook_handle_t *handle)
 {
@@ -61,36 +74,18 @@ static char *get_mtoc_title_text(scarletbook_handle_t *handle)
     return 0;
 }
 
-dsdiff_handle_t *dsdiff_create(scarletbook_handle_t *sb_handle, char *filename, int area, int track, int dst_encoded)
+int dsdiff_create(scarletbook_output_format_t *ft)
 {
-    dsdiff_handle_t  *handle;
     form_dsd_chunk_t *form_dsd_chunk;
     property_chunk_t *property_chunk;
     uint8_t          *write_ptr, *prop_ptr;
-    ssize_t          track_size;
+    scarletbook_handle_t *sb_handle = ft->sb_handle;
+    dsdiff_handle_t  *handle = (dsdiff_handle_t *) ft->priv;
 
-    handle = (dsdiff_handle_t *) malloc(sizeof(dsdiff_handle_t));
-    memset(handle, 0, sizeof(dsdiff_handle_t));
-
-#if defined(__lv2ppu__)
-    if (sysFsOpen(filename, SYS_O_RDWR | SYS_O_CREAT | SYS_O_TRUNC, &handle->fd, 0, 0) != 0)
-    {
-        fprintf(stderr, "error creating %s", filename);
-        return 0;
-    }
-#else
-    handle->fd = open(filename, O_RDWR | O_CREAT | O_TRUNC | O_BINARY, 0666);
-    if (handle->fd == -1)
-    {
-        fprintf(stderr, "error creating %s", filename);
-        return 0;
-    }
-#endif
-    handle->header = (uint8_t *) malloc(DSDFIFF_BUFFER_SIZE);
-    memset(handle->header, 0, DSDFIFF_BUFFER_SIZE);
-
-    handle->footer = (uint8_t *) malloc(DSDFIFF_BUFFER_SIZE);
-    memset(handle->footer, 0, DSDFIFF_BUFFER_SIZE);
+    if (!handle->header)
+        handle->header = (uint8_t *) calloc(DSDFIFF_BUFFER_SIZE, 1);
+    if (!handle->footer)
+        handle->footer = (uint8_t *) calloc(DSDFIFF_BUFFER_SIZE, 1);
 
     write_ptr = handle->header;
 
@@ -132,7 +127,7 @@ dsdiff_handle_t *dsdiff_create(scarletbook_handle_t *sb_handle, char *filename, 
     // The Channels Chunk is required and may appear only once in the Property Chunk.
     {
         int              i;
-        uint8_t          channel_count    = sb_handle->area[area].area_toc->channel_count;
+        uint8_t          channel_count    = sb_handle->area[ft->area].area_toc->channel_count;
         channels_chunk_t * channels_chunk = (channels_chunk_t *) write_ptr;
         channels_chunk->chunk_id        = CHNL_MARKER;
         channels_chunk->chunk_data_size = CALC_CHUNK_SIZE(CHANNELS_CHUNK_SIZE - CHUNK_HEADER_SIZE + channel_count * sizeof(uint32_t));
@@ -175,14 +170,15 @@ dsdiff_handle_t *dsdiff_create(scarletbook_handle_t *sb_handle, char *filename, 
     {
         compression_type_chunk_t *compression_type_chunk = (compression_type_chunk_t *) write_ptr;
         compression_type_chunk->chunk_id         = CMPR_MARKER;
-        compression_type_chunk->compression_type = DSD_MARKER;
-        if (dst_encoded)
+        if (ft->dst_encoded)
         {
+            compression_type_chunk->compression_type = DST_MARKER;
             compression_type_chunk->count = 11;
             memcpy(compression_type_chunk->compression_name, "DST Encoded", 11);
         }
         else
         {
+            compression_type_chunk->compression_type = DSD_MARKER;
             compression_type_chunk->count = 14;
             memcpy(compression_type_chunk->compression_name, "not compressed", 14);
         }
@@ -195,16 +191,20 @@ dsdiff_handle_t *dsdiff_create(scarletbook_handle_t *sb_handle, char *filename, 
     // Property Chunk.
     {
         absolute_start_time_chunk_t *absolute_start_time_chunk = (absolute_start_time_chunk_t *) write_ptr;
-        absolute_start_time_chunk->chunk_id        = ABSS_MARKER;
+        area_tracklist_time_start_t *area_tracklist_time_start = sb_handle->area[ft->area].area_tracklist_time->start;
+        absolute_start_time_chunk->chunk_id = ABSS_MARKER;
         absolute_start_time_chunk->chunk_data_size = CALC_CHUNK_SIZE(ABSOLUTE_START_TIME_CHUNK_SIZE - CHUNK_HEADER_SIZE);
-
+        absolute_start_time_chunk->hours = area_tracklist_time_start->minutes / 60;
+        absolute_start_time_chunk->minutes = area_tracklist_time_start->minutes % 60;
+        absolute_start_time_chunk->seconds = area_tracklist_time_start->seconds;
+        absolute_start_time_chunk->samples = area_tracklist_time_start->frames;
         write_ptr += ABSOLUTE_START_TIME_CHUNK_SIZE;
     }
 
     // The Loudspeaker Configuration Chunk is optional but if used it may appear only once in
     // the Property Chunk.
     {
-        uint8_t                    channel_count             = sb_handle->area[area].area_toc->channel_count;
+        uint8_t channel_count = sb_handle->area[ft->area].area_toc->channel_count;
         loudspeaker_config_chunk_t *loudspeaker_config_chunk = (loudspeaker_config_chunk_t *) write_ptr;
         loudspeaker_config_chunk->chunk_id        = LSCO_MARKER;
         loudspeaker_config_chunk->chunk_data_size = CALC_CHUNK_SIZE(LOADSPEAKER_CONFIG_CHUNK_SIZE - CHUNK_HEADER_SIZE);
@@ -235,7 +235,7 @@ dsdiff_handle_t *dsdiff_create(scarletbook_handle_t *sb_handle, char *filename, 
         int            id3_chunk_size;
         id3_chunk                  = (chunk_header_t *) write_ptr;
         id3_chunk->chunk_id        = MAKE_MARKER('I', 'D', '3', ' ');
-        id3_chunk_size             = scarletbook_id3_tag_render(sb_handle, write_ptr + CHUNK_HEADER_SIZE, area, track);
+        id3_chunk_size             = scarletbook_id3_tag_render(sb_handle, write_ptr + CHUNK_HEADER_SIZE, ft->area, ft->track);
         id3_chunk->chunk_data_size = CALC_CHUNK_SIZE(id3_chunk_size);
 
         write_ptr += CEIL_ODD_NUMBER(CHUNK_HEADER_SIZE + id3_chunk_size);
@@ -244,26 +244,33 @@ dsdiff_handle_t *dsdiff_create(scarletbook_handle_t *sb_handle, char *filename, 
     // all properties have been written, now set the property chunk size
     property_chunk->chunk_data_size = CALC_CHUNK_SIZE(write_ptr - prop_ptr - CHUNK_HEADER_SIZE);
 
-    track_size = sb_handle->area[area].area_tracklist_offset->track_length_lsn[track] - 1;
-    switch (sb_handle->area[area].area_toc->frame_format)
-    {
-    case FRAME_FORMAT_DSD_3_IN_14:
-        track_size *= (SACD_LSN_SIZE - 32);
-        break;
-    case FRAME_FORMAT_DSD_3_IN_16:
-        track_size *= (SACD_LSN_SIZE - 284);
-        break;
-    case FRAME_FORMAT_DST:
-        break;
-    }
-
-    // Either the DSD or DST Sound Data (described below) chunk is required and may appear
+    // Either the DSD or DST Sound Data chunk is required and may appear
     // only once in the Form DSD Chunk. The chunk must be placed after the Property Chunk.
+    if (ft->dst_encoded)
+    {
+        dst_sound_data_chunk_t *dst_sound_data_chunk;
+        dst_frame_information_chunk_t *dst_frame_information_chunk;
+
+        dst_sound_data_chunk                  = (dst_sound_data_chunk_t *) write_ptr;
+        dst_sound_data_chunk->chunk_id        = DST_MARKER;
+        dst_sound_data_chunk->chunk_data_size = CALC_CHUNK_SIZE(handle->audio_data_size + DST_FRAME_INFORMATION_CHUNK_SIZE);
+
+        write_ptr += DST_SOUND_DATA_CHUNK_SIZE;
+
+        dst_frame_information_chunk           = (dst_frame_information_chunk_t *) write_ptr;
+        dst_frame_information_chunk->chunk_id = FRTE_MARKER;
+        dst_frame_information_chunk->chunk_data_size = CALC_CHUNK_SIZE(DST_FRAME_INFORMATION_CHUNK_SIZE - CHUNK_HEADER_SIZE);
+        dst_frame_information_chunk->frame_rate = hton16(75);
+        dst_frame_information_chunk->num_frames = hton32(handle->frame_count);
+
+        write_ptr += DST_FRAME_INFORMATION_CHUNK_SIZE;
+    }
+    else
     {
         dsd_sound_data_chunk_t * dsd_sound_data_chunk;
         dsd_sound_data_chunk                  = (dsd_sound_data_chunk_t *) write_ptr;
         dsd_sound_data_chunk->chunk_id        = DSD_MARKER;
-        dsd_sound_data_chunk->chunk_data_size = CALC_CHUNK_SIZE(track_size);
+        dsd_sound_data_chunk->chunk_data_size = CALC_CHUNK_SIZE(handle->audio_data_size);
 
         write_ptr += CHUNK_HEADER_SIZE;
     }
@@ -285,11 +292,11 @@ dsdiff_handle_t *dsdiff_create(scarletbook_handle_t *sb_handle, char *filename, 
         timeinfo = localtime(&rawtime);
 
         comment                    = (comment_t *) comment_ptr;
-        comment->timestamp_year    = hton16(timeinfo->tm_year + 1900);
-        comment->timestamp_month   = timeinfo->tm_mon;
-        comment->timestamp_day     = timeinfo->tm_mday;
-        comment->timestamp_hour    = timeinfo->tm_hour;
-        comment->timestamp_minutes = timeinfo->tm_min;
+        comment->timestamp_year    = hton16(sb_handle->master_toc->disc_date_year);
+        comment->timestamp_month   = sb_handle->master_toc->disc_date_month;
+        comment->timestamp_day     = sb_handle->master_toc->disc_date_day;
+        comment->timestamp_hour    = 0;
+        comment->timestamp_minutes = 0;
         comment->comment_type      = hton16(COMT_TYPE_FILE_HISTORY);
         comment->comment_reference = hton16(COMT_TYPE_CHANNEL_FILE_HISTORY_CREATING_MACHINE);
         sprintf(data, SACD_RIPPER_VERSION);
@@ -317,43 +324,106 @@ dsdiff_handle_t *dsdiff_create(scarletbook_handle_t *sb_handle, char *filename, 
     }
 
     handle->header_size             = CEIL_ODD_NUMBER(write_ptr - handle->header);
-    form_dsd_chunk->chunk_data_size = CALC_CHUNK_SIZE(handle->header_size + handle->footer_size - COMMENTS_CHUNK_SIZE + CEIL_ODD_NUMBER(track_size));
+    form_dsd_chunk->chunk_data_size = CALC_CHUNK_SIZE(handle->header_size + handle->footer_size - COMMENTS_CHUNK_SIZE + CEIL_ODD_NUMBER(handle->audio_data_size));
 
-#if defined(__lv2ppu__)
+#ifdef __lv2ppu__
     {
         uint64_t nrw;
-        sysFsWrite(handle->fd, handle->header, handle->header_size, &nrw);
+        sysFsWrite(ft->fd, handle->header, handle->header_size, &nrw);
     }
 #else
-    write(handle->fd, handle->header, handle->header_size);
+    write(ft->fd, handle->header, handle->header_size);
 #endif
 
-    return handle;
+    return 0;
 }
 
-void dsdiff_close(dsdiff_handle_t *handle)
+int dsdiff_close(scarletbook_output_format_t *ft)
 {
-    if (!handle)
-        return;
+    dsdiff_handle_t *handle = (dsdiff_handle_t *) ft->priv;
 
-#if defined(__lv2ppu__)
+#ifdef __lv2ppu__
     {
         uint64_t nrw;
-        sysFsWrite(handle->fd, handle->footer, handle->footer_size, &nrw);
+        sysFsWrite(ft->fd, handle->footer, handle->footer_size, &nrw);
     }
 #else
-    write(handle->fd, handle->footer, handle->footer_size);
+    write(ft->fd, handle->footer, handle->footer_size);
 #endif
 
-    if (handle->fd)
-#if defined(__lv2ppu__)
-        sysFsClose(handle->fd);
-#else
-        close(handle->fd);
-#endif
+    lseek(ft->fd, 0, SEEK_SET);
+    
+    // write the final header
+    dsdiff_create(ft);
+
     if (handle->header)
         free(handle->header);
     if (handle->footer)
         free(handle->footer);
-    free(handle);
+
+    return 0;
+}
+
+size_t dsdiff_write_frame(scarletbook_output_format_t *ft, const uint8_t *buf, size_t len)
+{
+    dsdiff_handle_t *handle = (dsdiff_handle_t *) ft->priv;
+
+    handle->frame_count++;
+
+    if (ft->dst_encoded)
+    {
+        dst_frame_data_chunk_t dst_frame_data_chunk;
+        dst_frame_data_chunk.chunk_id = DSTF_MARKER;
+        dst_frame_data_chunk.chunk_data_size = CALC_CHUNK_SIZE(len);
+#ifdef __lv2ppu__
+        {
+            uint64_t nrw;
+            sysFsWrite(ft->fd, &dst_frame_data_chunk, DST_FRAME_DATA_CHUNK_SIZE, &nrw);
+            handle->audio_data_size += DST_FRAME_DATA_CHUNK_SIZE;
+            sysFsWrite(ft->fd, buf, CEIL_ODD_NUMBER(len), &nrw);
+            return nrw + DST_FRAME_DATA_CHUNK_SIZE;
+        }
+#else
+        {
+            size_t nrw;
+            nrw = write(ft->fd, &dst_frame_data_chunk, DST_FRAME_DATA_CHUNK_SIZE);
+            handle->audio_data_size += nrw;
+            nrw += write(ft->fd, buf, CEIL_ODD_NUMBER(len));
+            return nrw;
+        }
+#endif
+    }
+    else
+    {
+#ifdef __lv2ppu__
+        {
+            uint64_t nrw;
+            sysFsWrite(ft->fd, buf, len, &nrw);
+            handle->audio_data_size += nrw;
+            return nrw;
+        }
+#else
+        {
+            size_t nrw;
+            nrw = write(ft->fd, buf, len);
+            handle->audio_data_size += nrw;
+            return nrw;
+        }
+#endif
+    }
+}
+
+scarletbook_format_handler_t const * dsdiff_format_fn(void) 
+{
+    static scarletbook_format_handler_t handler = 
+    {
+        "Direct Stream Digital Interchange File Format", 
+        "dsdiff", 
+        dsdiff_create, 
+        dsdiff_write_frame,
+        dsdiff_close, 
+        1,
+        sizeof(dsdiff_handle_t)
+    };
+    return &handler;
 }

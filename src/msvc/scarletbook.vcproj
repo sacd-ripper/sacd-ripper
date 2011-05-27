@@ -174,7 +174,7 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath="..\..\libs\libsacd\dsdiff_writer.c"
+				RelativePath="..\..\libs\libsacd\dsdiff.c"
 				>
 			</File>
 			<File
@@ -214,6 +214,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\libs\libsacd\scarletbook_output.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\libs\libsacd\scarletbook_print.c"
 				>
 			</File>
@@ -233,10 +237,6 @@
 			>
 			<File
 				RelativePath="..\..\libs\libsacd\dsdiff.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\libs\libsacd\dsdiff_writer.h"
 				>
 			</File>
 			<File
@@ -269,6 +269,10 @@
 			</File>
 			<File
 				RelativePath="..\..\libs\libsacd\scarletbook_id3.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\libs\libsacd\scarletbook_output.h"
 				>
 			</File>
 			<File
