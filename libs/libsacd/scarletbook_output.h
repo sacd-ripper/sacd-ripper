@@ -66,6 +66,11 @@ struct scarletbook_output_format_t
     struct list_head                siblings;
 }; 
 
+typedef void (*stats_callback_t)(uint32_t stats_total_sectors, uint32_t stats_total_sectors_processed,
+                                 uint32_t stats_current_file_total_sectors, uint32_t stats_current_file_sectors_processed,
+                                 char *filename);
+void init_stats(stats_callback_t);
+
 scarletbook_format_handler_t const * sacd_find_output_format(char const *);
 
 int start_ripping(scarletbook_handle_t *);

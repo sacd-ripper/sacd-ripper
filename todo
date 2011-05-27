@@ -2,7 +2,6 @@ todo:
 
   core:
     - finish ripping pipeline
-        - write statistics
         - write iso writer
             - add splitted iso image support
         - add proper file writing & file naming

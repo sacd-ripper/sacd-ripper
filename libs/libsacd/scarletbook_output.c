@@ -46,6 +46,13 @@ int current_audio_frame_size = 0;
 uint8_t current_audio_frame[SACD_LSN_SIZE * 40];
 uint8_t *current_audio_frame_ptr = current_audio_frame;
 
+// stats
+uint32_t         stats_total_sectors;
+uint32_t         stats_total_sectors_processed;
+uint32_t         stats_current_file_total_sectors;
+uint32_t         stats_current_file_sectors_processed;
+stats_callback_t stats_callback = 0;
+
 extern scarletbook_format_handler_t const * dsdiff_format_fn(void);
 
 typedef const scarletbook_format_handler_t *(*sacd_output_format_fn_t)(void); 
@@ -393,6 +400,24 @@ static int process_frames(scarletbook_output_format_t * ft)
 
 #else 
 
+void init_stats(stats_callback_t cb)
+{
+    struct list_head * node_ptr;
+    scarletbook_output_format_t * output_format_ptr;
+
+    stats_total_sectors = 0;
+    stats_total_sectors_processed = 0;
+    stats_current_file_total_sectors = 0;
+    stats_current_file_sectors_processed = 0;
+    stats_callback = cb;
+
+    list_for_each(node_ptr, &ripping_queue)
+    {
+        output_format_ptr = list_entry(node_ptr, scarletbook_output_format_t, siblings);
+        stats_total_sectors += output_format_ptr->length_lsn;
+    }
+}
+
 static int process_frames(scarletbook_output_format_t * ft)
 {
     uint32_t block_size, end_lsn;
@@ -411,6 +436,16 @@ static int process_frames(scarletbook_output_format_t * ft)
 
             sacd_read_async_block_raw(ft->sb_handle->sacd, ft->current_lsn, block_size, scarletbook_process_frames_callback, ft);
 
+            stats_total_sectors_processed += block_size;
+            stats_current_file_sectors_processed += block_size;
+            
+            if (stats_callback)
+            {
+                stats_callback(stats_total_sectors, stats_total_sectors_processed, 
+                               stats_current_file_total_sectors, stats_current_file_sectors_processed,
+                               0);
+            }
+
             ft->current_lsn += block_size;
         }
         else 
@@ -423,20 +458,10 @@ static int process_frames(scarletbook_output_format_t * ft)
 }
 #endif
 
-uint32_t stats_total_sectors;
-
 int start_ripping(scarletbook_handle_t *handle)
 {
     struct list_head * node_ptr;
     scarletbook_output_format_t * output_format_ptr;
-
-    // calculate the total amount of sectors to process
-    stats_total_sectors = 0;
-    list_for_each(node_ptr, &ripping_queue)
-    {
-        output_format_ptr = list_entry(node_ptr, scarletbook_output_format_t, siblings);
-        stats_total_sectors += output_format_ptr->length_lsn;
-    }
 
     while (!list_empty(&ripping_queue))
     {
@@ -445,6 +470,16 @@ int start_ripping(scarletbook_handle_t *handle)
         list_del(node_ptr);
 
         output_format_ptr->sb_handle = handle;
+
+        stats_current_file_total_sectors = output_format_ptr->length_lsn;
+        stats_current_file_sectors_processed = 0;
+
+        if (stats_callback)
+        {
+            stats_callback(stats_total_sectors, stats_total_sectors_processed, 
+                           stats_current_file_total_sectors, stats_current_file_sectors_processed,
+                           output_format_ptr->filename);
+        }
 
         create_output_file(output_format_ptr);
         process_frames(output_format_ptr);
