@@ -32,9 +32,7 @@
 #include <sys/types.h>
 #include <inttypes.h>
 
-#if defined(__lv2ppu__)
-#include <sys/io_buffer.h>
-#endif
+#include "sacd_input.h"
 
 /**
  * The SACD access interface.
@@ -84,7 +82,6 @@ void sacd_close(sacd_reader_t *);
  */
 ssize_t sacd_read_block_raw(sacd_reader_t *, uint32_t, size_t, unsigned char *);
 
-#if defined(__lv2ppu__)
 /**
  * Seeks and reads a block asynchrously from sacd.
  *
@@ -94,13 +91,14 @@ ssize_t sacd_read_block_raw(sacd_reader_t *, uint32_t, size_t, unsigned char *);
  * @param bounce_buf The data pointer to read the block into.
  * @param user_data User data that is received on callback
  *
- * sacd_read_block_raw(sacd, lb_number, block_count, data);
+ * sacd_read_async_block_raw(sacd, lb_number, block_count, data);
  */
-inline int sacd_async_read_block_raw(sacd_reader_t *, uint32_t, size_t, sys_io_block_t, uint64_t);
+ssize_t sacd_read_async_block_raw(sacd_reader_t *, int, int, sacd_aio_callback_t, void *);
 
-// hack, temporary
-inline int sacd_get_fd(sacd_reader_t *sacd);
-#endif
+/**
+ * Decrypts audio sectors, only available on PS3
+ */
+int sacd_decrypt(sacd_reader_t *, uint8_t *, int);
 
 #ifdef __cplusplus
 };

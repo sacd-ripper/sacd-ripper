@@ -74,7 +74,7 @@ extern "C" {
 
 enum
 {
-    SAC_CMD_INITIALIZE       = 0
+      SAC_CMD_INITIALIZE     = 0
     , SAC_CMD_EXIT           = 1
     , SAC_CMD_GENERATE_KEY_1 = 2
     , SAC_CMD_VALIDATE_KEY_1 = 3

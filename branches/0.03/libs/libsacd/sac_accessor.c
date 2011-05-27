@@ -68,13 +68,12 @@ int create_sac_accessor(void)
         return -1;
     }
 
-    sa = malloc(sizeof(sac_accessor_t));
+    sa = calloc(sizeof(sac_accessor_t), 1);
     if (sa == NULL)
     {
         LOG(lm_main, LOG_ERROR, ("sac_accessor_t malloc failed\n"));
         return -1;
     }
-    memset(sa, 0, sizeof(sac_accessor_t));
 
     sa->buffer = (uint8_t *) memalign(128, DMA_BUFFER_SIZE);
     memset(sa->buffer, 0, DMA_BUFFER_SIZE);

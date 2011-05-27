@@ -61,11 +61,10 @@ scarletbook_handle_t *scarletbook_open(sacd_reader_t *sacd, int title)
 {
     scarletbook_handle_t *sb;
 
-    sb = (scarletbook_handle_t *) malloc(sizeof(scarletbook_handle_t));
+    sb = (scarletbook_handle_t *) calloc(sizeof(scarletbook_handle_t), 1);
     if (!sb)
         return NULL;
 
-    memset(sb, 0, sizeof(scarletbook_handle_t));
     sb->sacd      = sacd;
     sb->twoch_area_idx = -1;
     sb->mulch_area_idx = -1;
@@ -414,3 +413,4 @@ static int scarletbook_read_area_toc(scarletbook_handle_t *handle, int area_idx)
 
     return 1;
 }
+

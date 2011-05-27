@@ -501,13 +501,14 @@ struct dst_frame_information_chunk_t
     // bytes used by chunk_id and chunk_data_size.
     uint64_t chunk_data_size;
 
-    // numFrames is the number of DST frames (the number of chunks) in the file.
-    uint32_t numFrames;            // number of DST frames.
+    // num_frames is the number of DST frames (the number of chunks) in the file.
+    uint32_t num_frames;            // number of DST frames.
 
-    // frameRate is the actual DST frame rate per second. The only valid value is 75.
-    uint16_t frameRate;            // DST frame rate per second
+    // frame_rate is the actual DST frame rate per second. The only valid value is 75.
+    uint16_t frame_rate;            // DST frame rate per second
 } ATTRIBUTE_PACKED;
 typedef struct dst_frame_information_chunk_t   dst_frame_information_chunk_t;
+#define DST_FRAME_INFORMATION_CHUNK_SIZE    18U
 
 
 // The DST Frame Data Chunk contains the compressed sound data.
@@ -531,6 +532,7 @@ struct dst_frame_data_chunk_t
     //uint8_t       DSTsoundData[1]; // The DST data for one frame
 } ATTRIBUTE_PACKED;
 typedef struct dst_frame_data_chunk_t   dst_frame_data_chunk_t;
+#define DST_FRAME_DATA_CHUNK_SIZE    12U
 
 
 // The DST Frame Data Chunk always precedes its corresponding DST Frame CRC Chunk.

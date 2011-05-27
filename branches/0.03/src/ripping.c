@@ -484,8 +484,9 @@ static void processing_thread(void *arg)
                     accessor->aio_packet[i].encrypted = 0;
     
                     // check what parts are encrypted..
-                    if (is_between_inclusive(current_position + MAX_BLOCK_SIZE, decrypt_start[0], decrypt_end[0])
-                     || is_between_exclusive(current_position, decrypt_start[0], decrypt_end[0])
+                    if (decrypt_start[0] != 0
+                     && (is_between_inclusive(current_position + MAX_BLOCK_SIZE, decrypt_start[0], decrypt_end[0])
+                     || is_between_exclusive(current_position, decrypt_start[0], decrypt_end[0]))
                         )
                     {
                         if (current_position < decrypt_start[0])
@@ -498,8 +499,9 @@ static void processing_thread(void *arg)
                             accessor->aio_packet[i].encrypted = 1;
                         }
                     }
-                    else if (is_between_inclusive(current_position + MAX_BLOCK_SIZE, decrypt_start[1], decrypt_end[1])
-                        || is_between_exclusive(current_position, decrypt_start[1], decrypt_end[1])
+                    else if (decrypt_start[1] != 0
+                        && (is_between_inclusive(current_position + MAX_BLOCK_SIZE, decrypt_start[1], decrypt_end[1])
+                        || is_between_exclusive(current_position, decrypt_start[1], decrypt_end[1]))
                         )
                     {
                         if (current_position < decrypt_start[1])

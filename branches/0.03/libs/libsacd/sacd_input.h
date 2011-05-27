@@ -22,6 +22,8 @@
 #ifndef SACD_INPUT_H_INCLUDED
 #define SACD_INPUT_H_INCLUDED
 
+#include <inttypes.h>
+
 #if defined(__MINGW32__)
 #   undef  lseek
 #   define lseek            _lseeki64
@@ -45,14 +47,13 @@
 #endif
 
 typedef struct sacd_input_s * sacd_input_t;
+typedef void (*sacd_aio_callback_t)(uint8_t *buffer, int pos, int blocks, void *user_data);
 
 extern sacd_input_t sacd_input_open(const char *);
 extern int     sacd_input_close(sacd_input_t);
 extern ssize_t sacd_input_read(sacd_input_t, int, int, void *);
 extern char    * sacd_input_error(sacd_input_t);
-#if defined(__lv2ppu__)
-inline int sacd_input_async_read(sacd_input_t, int, int, sys_io_block_t, uint64_t);
-#endif
-inline int sacd_input_get_fd(sacd_input_t);
+extern ssize_t sacd_input_async_read(sacd_input_t, int, int, sacd_aio_callback_t, void *);
+extern int sacd_input_decrypt(sacd_input_t, uint8_t *, int);
 
 #endif /* SACD_INPUT_H_INCLUDED */
