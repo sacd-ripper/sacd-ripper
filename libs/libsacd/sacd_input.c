@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <sys/stat.h>
 
 #if defined(__lv2ppu__)
 #include <sys/thread.h>
@@ -451,4 +452,22 @@ int sacd_input_close(sacd_input_t dev)
     free(dev);
 
     return 0;
+}
+
+uint32_t sacd_input_total_sectors(sacd_input_t dev)
+{
+    if (!dev)
+        return 0;
+
+#if defined(__lv2ppu__)
+    return dev->device_info.total_sectors;
+#else
+    {
+        struct stat file_stat;
+        if(fstat(dev->fd, &file_stat) < 0)    
+            return 0;
+
+        return (uint32_t) (file_stat.st_size / SACD_LSN_SIZE);
+    }
+#endif
 }
