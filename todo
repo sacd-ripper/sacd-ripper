@@ -4,7 +4,6 @@ todo:
 
     - finish ripping pipeline
         - finish asynchronous processing loops and thread
-        - add title (DITI) & artist (DIAR) to DSDIFF
     - add dst decoding
     - add sony dsf export support
     - write log along each consecutive rip

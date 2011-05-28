@@ -203,6 +203,8 @@ char *get_album_dir()
     {
         char *c = (char *) master_text + disc_artist_position;
         char *pos = strchr(c, ';');
+        if (!pos)
+            pos = c + strlen(c);
         strncpy(disc_artist, c, min(pos - c, 59));
     }
 
@@ -211,6 +213,8 @@ char *get_album_dir()
     {
         char *c = (char *) master_text + disc_album_title_position;
         char *pos = strchr(c, ';');
+        if (!pos)
+            pos = c + strlen(c);
         strncpy(disc_album_title, c, min(pos - c, 59));
     }
 
@@ -226,7 +230,7 @@ char *get_album_dir()
     else if (strlen(disc_album_title) > 0)
         return parse_format("%L", 0, disc_album_year, disc_artist, disc_album_title, NULL);
     else
-        return parse_format("Unknown", 0, disc_album_year, disc_artist, disc_album_title, NULL);
+        return parse_format("Unknown Album", 0, disc_album_year, disc_artist, disc_album_title, NULL);
 }
 
 char *get_music_filename(int area, int track)
@@ -239,38 +243,28 @@ char *get_music_filename(int area, int track)
     master_text_t *master_text = handle->master_text[0];
     int disc_album_title_position = (master_text->disc_title_position ? master_text->disc_title_position : master_text->disc_title_phonetic_position);
 
+    memset(track_artist, 0, sizeof(track_artist));
     c = handle->area[area].area_track_text[track].track_type_performer;
     if (c)
     {
-        memset(track_artist, 0, sizeof(track_artist));
         strncpy(track_artist, c, 59);
     }
-    else
-    {
-        strcpy(track_artist, "Unknown");
-    }
 
+    memset(track_title, 0, sizeof(track_title));
     c = handle->area[area].area_track_text[track].track_type_title;
     if (c)
     {
-        memset(track_title, 0, sizeof(track_title));
         strncpy(track_title, c, 59);
     }
-    else
-    {
-        strcpy(track_title, "Unknown");
-    }
 
+    memset(disc_album_title, 0, sizeof(disc_album_title));
     if (disc_album_title_position)
     {
         char *c = (char *) master_text + disc_album_title_position;
         char *pos = strchr(c, ';');
-        memset(disc_album_title, 0, sizeof(disc_album_title));
+        if (!pos)
+            pos = c + strlen(c);
         strncpy(disc_album_title, c, min(pos - c, 59));
-    }
-    else
-    {
-        strcpy(disc_album_title, "Unknown");
     }
 
     snprintf(disc_album_year, sizeof(disc_album_year), "%04d", handle->master_toc->disc_date_year);
@@ -279,7 +273,16 @@ char *get_music_filename(int area, int track)
     sanitize_filename(disc_album_title);
     sanitize_filename(track_title);
 
-    return parse_format("%N - %A - %T", track + 1, disc_album_year, track_artist, disc_album_title, track_title);
+    if (strlen(track_artist) > 0 && strlen(track_title) > 0)
+        return parse_format("%N - %A - %T", track + 1, disc_album_year, track_artist, disc_album_title, track_title);
+    else if (strlen(track_artist) > 0)
+        return parse_format("%N - %A", track + 1, disc_album_year, track_artist, disc_album_title, track_title);
+    else if (strlen(track_title) > 0)
+        return parse_format("%N - %T", track + 1, disc_album_year, track_artist, disc_album_title, track_title);
+    else if (strlen(disc_album_title) > 0)
+        return parse_format("%N - %L", track + 1, disc_album_year, track_artist, disc_album_title, track_title);
+    else
+        return parse_format("%N - Unknown Artist", track + 1, disc_album_year, track_artist, disc_album_title, track_title);
 }
 
 int main(int argc, char* argv[]) {
@@ -321,7 +324,8 @@ int main(int argc, char* argv[]) {
                 file_path     = make_filename(".", albumdir, musicfilename, "dff");
                 queue_track_to_rip(area_idx, i, file_path, "dsdiff", 
                     handle->area[area_idx].area_tracklist_offset->track_start_lsn[i], 
-                    handle->area[area_idx].area_tracklist_offset->track_length_lsn[i], 1);
+                    handle->area[area_idx].area_tracklist_offset->track_length_lsn[i], 
+                    handle->area[area_idx].area_toc->frame_format == FRAME_FORMAT_DST);
 
                 free(musicfilename);
                 free(file_path);

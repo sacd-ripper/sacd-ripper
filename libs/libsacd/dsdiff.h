@@ -728,6 +728,7 @@ struct edited_master_information_chunk_t
     //chunk_header_t            EmChunks[1]; // container
 } ATTRIBUTE_PACKED;
 typedef struct edited_master_information_chunk_t   edited_master_information_chunk_t;
+#define EDITED_MASTER_INFORMATION_CHUNK_SIZE    12U
 
 
 // The Edited Master ID Chunk stores an identifier.
@@ -869,6 +870,7 @@ struct marker_chunk_t
     char marker_text[65535];                // description
 } ATTRIBUTE_PACKED;
 typedef struct marker_chunk_t   marker_chunk_t;
+#define EDITED_MASTER_MARKER_CHUNK_SIZE 34U
 
 
 // The Artist Chunk defines the name of the Artist.
@@ -893,7 +895,7 @@ struct artist_chunk_t
     char artist_text[65535];                // description
 } ATTRIBUTE_PACKED;
 typedef struct artist_chunk_t   artist_chunk_t;
-
+#define EDITED_MASTER_ARTIST_CHUNK_SIZE 16U
 
 // The Title Chunk defines the title of the project in the file.
 //
@@ -917,7 +919,7 @@ struct title_chunk_t
     char title_text[65535];                // description
 } ATTRIBUTE_PACKED;
 typedef struct title_chunk_t   title_chunk_t;
-
+#define EDITED_MASTER_TITLE_CHUNK_SIZE 16U
 
 // The Manufacturer Specific Chunk is a chunk for storing manufacturer specific information.
 //
