@@ -53,6 +53,7 @@ OBJS		:= \
             scarletbook_output.o \
             sac_accessor.o \
             ioctl.o \
+            iso_writer.o \
             sacd_reader.o 
 all: ppu
 

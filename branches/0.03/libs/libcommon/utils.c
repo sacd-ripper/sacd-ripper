@@ -30,3 +30,37 @@ char *substr(const char *pstr, int start, int numchars)
     pnew[numchars] = '\0';
     return pnew;
 }
+
+void rem_space(char *str)
+{
+    int len = strlen(str) - 1;
+    int i = 0;
+    int spaces = 0;
+
+    if(!str || len < 0) 
+        return;
+        
+    while (i < len)
+    {
+        while(str[i] == ' ') 
+        {
+            spaces++; 
+            i++;
+        }
+        while(str[i] != ' ' && str[i] != '\0') 
+        {
+            str[i - spaces] = str[i]; 
+            i++;
+        }
+        if(str[i + spaces - 1] != '\0') 
+        {
+            str[i - spaces] = ' '; 
+            spaces--; 
+        } 
+        else 
+        {
+            break;
+        }
+    }
+    str[i - spaces] = '\0';
+}

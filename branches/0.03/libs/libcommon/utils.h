@@ -36,6 +36,7 @@ extern "C" {
     ( ((num) >= (lowerbound)) && ((num) <= (upperbound)) )
 
 char *substr(const char *, int, int);
+void rem_space(char *str);
 
 #ifdef __cplusplus
 };

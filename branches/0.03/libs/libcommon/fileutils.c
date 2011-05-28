@@ -32,6 +32,7 @@
 
 #include "logging.h"
 #include "fileutils.h"
+#include "utils.h"
 
 // construct a filename from various parts
 //
@@ -333,13 +334,15 @@ void trim_whitespace(char * str)
 void sanitize_filename(char *f)
 {
     const char safe_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+._- ";
+    char *c = f;
 
-    if (!f)
+    if (!c || strlen(c) == 0)
         return;
 
-    for (; *f; f++)
+    for (; *c; c++)
     {
-        if (!strchr(safe_chars, *f))
-            *f = ' ';
+        if (!strchr(safe_chars, *c))
+            *c = ' ';
     }
+    rem_space(f);
 }
