@@ -16,6 +16,6 @@ $srcdir=@srcdir@
 %packager Giuseppe "Cowo" Corbelli <cowo@lugbs.linux.it>
 
 %system all
-f 0755 root root @libdir@/libid3tag.la .libs/libid3tag.lai
-f 0644 root root @libdir@/libid3tag.a .libs/libid3tag.a
+f 0755 root root @libdir@/libid3tag.la lib/libid3tag.lai
+f 0644 root root @libdir@/libid3tag.a lib/libid3tag.a
 f 0644 root root @includedir@/id3tag.h @srcdir@/id3tag.h

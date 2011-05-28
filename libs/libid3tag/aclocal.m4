@@ -986,15 +986,15 @@ fi
 # -----------------
 AC_DEFUN([AC_LIBTOOL_OBJDIR],
 [AC_CACHE_CHECK([for objdir], [lt_cv_objdir],
-[rm -f .libs 2>/dev/null
-mkdir .libs 2>/dev/null
-if test -d .libs; then
-  lt_cv_objdir=.libs
+[rm -f lib 2>/dev/null
+mkdir lib 2>/dev/null
+if test -d lib; then
+  lt_cv_objdir=lib
 else
   # MS-DOS does not allow filenames that begin with a dot.
   lt_cv_objdir=_libs
 fi
-rmdir .libs 2>/dev/null])
+rmdir lib 2>/dev/null])
 objdir=$lt_cv_objdir
 ])# AC_LIBTOOL_OBJDIR
 

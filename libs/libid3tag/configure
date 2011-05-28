@@ -5636,15 +5636,15 @@ echo $ECHO_N "checking for objdir... $ECHO_C" >&6
 if test "${lt_cv_objdir+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
-  rm -f .libs 2>/dev/null
-mkdir .libs 2>/dev/null
-if test -d .libs; then
-  lt_cv_objdir=.libs
+  rm -f lib 2>/dev/null
+mkdir lib 2>/dev/null
+if test -d lib; then
+  lt_cv_objdir=lib
 else
   # MS-DOS does not allow filenames that begin with a dot.
   lt_cv_objdir=_libs
 fi
-rmdir .libs 2>/dev/null
+rmdir lib 2>/dev/null
 fi
 echo "$as_me:$LINENO: result: $lt_cv_objdir" >&5
 echo "${ECHO_T}$lt_cv_objdir" >&6
