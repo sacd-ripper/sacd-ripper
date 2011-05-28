@@ -22,7 +22,6 @@
 #ifndef __FILEUTILS_H__
 #define __FILEUTILS_H__ 
 
-#include <sys/stat.h>
 #include <stdio.h>
 
 #ifdef _WIN32

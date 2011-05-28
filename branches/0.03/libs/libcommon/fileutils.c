@@ -332,7 +332,7 @@ void trim_whitespace(char * str)
 
 void sanitize_filename(char *f)
 {
-    static const char safe_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+._- ";
+    const char safe_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+._- ";
 
     if (!f)
         return;
