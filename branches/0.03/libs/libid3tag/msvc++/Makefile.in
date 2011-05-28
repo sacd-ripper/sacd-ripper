@@ -181,7 +181,7 @@ mostlyclean-libtool:
 	-rm -f *.lo
 
 clean-libtool:
-	-rm -rf .libs _libs
+	-rm -rf lib _libs
 
 distclean-libtool:
 	-rm -f libtool
