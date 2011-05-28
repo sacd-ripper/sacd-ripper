@@ -1,18 +1,13 @@
-todo:
+TODO
 
   core:
 
-    - finish ripping pipeline
-        - finish asynchronous processing loops and thread
+    - test PS3 ripping pipeline
     - add dst decoding
     - add sony dsf export support
     - write log along each consecutive rip
     - use output_format_t.error_number for error handling
 
-  bug:
-  
-    - test the incorrect?? output length (audiogate tells me the tracks are a couple of frames bigger..)
-    
   interface: 
   
     - ask which area to rip (in case of multiple)
@@ -21,3 +16,11 @@ todo:
         - title
         - current filename
         - progress total & MB/sec
+
+  bug:
+  
+    - test the incorrect?? output length (audiogate tells me the tracks are a couple of frames bigger..)
+
+  testing:
+  
+     - test multi channel exports

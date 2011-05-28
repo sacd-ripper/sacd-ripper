@@ -28,7 +28,7 @@
 extern "C" {
 #endif
 
-int start_ripping(void);
+int start_ripping_gui(void);
 
 #ifdef __cplusplus
 }

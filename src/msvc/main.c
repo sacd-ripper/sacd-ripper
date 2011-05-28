@@ -353,8 +353,6 @@ int main(int argc, char* argv[]) {
             }
 #endif
 
-
-
             init_stats(handle_status_update_callback);
             start_ripping(handle);
             scarletbook_close(handle);

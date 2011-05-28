@@ -404,7 +404,7 @@ void main_loop(void)
     // did user request to start the ripping process?
     else if (dialog_action == 1 && bd_contains_sacd_disc)
     {
-        start_ripping();
+        start_ripping_gui();
 
         // action is handled
         dialog_action = 0;

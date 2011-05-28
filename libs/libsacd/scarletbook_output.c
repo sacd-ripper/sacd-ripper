@@ -26,6 +26,10 @@
 #include <inttypes.h>
 #ifdef __lv2ppu__
 #include <sys/file.h>
+#include <sys/thread.h>
+#include <sys/atomic.h>
+#include <sys/mutex.h>
+#include <sys/cond.h>
 #elif defined(WIN32)
 #include <io.h>
 #endif
@@ -36,11 +40,17 @@
 #include "scarletbook_output.h"
 #include "sacd_reader.h"
 
+// TODO, move all variables to scarletbook_output_t context...
+
 static struct list_head ripping_queue;
 static int initialized_ripping_queue = 0;
+#ifdef __lv2ppu__
+static atomic_t stop_processing;            // indicates if the thread needs to stop or has stopped
+static atomic_t outstanding_read_requests;
+#else
 static int stop_processing = 0;
+#endif
 
-// TODO, move to context
 audio_frame_t audio_sector;
 int current_audio_frame_size = 0;
 uint8_t current_audio_frame[SACD_LSN_SIZE * 40];
@@ -52,6 +62,14 @@ uint32_t         stats_total_sectors_processed;
 uint32_t         stats_current_file_total_sectors;
 uint32_t         stats_current_file_sectors_processed;
 stats_callback_t stats_callback = 0;
+
+#ifdef __lv2ppu__
+// processing 
+sys_cond_t          processing_cond;
+sys_mutex_t         processing_mutex;
+
+sys_ppu_thread_t    processing_thread_id;
+#endif
 
 extern scarletbook_format_handler_t const * dsdiff_format_fn(void);
 extern scarletbook_format_handler_t const * iso_format_fn(void);
@@ -196,6 +214,27 @@ void destroy_output_format(scarletbook_output_format_t * ft)
     free(ft);
 }
 
+void init_stats(stats_callback_t cb)
+{
+    if (initialized_ripping_queue)
+    {
+        struct list_head * node_ptr;
+        scarletbook_output_format_t * output_format_ptr;
+
+        stats_total_sectors = 0;
+        stats_total_sectors_processed = 0;
+        stats_current_file_total_sectors = 0;
+        stats_current_file_sectors_processed = 0;
+        stats_callback = cb;
+
+        list_for_each(node_ptr, &ripping_queue)
+        {
+            output_format_ptr = list_entry(node_ptr, scarletbook_output_format_t, siblings);
+            stats_total_sectors += output_format_ptr->length_lsn;
+        }
+    }
+}
+
 static void scarletbook_process_frames_callback(uint8_t *buffer, int pos, int blocks, void *user_data)
 {
     int ret, i;
@@ -295,133 +334,207 @@ static void scarletbook_process_frames_callback(uint8_t *buffer, int pos, int bl
     {
         write_frame(ft, buffer, blocks);
     }
+
+#ifdef __lv2ppu__
+    // amount of read requests can now be decreased
+    atomic_dec(&outstanding_read_requests);
+
+    // processing thread is still waiting, here we signal it can continue..
+    ret = sysMutexLock(processing_mutex, 0);
+    if (ret != 0)
+    {
+        return;
+    }
+    ret = sysCondSignal(processing_cond);
+    if (ret != 0)
+    {
+        sysMutexUnlock(processing_mutex);
+        return;
+    }
+    ret = sysMutexUnlock(processing_mutex);
+    if (ret != 0)
+    {
+        return;
+    }
+#endif
 }
 
 #ifdef __lv2ppu__
-static int process_frames(scarletbook_output_format_t * ft)
+static void processing_thread(void *arg)
 {
-    uint32_t block_size, end_lsn;
-    scarletbook_handle_t *handle = ft->sb_handle;
-    uint32_t encrypted_start_1 = 0;
-    uint32_t encrypted_start_2 = 0;
-    uint32_t encrypted_end_1;
-    uint32_t encrypted_end_2;
+    scarletbook_handle_t *handle = (scarletbook_handle_t *) arg;
+    struct list_head * node_ptr;
+    scarletbook_output_format_t * output_format_ptr;
 
-    if (handle->area[0].area_toc != 0)
+    if (initialized_ripping_queue)
     {
-        encrypted_start_1 = handle->area[0].area_toc->track_start;
-        encrypted_end_1 = handle->area[0].area_toc->track_end;
-    }
-    if (handle->area[1].area_toc != 0)
-    {
-        encrypted_start_2 = handle->area[1].area_toc->track_start;
-        encrypted_end_2 = handle->area[1].area_toc->track_end;
-    }
-
-    ft->current_lsn = ft->start_lsn;
-    end_lsn = ft->start_lsn + ft->length_lsn;
-
-    while (atomic_read(&stop_processing) == 0)
-    {
-        if (ft->current_lsn < end_lsn)
+        while (!list_empty(&ripping_queue))
         {
-            // check what parts are encrypted..
-            if (encrypted_start_1
-                && (is_between_inclusive(ft->current_lsn + MAX_PROCESSING_BLOCK_SIZE, encrypted_start_1, encrypted_end_1)
-                || is_between_exclusive(ft->current_lsn, encrypted_start_1, encrypted_end_1))
-                )
+            node_ptr = ripping_queue.next;
+            output_format_ptr = list_entry(node_ptr, scarletbook_output_format_t, siblings);
+            list_del(node_ptr);
+
+            output_format_ptr->sb_handle = handle;
+
+            stats_current_file_total_sectors = output_format_ptr->length_lsn;
+            stats_current_file_sectors_processed = 0;
+
+            if (stats_callback)
             {
-                if (ft->current_lsn < encrypted_start_1)
-                {
-                    block_size = encrypted_start_1 - ft->current_lsn;
-                    ft->encrypted = 0;
-                }
-                else
-                {
-                    block_size = min(encrypted_end_1 - ft->current_lsn + 1, MAX_PROCESSING_BLOCK_SIZE);
-                    ft->encrypted = 1;
-                }
-            }
-            else if (encrypted_start_2
-                && (is_between_inclusive(ft->current_lsn + MAX_PROCESSING_BLOCK_SIZE, encrypted_start_2, encrypted_end_2)
-                || is_between_exclusive(ft->current_lsn, encrypted_start_2, encrypted_end_2))
-                )
-            {
-                if (ft->current_lsn < encrypted_start_2)
-                {
-                    block_size = encrypted_start_2 - ft->current_lsn;
-                    ft->encrypted = 0;
-                }
-                else
-                {
-                    block_size = min(encrypted_end_2 - ft->current_lsn + 1, MAX_PROCESSING_BLOCK_SIZE);
-                    ft->encrypted = 1;
-                }
-            }
-            else 
-            {
-                block_size = min(end_lsn - ft->current_lsn, MAX_PROCESSING_BLOCK_SIZE);
-                ft->encrypted = 0;
+                stats_callback(stats_total_sectors, stats_total_sectors_processed, 
+                               stats_current_file_total_sectors, stats_current_file_sectors_processed,
+                               output_format_ptr->filename);
             }
 
-            sacd_read_async_block_raw(ft->sb_handle->sacd, ft->current_lsn, block_size, scarletbook_process_frames_callback, ft);
+            create_output_file(output_format_ptr);
+            {
+                scarletbook_output_format_t *ft = output_format_ptr;
+                uint32_t block_size, end_lsn;
+                uint32_t encrypted_start_1 = 0;
+                uint32_t encrypted_start_2 = 0;
+                uint32_t encrypted_end_1 = 0;
+                uint32_t encrypted_end_2 = 0;
+                int ret, i;
 
-            ft->current_lsn += block_size;
-        }
-        else if (atomic_read(&outstanding_read_requests) == 0)
-        {
-            // we are done!
-            break;
-        }
-        ret = sysMutexLock(accessor->processing_mutex, 0);
-        if (ret != 0)
-        {
-            LOG(lm_main, LOG_NOTICE, ("error sysMutexLock"));
-            goto close_thread;
-        }
+                if (handle->area[0].area_toc != 0)
+                {
+                    encrypted_start_1 = handle->area[0].area_toc->track_start;
+                    encrypted_end_1 = handle->area[0].area_toc->track_end;
+                }
+                if (handle->area[1].area_toc != 0)
+                {
+                    encrypted_start_2 = handle->area[1].area_toc->track_start;
+                    encrypted_end_2 = handle->area[1].area_toc->track_end;
+                }
 
-        LOG(lm_main, LOG_NOTICE, ("waiting for async read result (6 sec)"));
-        ret = sysCondWait(accessor->processing_cond, 6000000);
-        if (ret != 0)
-        {
-            LOG(lm_main, LOG_NOTICE, ("error sysCondWait"));
-            sysMutexUnlock(accessor->processing_mutex);
-            goto close_thread;
-        }
+                ft->current_lsn = ft->start_lsn;
+                end_lsn = ft->start_lsn + ft->length_lsn;
 
-        ret = sysMutexUnlock(accessor->processing_mutex);
-        if (ret != 0)
-        {
-            LOG(lm_main, LOG_NOTICE, ("error sysMutexUnlock"));
-            goto close_thread;
-        }
+                atomic_set(&outstanding_read_requests, 0);
+                atomic_set(&stop_processing, 0);
+
+                while (atomic_read(&stop_processing) == 0)
+                {
+                    if (ft->current_lsn < end_lsn)
+                    {
+                        // maximum of two oustanding read requests
+                        for (i = atomic_read(&outstanding_read_requests); i < 2; i++)
+                        {
+                            // check what parts are encrypted..
+                            if (encrypted_start_1
+                                && (is_between_inclusive(ft->current_lsn + MAX_PROCESSING_BLOCK_SIZE, encrypted_start_1, encrypted_end_1)
+                                || is_between_exclusive(ft->current_lsn, encrypted_start_1, encrypted_end_1))
+                                )
+                            {
+                                if (ft->current_lsn < encrypted_start_1)
+                                {
+                                    block_size = encrypted_start_1 - ft->current_lsn;
+                                    ft->encrypted = 0;
+                                }
+                                else
+                                {
+                                    block_size = min(encrypted_end_1 - ft->current_lsn + 1, MAX_PROCESSING_BLOCK_SIZE);
+                                    ft->encrypted = 1;
+                                }
+                            }
+                            else if (encrypted_start_2
+                                && (is_between_inclusive(ft->current_lsn + MAX_PROCESSING_BLOCK_SIZE, encrypted_start_2, encrypted_end_2)
+                                || is_between_exclusive(ft->current_lsn, encrypted_start_2, encrypted_end_2))
+                                )
+                            {
+                                if (ft->current_lsn < encrypted_start_2)
+                                {
+                                    block_size = encrypted_start_2 - ft->current_lsn;
+                                    ft->encrypted = 0;
+                                }
+                                else
+                                {
+                                    block_size = min(encrypted_end_2 - ft->current_lsn + 1, MAX_PROCESSING_BLOCK_SIZE);
+                                    ft->encrypted = 1;
+                                }
+                            }
+                            else 
+                            {
+                                block_size = min(end_lsn - ft->current_lsn, MAX_PROCESSING_BLOCK_SIZE);
+                                ft->encrypted = 0;
+                            }
+
+                            ret = sacd_read_async_block_raw(ft->sb_handle->sacd, ft->current_lsn, block_size, scarletbook_process_frames_callback, ft);
+                            if (ret != 0)
+                            {
+                                // TODO: handle this error
+                                LOG(lm_main, LOG_ERROR, ("could trigger async block read"));
+                                break;
+                            }
+                            else
+                            {
+                                 atomic_inc(&outstanding_read_requests);
+                            }
+                            stats_total_sectors_processed += block_size;
+                            stats_current_file_sectors_processed += block_size;
+                            
+                            if (stats_callback)
+                            {
+                                stats_callback(stats_total_sectors, stats_total_sectors_processed, 
+                                               stats_current_file_total_sectors, stats_current_file_sectors_processed,
+                                               0);
+                            }
+
+                            ft->current_lsn += block_size;
+                        }
+                    }
+                    else if (atomic_read(&outstanding_read_requests) == 0)
+                    {
+                        // we are done!
+                        break;
+                    }
+
+                    ret = sysMutexLock(processing_mutex, 0);
+                    if (ret != 0)
+                    {
+                        LOG(lm_main, LOG_NOTICE, ("error sysMutexLock"));
+                        sysThreadExit(0);
+                    }
+
+                    LOG(lm_main, LOG_NOTICE, ("waiting for async read result (6 sec)"));
+                    ret = sysCondWait(processing_cond, 6000000);
+                    if (ret != 0)
+                    {
+                        LOG(lm_main, LOG_NOTICE, ("error sysCondWait"));
+                        sysMutexUnlock(processing_mutex);
+                        sysThreadExit(0);
+                    }
+
+                    ret = sysMutexUnlock(processing_mutex);
+                    if (ret != 0)
+                    {
+                        LOG(lm_main, LOG_NOTICE, ("error sysMutexUnlock"));
+                        sysThreadExit(0);
+                    }
+                }
+
+            }
+
+            close_output_file(output_format_ptr);
+
+            if (atomic_read(&stop_processing) == 1)
+            {
+                // remove the file being worked on
+                remove(output_format_ptr->filename);
+                destroy_output_format(output_format_ptr);
+                destroy_ripping_queue();
+                sysThreadExit(0);
+            }
+
+            destroy_output_format(output_format_ptr);
+        } 
+        destroy_ripping_queue();
     }
 
-    return 0;
+    sysThreadExit(0);
 }
 
 #else 
-
-void init_stats(stats_callback_t cb)
-{
-    if (initialized_ripping_queue)
-    {
-        struct list_head * node_ptr;
-        scarletbook_output_format_t * output_format_ptr;
-
-        stats_total_sectors = 0;
-        stats_total_sectors_processed = 0;
-        stats_current_file_total_sectors = 0;
-        stats_current_file_sectors_processed = 0;
-        stats_callback = cb;
-
-        list_for_each(node_ptr, &ripping_queue)
-        {
-            output_format_ptr = list_entry(node_ptr, scarletbook_output_format_t, siblings);
-            stats_total_sectors += output_format_ptr->length_lsn;
-        }
-    }
-}
 
 static int process_frames(scarletbook_output_format_t * ft)
 {
@@ -461,9 +574,8 @@ static int process_frames(scarletbook_output_format_t * ft)
 
     return -1;
 }
-#endif
 
-int start_ripping(scarletbook_handle_t *handle)
+static int synchronous_ripping(scarletbook_handle_t *handle)
 {
     struct list_head * node_ptr;
     scarletbook_output_format_t * output_format_ptr;
@@ -505,11 +617,91 @@ int start_ripping(scarletbook_handle_t *handle)
         } 
         destroy_ripping_queue();
     }
+    return 0;
+}
+#endif
+
+int start_ripping(scarletbook_handle_t *handle)
+{
+#ifdef __lv2ppu__
+    int ret;
+    sys_cond_attr_t         cond_attr;
+    sys_mutex_attr_t        mutex_attr;
+
+    memset(&cond_attr, 0, sizeof(sys_cond_attr_t));
+    cond_attr.attr_pshared = SYS_COND_ATTR_PSHARED;
+
+    memset(&mutex_attr, 0, sizeof(sys_mutex_attr_t));
+    mutex_attr.attr_protocol  = SYS_MUTEX_PROTOCOL_PRIO;
+    mutex_attr.attr_recursive = SYS_MUTEX_ATTR_NOT_RECURSIVE;
+    mutex_attr.attr_pshared   = SYS_MUTEX_ATTR_PSHARED;
+    mutex_attr.attr_adaptive  = SYS_MUTEX_ATTR_NOT_ADAPTIVE;
+
+    if (sysMutexCreate(&processing_mutex, &mutex_attr) != 0)
+    {
+        LOG(lm_main, LOG_ERROR, ("create processing_mutex failed."));
+        return -1;
+    }
+
+    if (sysCondCreate(&processing_cond, processing_mutex, &cond_attr) != 0)
+    {
+        LOG(lm_main, LOG_ERROR, ("create processing_cond failed."));
+        return -1;
+    }
+
+    ret = sysThreadCreate(&processing_thread_id, processing_thread, handle, 1500, 4096, THREAD_JOINABLE, "processing_thread");
+    if (ret != 0)
+    {
+        LOG(lm_main, LOG_ERROR, ("sys_ppu_thread_join failed (%#x)\n", ret));
+        return ret;
+    }
 
     return 0;
+#else
+    return synchronous_ripping(handle);
+#endif
 }
 
 void stop_ripping(scarletbook_handle_t *handle)
 {
+#ifdef __lv2ppu__
+    uint64_t        retval;
+    int             ret;
+
+    atomic_set(&stop_processing, 1);
+
+    // wait for our thread to close
+    ret = sysThreadJoin(processing_thread_id, &retval);
+    if (ret != 0)
+    {
+        LOG(lm_main, LOG_ERROR, ("processing thread didn't close properly..."));
+    }
+
+    if (processing_cond != 0)
+    {
+        if ((ret = sysCondDestroy(processing_cond)) != 0)
+        {
+            LOG(lm_main, LOG_ERROR, ("destroy processing_cond failed."));
+        }
+        else
+        {
+            processing_cond = 0;
+        }
+    }
+
+    if (processing_mutex != 0)
+    {
+        if ((ret = sysMutexDestroy(processing_mutex)) != 0)
+        {
+            LOG(lm_main, LOG_ERROR, ("destroy processing_mutex failed."));
+        }
+        else
+        {
+            processing_mutex = 0;
+        }
+    }
+
+#else
     stop_processing = 1;
+#endif
 }
