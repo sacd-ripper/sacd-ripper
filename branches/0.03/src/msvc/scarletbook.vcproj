@@ -190,6 +190,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\libs\libsacd\iso_writer.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\libs\libcommon\log.c"
 				>
 			</File>

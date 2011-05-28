@@ -385,13 +385,25 @@ ssize_t sacd_read_block_raw(sacd_reader_t *sacd, uint32_t lb_number,
 
 ssize_t sacd_read_async_block_raw(sacd_reader_t *sacd, int pos, int blocks, sacd_aio_callback_t cb, void *user_data)
 {
+    if (!sacd->dev)
+        return 0;
+
     return sacd_input_async_read(sacd->dev, pos, blocks, cb, user_data);
 }
 
-/**
- * Decrypts audio sectors, only available on PS3
- */
 int sacd_decrypt(sacd_reader_t *sacd, uint8_t *buffer, int blocks)
 {
+    if (!sacd->dev)
+        return 0;
+
     return sacd_input_decrypt(sacd->dev, buffer, blocks);
 }
+
+uint32_t sacd_get_total_sectors(sacd_reader_t *sacd)
+{
+    if (!sacd->dev)
+        return 0;
+
+    return sacd_input_total_sectors(sacd->dev);
+}
+

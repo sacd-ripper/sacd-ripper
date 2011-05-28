@@ -228,6 +228,8 @@ int main(int argc, char* argv[]) {
                 scarletbook_print(handle);
             }
 
+
+#if 1
             // select the channel area
             area_idx = (has_multi_channel(handle) && opts.multi_channel) ? handle->mulch_area_idx : handle->twoch_area_idx;
 
@@ -238,7 +240,29 @@ int main(int argc, char* argv[]) {
                     handle->area[area_idx].area_tracklist_offset->track_start_lsn[i], 
                     handle->area[area_idx].area_tracklist_offset->track_length_lsn[i], 1);
             }
-            
+#else
+            {
+                #define FAT32_SECTOR_LIMIT 100000
+                uint32_t total_sectors = sacd_get_total_sectors(sacd_reader);
+                uint32_t sector_size = FAT32_SECTOR_LIMIT;
+                uint32_t sector_offset = 0;
+                if (total_sectors > FAT32_SECTOR_LIMIT)
+                {
+                    for (i = 0; total_sectors != 0; i++)
+                    {
+                        sector_size = min(total_sectors, FAT32_SECTOR_LIMIT);
+                        queue_track_to_rip(0, 0, generate_trackname(i), "iso", sector_offset, sector_size, 0);
+                        sector_offset += sector_size;
+                        total_sectors -= sector_size;
+                    }
+                }
+                else
+                {
+                    queue_track_to_rip(0, 0, "filename.iso", "iso", 0, total_sectors, 0);
+                }
+            }
+#endif
+
             init_stats(handle_status_update_callback);
             start_ripping(handle);
             scarletbook_close(handle);

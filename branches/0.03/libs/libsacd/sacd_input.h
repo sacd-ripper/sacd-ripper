@@ -24,7 +24,7 @@
 
 #include <inttypes.h>
 
-#if defined(__MINGW32__)
+#if defined(__MINGW32__) || defined(_WIN32)
 #   undef  lseek
 #   define lseek            _lseeki64
 #   undef  fseeko
@@ -35,7 +35,7 @@
 #   define funlockfile(...)
 #   define getc_unlocked    getc
 #   undef  off_t
-#   define off_t            off64_t
+#   define off_t            uint64_t
 #   undef  stat
 #   define stat             _stati64
 #   define fstat            _fstati64
@@ -55,5 +55,6 @@ extern ssize_t sacd_input_read(sacd_input_t, int, int, void *);
 extern char    * sacd_input_error(sacd_input_t);
 extern ssize_t sacd_input_async_read(sacd_input_t, int, int, sacd_aio_callback_t, void *);
 extern int sacd_input_decrypt(sacd_input_t, uint8_t *, int);
+extern uint32_t sacd_input_total_sectors(sacd_input_t);
 
 #endif /* SACD_INPUT_H_INCLUDED */

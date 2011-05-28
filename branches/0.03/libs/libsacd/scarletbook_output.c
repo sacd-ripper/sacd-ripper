@@ -54,11 +54,13 @@ uint32_t         stats_current_file_sectors_processed;
 stats_callback_t stats_callback = 0;
 
 extern scarletbook_format_handler_t const * dsdiff_format_fn(void);
+extern scarletbook_format_handler_t const * iso_format_fn(void);
 
 typedef const scarletbook_format_handler_t *(*sacd_output_format_fn_t)(void); 
 static sacd_output_format_fn_t s_sacd_output_format_fns[] = 
 {
     dsdiff_format_fn,
+    iso_format_fn,
     NULL
 }; 
 
