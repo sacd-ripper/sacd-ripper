@@ -340,6 +340,6 @@ void sanitize_filename(char *f)
     for (; *f; f++)
     {
         if (!strchr(safe_chars, *f))
-            *f = '_';
+            *f = ' ';
     }
 }

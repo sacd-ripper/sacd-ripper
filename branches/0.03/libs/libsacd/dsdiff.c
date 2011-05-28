@@ -74,7 +74,7 @@ static char *get_mtoc_title_text(scarletbook_handle_t *handle)
     return 0;
 }
 
-int dsdiff_create(scarletbook_output_format_t *ft)
+int dsdiff_create_header(scarletbook_output_format_t *ft)
 {
     form_dsd_chunk_t *form_dsd_chunk;
     property_chunk_t *property_chunk;
@@ -184,7 +184,7 @@ int dsdiff_create(scarletbook_output_format_t *ft)
         }
 
         compression_type_chunk->chunk_data_size = CALC_CHUNK_SIZE(COMPRESSION_TYPE_CHUNK_SIZE - CHUNK_HEADER_SIZE + compression_type_chunk->count);
-        write_ptr                              += CEIL_ODD_NUMBER(COMPRESSION_TYPE_CHUNK_SIZE + compression_type_chunk->count);
+        write_ptr += CEIL_ODD_NUMBER(COMPRESSION_TYPE_CHUNK_SIZE + compression_type_chunk->count);
     }
 
     // The Absolute Start Time Chunk is optional but if used it may appear only once in the
@@ -194,10 +194,10 @@ int dsdiff_create(scarletbook_output_format_t *ft)
         area_tracklist_time_start_t *area_tracklist_time_start = sb_handle->area[ft->area].area_tracklist_time->start;
         absolute_start_time_chunk->chunk_id = ABSS_MARKER;
         absolute_start_time_chunk->chunk_data_size = CALC_CHUNK_SIZE(ABSOLUTE_START_TIME_CHUNK_SIZE - CHUNK_HEADER_SIZE);
-        absolute_start_time_chunk->hours = area_tracklist_time_start->minutes / 60;
+        absolute_start_time_chunk->hours = hton16(area_tracklist_time_start->minutes / 60);
         absolute_start_time_chunk->minutes = area_tracklist_time_start->minutes % 60;
         absolute_start_time_chunk->seconds = area_tracklist_time_start->seconds;
-        absolute_start_time_chunk->samples = area_tracklist_time_start->frames;
+        absolute_start_time_chunk->samples = hton32(area_tracklist_time_start->frames);
         write_ptr += ABSOLUTE_START_TIME_CHUNK_SIZE;
     }
 
@@ -275,13 +275,89 @@ int dsdiff_create(scarletbook_output_format_t *ft)
         write_ptr += CHUNK_HEADER_SIZE;
     }
 
+    // start with a new footer
+    handle->footer_size = 0;
+
+    // Audiogate supports, Title and Artist information through an EM Chunk
+    {
+        uint8_t * em_ptr  = handle->footer + handle->footer_size;
+        edited_master_information_chunk_t *edited_master_information_chunk = (edited_master_information_chunk_t *) em_ptr;
+        edited_master_information_chunk->chunk_id = DIIN_MARKER;
+        em_ptr += EDITED_MASTER_INFORMATION_CHUNK_SIZE;
+
+        {
+            marker_chunk_t *marker_chunk = (marker_chunk_t *) em_ptr;
+            area_tracklist_time_duration_t *area_tracklist_time_duration = sb_handle->area[ft->area].area_tracklist_time->duration;
+            marker_chunk->chunk_id = MARK_MARKER;
+            marker_chunk->chunk_data_size = CALC_CHUNK_SIZE(EDITED_MASTER_MARKER_CHUNK_SIZE - CHUNK_HEADER_SIZE);
+            marker_chunk->hours = hton16(area_tracklist_time_duration->minutes / 60);
+            marker_chunk->minutes = area_tracklist_time_duration->minutes % 60;
+            marker_chunk->seconds = area_tracklist_time_duration->seconds;
+            marker_chunk->samples = hton32(area_tracklist_time_duration->frames);
+            marker_chunk->offset = 0;
+            marker_chunk->mark_type = hton16(MARK_MARKER_TYPE_INDEX_ENTRY);
+            marker_chunk->mark_channel = 0;
+            marker_chunk->track_flags = 0;
+            marker_chunk->count = 0;
+            em_ptr += EDITED_MASTER_MARKER_CHUNK_SIZE;
+        }
+
+        {
+            artist_chunk_t   *artist_chunk = (artist_chunk_t *) em_ptr;
+            char *c;
+
+            c = sb_handle->area[ft->area].area_track_text[ft->track].track_type_performer;
+            if (c)
+            {
+                char track_artist[512];
+                int len;
+                memset(track_artist, 0, sizeof(track_artist));
+                strncpy(track_artist, c, 511);
+
+                len = strlen(track_artist);
+                artist_chunk->chunk_id = DIAR_MARKER;
+                artist_chunk->chunk_data_size = CALC_CHUNK_SIZE(EDITED_MASTER_ARTIST_CHUNK_SIZE + len - CHUNK_HEADER_SIZE);
+                artist_chunk->count = hton32(len);
+                em_ptr += EDITED_MASTER_ARTIST_CHUNK_SIZE;
+                memcpy(em_ptr, track_artist, len);
+                em_ptr += CEIL_ODD_NUMBER(len);
+            }
+        }
+
+        {
+            title_chunk_t   *title_chunk = (title_chunk_t *) em_ptr;
+            char *c;
+
+            c = sb_handle->area[ft->area].area_track_text[ft->track].track_type_title;
+            if (c)
+            {
+                int len;
+                char track_title[512];
+                memset(track_title, 0, sizeof(track_title));
+                strncpy(track_title, c, 511);
+
+                len = strlen(track_title);
+
+                title_chunk->chunk_id = DITI_MARKER;
+                title_chunk->chunk_data_size = CALC_CHUNK_SIZE(EDITED_MASTER_TITLE_CHUNK_SIZE + len - CHUNK_HEADER_SIZE);
+                title_chunk->count = hton32(len);
+                em_ptr += EDITED_MASTER_TITLE_CHUNK_SIZE;
+                memcpy(em_ptr, track_title, len);
+                em_ptr += CEIL_ODD_NUMBER(len);
+            }
+        }
+
+        edited_master_information_chunk->chunk_data_size = CALC_CHUNK_SIZE(em_ptr - handle->footer - handle->footer_size - CHUNK_HEADER_SIZE);
+        handle->footer_size = CEIL_ODD_NUMBER(em_ptr - handle->footer);
+    }
+
     // Now we write the COMT comment chunk to the footer buffer
     {
         time_t           rawtime;
         struct tm        * timeinfo;
         comment_t        * comment;
         char             data[512];
-        uint8_t          * comment_ptr  = handle->footer;
+        uint8_t          * comment_ptr  = handle->footer + handle->footer_size;
         comments_chunk_t *comment_chunk = (comments_chunk_t *) comment_ptr;
         comment_chunk->chunk_id    = COMT_MARKER;
         comment_chunk->numcomments = hton16(2);
@@ -303,7 +379,7 @@ int dsdiff_create(scarletbook_output_format_t *ft)
         comment->count = hton32(strlen(data));
         memcpy(comment->comment_text, data, strlen(data));
 
-        comment_ptr += COMMENT_SIZE + strlen(data);
+        comment_ptr += CEIL_ODD_NUMBER(COMMENT_SIZE + strlen(data));
 
         comment                    = (comment_t *) comment_ptr;
         comment->timestamp_year    = hton16(timeinfo->tm_year + 1900);
@@ -317,14 +393,14 @@ int dsdiff_create(scarletbook_output_format_t *ft)
         comment->count = hton32(strlen(data));
         memcpy(comment->comment_text, data, strlen(data));
 
-        comment_ptr += COMMENT_SIZE + strlen(data);
+        comment_ptr += CEIL_ODD_NUMBER(COMMENT_SIZE + strlen(data));
 
         handle->footer_size            = CEIL_ODD_NUMBER(comment_ptr - handle->footer);
-        comment_chunk->chunk_data_size = CALC_CHUNK_SIZE(handle->footer_size - COMMENTS_CHUNK_SIZE);
+        comment_chunk->chunk_data_size = CALC_CHUNK_SIZE(comment_ptr - handle->footer - handle->footer_size - COMMENTS_CHUNK_SIZE);
     }
 
-    handle->header_size             = CEIL_ODD_NUMBER(write_ptr - handle->header);
-    form_dsd_chunk->chunk_data_size = CALC_CHUNK_SIZE(handle->header_size + handle->footer_size - COMMENTS_CHUNK_SIZE + CEIL_ODD_NUMBER(handle->audio_data_size));
+    handle->header_size = CEIL_ODD_NUMBER(write_ptr - handle->header);
+    form_dsd_chunk->chunk_data_size = CALC_CHUNK_SIZE(handle->header_size + handle->footer_size - COMMENTS_CHUNK_SIZE + handle->audio_data_size);
 
 #ifdef __lv2ppu__
     {
@@ -338,6 +414,12 @@ int dsdiff_create(scarletbook_output_format_t *ft)
     return 0;
 }
 
+
+int dsdiff_create(scarletbook_output_format_t *ft)
+{
+    return dsdiff_create_header(ft);
+}
+
 int dsdiff_close(scarletbook_output_format_t *ft)
 {
     dsdiff_handle_t *handle = (dsdiff_handle_t *) ft->priv;
@@ -345,16 +427,28 @@ int dsdiff_close(scarletbook_output_format_t *ft)
 #ifdef __lv2ppu__
     {
         uint64_t nrw;
+        if (handle->audio_data_size % 2)
+        {
+            uint8_t dummy = 0;
+            sysFsWrite(ft->fd, &dummy, 1, &nrw);
+            handle->audio_data_size += 1;
+        }
         sysFsWrite(ft->fd, handle->footer, handle->footer_size, &nrw);
     }
 #else
+    if (handle->audio_data_size % 2)
+    {
+        uint8_t dummy = 0;
+        write(ft->fd, &dummy, 1);
+        handle->audio_data_size += 1;
+    }
     write(ft->fd, handle->footer, handle->footer_size);
 #endif
 
     lseek(ft->fd, 0, SEEK_SET);
     
     // write the final header
-    dsdiff_create(ft);
+    dsdiff_create_header(ft);
 
     if (handle->header)
         free(handle->header);
@@ -387,8 +481,8 @@ size_t dsdiff_write_frame(scarletbook_output_format_t *ft, const uint8_t *buf, s
         {
             size_t nrw;
             nrw = write(ft->fd, &dst_frame_data_chunk, DST_FRAME_DATA_CHUNK_SIZE);
-            handle->audio_data_size += nrw;
             nrw += write(ft->fd, buf, CEIL_ODD_NUMBER(len));
+            handle->audio_data_size += nrw;
             return nrw;
         }
 #endif
