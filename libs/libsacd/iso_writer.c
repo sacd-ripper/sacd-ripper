@@ -32,6 +32,7 @@
 
 #include "scarletbook_output.h"
 
+// TODO: we need some "proper" indication if we are dealing with LSN size
 size_t iso_write_frame(scarletbook_output_format_t *ft, const uint8_t *buf, size_t len)
 {
 #ifdef __lv2ppu__
@@ -55,7 +56,7 @@ scarletbook_format_handler_t const * iso_format_fn(void)
         iso_write_frame,
         0, 
         0,
-        0
+        0 // no preprocessing, means return decrypted raw sectors
     };
     return &handler;
 }
