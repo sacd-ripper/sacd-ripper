@@ -404,19 +404,22 @@ static int process_frames(scarletbook_output_format_t * ft)
 
 void init_stats(stats_callback_t cb)
 {
-    struct list_head * node_ptr;
-    scarletbook_output_format_t * output_format_ptr;
-
-    stats_total_sectors = 0;
-    stats_total_sectors_processed = 0;
-    stats_current_file_total_sectors = 0;
-    stats_current_file_sectors_processed = 0;
-    stats_callback = cb;
-
-    list_for_each(node_ptr, &ripping_queue)
+    if (initialized_ripping_queue)
     {
-        output_format_ptr = list_entry(node_ptr, scarletbook_output_format_t, siblings);
-        stats_total_sectors += output_format_ptr->length_lsn;
+        struct list_head * node_ptr;
+        scarletbook_output_format_t * output_format_ptr;
+
+        stats_total_sectors = 0;
+        stats_total_sectors_processed = 0;
+        stats_current_file_total_sectors = 0;
+        stats_current_file_sectors_processed = 0;
+        stats_callback = cb;
+
+        list_for_each(node_ptr, &ripping_queue)
+        {
+            output_format_ptr = list_entry(node_ptr, scarletbook_output_format_t, siblings);
+            stats_total_sectors += output_format_ptr->length_lsn;
+        }
     }
 }
 
@@ -465,40 +468,43 @@ int start_ripping(scarletbook_handle_t *handle)
     struct list_head * node_ptr;
     scarletbook_output_format_t * output_format_ptr;
 
-    while (!list_empty(&ripping_queue))
+    if (initialized_ripping_queue)
     {
-        node_ptr = ripping_queue.next;
-        output_format_ptr = list_entry(node_ptr, scarletbook_output_format_t, siblings);
-        list_del(node_ptr);
-
-        output_format_ptr->sb_handle = handle;
-
-        stats_current_file_total_sectors = output_format_ptr->length_lsn;
-        stats_current_file_sectors_processed = 0;
-
-        if (stats_callback)
+        while (!list_empty(&ripping_queue))
         {
-            stats_callback(stats_total_sectors, stats_total_sectors_processed, 
-                           stats_current_file_total_sectors, stats_current_file_sectors_processed,
-                           output_format_ptr->filename);
-        }
+            node_ptr = ripping_queue.next;
+            output_format_ptr = list_entry(node_ptr, scarletbook_output_format_t, siblings);
+            list_del(node_ptr);
 
-        create_output_file(output_format_ptr);
-        process_frames(output_format_ptr);
-        close_output_file(output_format_ptr);
+            output_format_ptr->sb_handle = handle;
 
-        if (stop_processing)
-        {
-            // remove the file being worked on
-            remove(output_format_ptr->filename);
+            stats_current_file_total_sectors = output_format_ptr->length_lsn;
+            stats_current_file_sectors_processed = 0;
+
+            if (stats_callback)
+            {
+                stats_callback(stats_total_sectors, stats_total_sectors_processed, 
+                               stats_current_file_total_sectors, stats_current_file_sectors_processed,
+                               output_format_ptr->filename);
+            }
+
+            create_output_file(output_format_ptr);
+            process_frames(output_format_ptr);
+            close_output_file(output_format_ptr);
+
+            if (stop_processing)
+            {
+                // remove the file being worked on
+                remove(output_format_ptr->filename);
+                destroy_output_format(output_format_ptr);
+                destroy_ripping_queue();
+                return -1;
+            }
+
             destroy_output_format(output_format_ptr);
-            destroy_ripping_queue();
-            return -1;
-        }
-
-        destroy_output_format(output_format_ptr);
-    } 
-    destroy_ripping_queue();
+        } 
+        destroy_ripping_queue();
+    }
 
     return 0;
 }

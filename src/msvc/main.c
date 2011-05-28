@@ -24,7 +24,11 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <signal.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#ifdef _WIN32
 #include <io.h>
+#endif
 
 #include <logging.h>
 
@@ -37,6 +41,7 @@
 #include <scarletbook_print.h>
 #include <scarletbook_id3.h>
 #include <endianess.h>
+#include <fileutils.h>
 #include <utils.h>
 
 static struct opts_s
@@ -141,26 +146,6 @@ static int parse_options(int argc, char *argv[]) {
     return 1;
 }
 
-static char *generate_trackname(int track) {
-    static char outfile_name[255];
-    char path[256];
-    char *post = strrchr(opts.output_file, '/');
-    int path_pos = (post ? post - opts.output_file + 1 : 0);
-    char *file = opts.output_file + path_pos;
-
-    path[0] = '\0';
-    if (path_pos) {
-        strncat(path, opts.output_file, path_pos > 256 ? 256 : path_pos);
-    }
-
-    if (strlen(file) == 0) {
-        file = "sacd.dff";
-    }
-
-    snprintf(outfile_name, 246, "%strack%02d.%s", path, track, file); 
-    return outfile_name;
-}
-
 void handle_sigint(int sig_no)
 {
     printf("\rUser interrupted..                                \n");
@@ -204,7 +189,101 @@ static void init(void) {
     init_logging();
 } 
 
+char *get_album_dir()
+{
+    char disc_artist[60];
+    char disc_album_title[60];
+    char disc_album_year[5];
+    master_text_t *master_text = handle->master_text[0];
+    int disc_artist_position = (master_text->disc_artist_position ? master_text->disc_artist_position : master_text->disc_artist_phonetic_position);
+    int disc_album_title_position = (master_text->disc_title_position ? master_text->disc_title_position : master_text->disc_title_phonetic_position);
+
+    memset(disc_artist, 0, sizeof(disc_artist));
+    if (disc_artist_position)
+    {
+        char *c = (char *) master_text + disc_artist_position;
+        char *pos = strchr(c, ';');
+        strncpy(disc_artist, c, min(pos - c, 59));
+    }
+
+    memset(disc_album_title, 0, sizeof(disc_album_title));
+    if (disc_album_title_position)
+    {
+        char *c = (char *) master_text + disc_album_title_position;
+        char *pos = strchr(c, ';');
+        strncpy(disc_album_title, c, min(pos - c, 59));
+    }
+
+    snprintf(disc_album_year, sizeof(disc_album_year), "%04d", handle->master_toc->disc_date_year);
+    
+    sanitize_filename(disc_artist);
+    sanitize_filename(disc_album_title);
+
+    if (strlen(disc_artist) > 0 && strlen(disc_album_title) > 0)
+        return parse_format("%A - %L", 0, disc_album_year, disc_artist, disc_album_title, NULL);
+    else if (strlen(disc_artist) > 0)
+        return parse_format("%A", 0, disc_album_year, disc_artist, disc_album_title, NULL);
+    else if (strlen(disc_album_title) > 0)
+        return parse_format("%L", 0, disc_album_year, disc_artist, disc_album_title, NULL);
+    else
+        return parse_format("Unknown", 0, disc_album_year, disc_artist, disc_album_title, NULL);
+}
+
+char *get_music_filename(int area, int track)
+{
+    char *c;
+    char track_artist[60];
+    char track_title[60];
+    char disc_album_title[60];
+    char disc_album_year[5];
+    master_text_t *master_text = handle->master_text[0];
+    int disc_album_title_position = (master_text->disc_title_position ? master_text->disc_title_position : master_text->disc_title_phonetic_position);
+
+    c = handle->area[area].area_track_text[track].track_type_performer;
+    if (c)
+    {
+        memset(track_artist, 0, sizeof(track_artist));
+        strncpy(track_artist, c, 59);
+    }
+    else
+    {
+        strcpy(track_artist, "Unknown");
+    }
+
+    c = handle->area[area].area_track_text[track].track_type_title;
+    if (c)
+    {
+        memset(track_title, 0, sizeof(track_title));
+        strncpy(track_title, c, 59);
+    }
+    else
+    {
+        strcpy(track_title, "Unknown");
+    }
+
+    if (disc_album_title_position)
+    {
+        char *c = (char *) master_text + disc_album_title_position;
+        char *pos = strchr(c, ';');
+        memset(disc_album_title, 0, sizeof(disc_album_title));
+        strncpy(disc_album_title, c, min(pos - c, 59));
+    }
+    else
+    {
+        strcpy(disc_album_title, "Unknown");
+    }
+
+    snprintf(disc_album_year, sizeof(disc_album_year), "%04d", handle->master_toc->disc_date_year);
+
+    sanitize_filename(track_artist);
+    sanitize_filename(disc_album_title);
+    sanitize_filename(track_title);
+
+    return parse_format("%N - %A - %T", track + 1, disc_album_year, track_artist, disc_album_title, track_title);
+}
+
 int main(int argc, char* argv[]) {
+    char *albumdir, *musicfilename, *file_path;
     int i, area_idx;
     sacd_reader_t *sacd_reader;
 
@@ -228,17 +307,24 @@ int main(int argc, char* argv[]) {
                 scarletbook_print(handle);
             }
 
-
-#if 1
             // select the channel area
             area_idx = (has_multi_channel(handle) && opts.multi_channel) ? handle->mulch_area_idx : handle->twoch_area_idx;
 
+            albumdir      = get_album_dir();
+            recursive_mkdir(albumdir, 0666);
+
+#if 1
             // fill the queue with items to rip
             for (i = 0; i < handle->area[area_idx].area_toc->track_count; i++) 
             {
-                queue_track_to_rip(area_idx, i, generate_trackname(i + 1), "dsdiff", 
+                musicfilename = get_music_filename(area_idx, i);
+                file_path     = make_filename(".", albumdir, musicfilename, "dff");
+                queue_track_to_rip(area_idx, i, file_path, "dsdiff", 
                     handle->area[area_idx].area_tracklist_offset->track_start_lsn[i], 
                     handle->area[area_idx].area_tracklist_offset->track_length_lsn[i], 1);
+
+                free(musicfilename);
+                free(file_path);
             }
 #else
             {
@@ -263,9 +349,13 @@ int main(int argc, char* argv[]) {
             }
 #endif
 
+
+
             init_stats(handle_status_update_callback);
             start_ripping(handle);
             scarletbook_close(handle);
+
+            free(albumdir);
 
             printf("\rWe are done..                                     \n");
         }
