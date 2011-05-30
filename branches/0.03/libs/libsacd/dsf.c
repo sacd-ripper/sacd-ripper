@@ -55,6 +55,7 @@ typedef struct
     ssize_t             audio_data_size;
 
     int                 channel_count;
+    uint64_t            sample_count;
 
     uint8_t             buffer[6][SACD_BLOCK_SIZE_PER_CHANNEL];
     uint8_t            *buffer_ptr[6];
@@ -131,7 +132,7 @@ int dsf_create_header(scarletbook_output_format_t *ft)
         fmt_chunk->channel_count            = htole32(area_toc->channel_count);
         fmt_chunk->sample_frequency         = htole32(SAMPLE_FREQ_2822400); // SACDs cannot contain anything else..
         fmt_chunk->bits_per_sample          = htole32(SACD_BITS_PER_SAMPLE);
-        fmt_chunk->sample_count             = htole64(handle->audio_data_size / area_toc->channel_count * 8);
+        fmt_chunk->sample_count             = htole64(handle->sample_count / area_toc->channel_count * 8);
         fmt_chunk->block_size_per_channel   = htole32(SACD_BLOCK_SIZE_PER_CHANNEL);
         fmt_chunk->reserved                 = 0;
 
@@ -218,54 +219,43 @@ size_t dsf_write_frame(scarletbook_output_format_t *ft, const uint8_t *buf, size
                 handle->buffer_ptr[i] = handle->buffer[i];
             }
 
-            if (handle->buffer_ptr[i] < handle->buffer[i] + SACD_BLOCK_SIZE_PER_CHANNEL)
+            if (handle->buffer_ptr[i] < handle->buffer[i] + SACD_BLOCK_SIZE_PER_CHANNEL && 
+                handle->buffer_ptr[i] < handle->buffer[i] + len / handle->channel_count)
             {
                 *handle->buffer_ptr[i] = bit_reverse_table[*buf_ptr];
 
                 handle->buffer_ptr[i]++;
                 buf_ptr++;
+
+                continue;
             }
-            else
+
+            handle->sample_count += handle->buffer_ptr[i] - handle->buffer[i];
+
+#ifdef __lv2ppu__
             {
-#ifdef __lv2ppu__
-                {
-                    uint64_t nrw;
-                    sysFsWrite(ft->fd, handle->buffer[i], SACD_BLOCK_SIZE_PER_CHANNEL, &nrw);
-                    handle->audio_data_size += nrw;
-                    memset(handle->buffer[i], 0, SACD_BLOCK_SIZE_PER_CHANNEL);
-                    handle->buffer_ptr[i] = handle->buffer[i];
-                }
+                uint64_t nrw;
+                sysFsWrite(ft->fd, handle->buffer[i], SACD_BLOCK_SIZE_PER_CHANNEL, &nrw);
+                memset(handle->buffer[i], 0, SACD_BLOCK_SIZE_PER_CHANNEL);
+                handle->buffer_ptr[i] = handle->buffer[i];
+            }
 #else
-                {
-                    size_t nrw;
-                    nrw = write(ft->fd, handle->buffer[i], SACD_BLOCK_SIZE_PER_CHANNEL);
-                    handle->audio_data_size += nrw;
-                    memset(handle->buffer[i], 0, SACD_BLOCK_SIZE_PER_CHANNEL);
-                    handle->buffer_ptr[i] = handle->buffer[i];
-                }
+            {
+                size_t nrw;
+                nrw = write(ft->fd, handle->buffer[i], SACD_BLOCK_SIZE_PER_CHANNEL);
+                memset(handle->buffer[i], 0, SACD_BLOCK_SIZE_PER_CHANNEL);
+                handle->buffer_ptr[i] = handle->buffer[i];
+            }
 #endif
+
+            handle->audio_data_size += SACD_BLOCK_SIZE_PER_CHANNEL;
+
+            // did we write all frames? if so, we are done!
+            if (last_frame && i == handle->channel_count - 1)
+            {
+                return (size_t) (handle->audio_data_size - prev_audio_data_size);
             }
         }
-    }
-    if (last_frame)
-    {
-#ifdef __lv2ppu__
-        {
-            uint64_t nrw;
-            sysFsWrite(ft->fd, handle->buffer[i], SACD_BLOCK_SIZE_PER_CHANNEL, &nrw);
-            handle->audio_data_size += nrw;
-            memset(handle->buffer[i], 0, SACD_BLOCK_SIZE_PER_CHANNEL);
-            handle->buffer_ptr[i] = handle->buffer[i];
-        }
-#else
-        {
-            size_t nrw;
-            nrw = write(ft->fd, handle->buffer[i], SACD_BLOCK_SIZE_PER_CHANNEL);
-            handle->audio_data_size += nrw;
-            memset(handle->buffer[i], 0, SACD_BLOCK_SIZE_PER_CHANNEL);
-            handle->buffer_ptr[i] = handle->buffer[i];
-        }
-#endif
     }
 
     return (size_t) (handle->audio_data_size - prev_audio_data_size);

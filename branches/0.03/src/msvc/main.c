@@ -321,11 +321,22 @@ int main(int argc, char* argv[]) {
             for (i = 0; i < handle->area[area_idx].area_toc->track_count; i++) 
             {
                 musicfilename = get_music_filename(area_idx, i);
-                file_path     = make_filename(".", albumdir, musicfilename, "dff");
-                queue_track_to_rip(area_idx, i, file_path, "dsdiff", 
-                    handle->area[area_idx].area_tracklist_offset->track_start_lsn[i], 
-                    handle->area[area_idx].area_tracklist_offset->track_length_lsn[i], 
-                    handle->area[area_idx].area_toc->frame_format == FRAME_FORMAT_DST);
+                if (opts.output_dsf)
+                {
+                    file_path     = make_filename(".", albumdir, musicfilename, "dsf");
+                    queue_track_to_rip(area_idx, i, file_path, "dsf", 
+                        handle->area[area_idx].area_tracklist_offset->track_start_lsn[i], 
+                        handle->area[area_idx].area_tracklist_offset->track_length_lsn[i], 
+                        handle->area[area_idx].area_toc->frame_format == FRAME_FORMAT_DST);
+                }
+                else
+                {
+                    file_path     = make_filename(".", albumdir, musicfilename, "dff");
+                    queue_track_to_rip(area_idx, i, file_path, "dsdiff", 
+                        handle->area[area_idx].area_tracklist_offset->track_start_lsn[i], 
+                        handle->area[area_idx].area_tracklist_offset->track_length_lsn[i], 
+                        handle->area[area_idx].area_toc->frame_format == FRAME_FORMAT_DST);
+                }
 
                 free(musicfilename);
                 free(file_path);
