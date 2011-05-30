@@ -33,7 +33,7 @@ typedef struct scarletbook_format_handler_t
     char const *description;
     char const *name;
     int (*startwrite)(scarletbook_output_format_t *ft);
-    size_t (*write)(scarletbook_output_format_t *ft, const uint8_t *buf, size_t len);
+    size_t (*write)(scarletbook_output_format_t *ft, const uint8_t *buf, size_t len, int last_frame);
     int (*stopwrite)(scarletbook_output_format_t *ft);
     int         preprocess_audio_frames;
     size_t      priv_size;

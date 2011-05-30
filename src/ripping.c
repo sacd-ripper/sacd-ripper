@@ -214,6 +214,7 @@ int start_ripping_gui(void)
             free(musicfilename);
             free(file_path);
         }
+        free(albumdir);
 
         //init_stats(handle_status_update_callback);
         start_ripping(handle);
@@ -254,8 +255,6 @@ int start_ripping_gui(void)
             stop_ripping(handle);
 
         scarletbook_close(handle);
-
-        free(albumdir);
     }
     sacd_close(sacd_reader);
 

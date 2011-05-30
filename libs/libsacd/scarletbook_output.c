@@ -72,12 +72,14 @@ sys_ppu_thread_t    processing_thread_id;
 #endif
 
 extern scarletbook_format_handler_t const * dsdiff_format_fn(void);
+extern scarletbook_format_handler_t const * dsf_format_fn(void);
 extern scarletbook_format_handler_t const * iso_format_fn(void);
 
 typedef const scarletbook_format_handler_t *(*sacd_output_format_fn_t)(void); 
 static sacd_output_format_fn_t s_sacd_output_format_fns[] = 
 {
     dsdiff_format_fn,
+    dsf_format_fn,
     iso_format_fn,
     NULL
 }; 
@@ -185,9 +187,9 @@ error:
     return -1;
 }
 
-size_t write_frame(scarletbook_output_format_t * ft, const uint8_t *buf, size_t len)
+size_t write_frame(scarletbook_output_format_t * ft, const uint8_t *buf, size_t len, int last_frame)
 {
-    size_t actual = ft->handler.write? (*ft->handler.write)(ft, buf, len) : 0;
+    size_t actual = ft->handler.write? (*ft->handler.write)(ft, buf, len, last_frame) : 0;
     ft->write_length += actual;
     return actual;
 }
@@ -297,7 +299,7 @@ static void scarletbook_process_frames_callback(uint8_t *buffer, int pos, int bl
                         {
                             // TODO: add DST decoding here..
 
-                            write_frame(ft, current_audio_frame, current_audio_frame_size);
+                            write_frame(ft, current_audio_frame, current_audio_frame_size, 0);
                             
                             current_audio_frame_ptr = current_audio_frame;
                             current_audio_frame_size = 0;
@@ -324,7 +326,7 @@ static void scarletbook_process_frames_callback(uint8_t *buffer, int pos, int bl
         }
         if (current_audio_frame_size > 0 && last_frame)
         {
-            write_frame(ft, current_audio_frame, current_audio_frame_size);
+            write_frame(ft, current_audio_frame, current_audio_frame_size, 1);
 
             current_audio_frame_ptr = current_audio_frame;
             current_audio_frame_size = 0;
@@ -332,7 +334,7 @@ static void scarletbook_process_frames_callback(uint8_t *buffer, int pos, int bl
     }
     else
     {
-        write_frame(ft, buffer, blocks);
+        write_frame(ft, buffer, blocks, 0);
     }
 
 #ifdef __lv2ppu__
