@@ -46,6 +46,7 @@ VPATH :=	$(BASEDIR)
 OBJS		:= \
 			scarletbook.o \
 			dsdiff.o \
+			dsf.o \
             sacd_input.o \
             scarletbook_print.o \
             scarletbook_id3.o \
