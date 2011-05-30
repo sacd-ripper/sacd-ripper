@@ -4,7 +4,6 @@ TODO
 
     - test PS3 ripping pipeline
     - add dst decoding
-    - add sony dsf export support
     - write log along each consecutive rip
     - use output_format_t.error_number for error handling
 

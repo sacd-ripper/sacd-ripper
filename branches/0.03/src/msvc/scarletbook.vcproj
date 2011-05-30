@@ -178,6 +178,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\libs\libsacd\dsf.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\libs\libcommon\fileutils.c"
 				>
 			</File>
@@ -245,6 +249,10 @@
 			>
 			<File
 				RelativePath="..\..\libs\libsacd\dsdiff.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\libs\libsacd\dsf.h"
 				>
 			</File>
 			<File

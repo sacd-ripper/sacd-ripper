@@ -27,6 +27,7 @@
 
 #include "config.h"
 #include "scarletbook.h"
+#include "version.h"
 
 #ifndef NO_ID3
 
@@ -116,8 +117,7 @@ int scarletbook_id3_tag_render(scarletbook_handle_t *handle, uint8_t *buffer, in
         snprintf(tmp, 200, "%s", (char *) handle->master_text[0] + handle->master_text[0]->album_title_position);
         update_id3_frame(id3tag, ID3_FRAME_ALBUM, tmp);
     }
-    if (handle->area[area].area_track_text->track_type_message)
-        update_id3_frame(id3tag, ID3_FRAME_COMMENT, handle->area[area].area_track_text->track_type_message);
+    update_id3_frame(id3tag, ID3_FRAME_COMMENT, SACD_RIPPER_VERSION);
 
     snprintf(tmp, 200, "%04d", handle->master_toc->disc_date_year);
     update_id3_frame(id3tag, ID3_FRAME_YEAR, tmp);

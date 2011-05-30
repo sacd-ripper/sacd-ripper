@@ -33,7 +33,7 @@
 #include "scarletbook_output.h"
 
 // TODO: we need some "proper" indication that we are dealing with LSN sectors
-size_t iso_write_frame(scarletbook_output_format_t *ft, const uint8_t *buf, size_t len)
+size_t iso_write_frame(scarletbook_output_format_t *ft, const uint8_t *buf, size_t len, int last_frame)
 {
 #ifdef __lv2ppu__
     {
