@@ -37,8 +37,8 @@
 #endif
 
 /**
- * a first year intern Sony student must have come up with this format it's so dumb
- * that I should actually not have written this code to support it in the first place..
+ * A first year Sony intern must have come up with this format! it's so badly put together 
+ * that I should actually not have written this code in the first place..
  */
 
 #if !defined(ATTRIBUTE_PACKED)
