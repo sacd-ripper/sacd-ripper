@@ -524,7 +524,7 @@ typedef struct
     audio_packet_info_t   packet[7];
     audio_frame_info_t    frame[7];
 } 
-ATTRIBUTE_PACKED audio_frame_t;
+ATTRIBUTE_PACKED audio_sector_t;
 
 typedef struct  
 {

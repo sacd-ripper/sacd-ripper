@@ -305,72 +305,77 @@ int main(int argc, char* argv[]) {
         {
 
             handle = scarletbook_open(sacd_reader, 0);
-            if (opts.print_only) 
+            if (handle)
             {
-                scarletbook_print(handle);
-            }
+                if (opts.print_only)
+                {
+                    scarletbook_print(handle);
+                }
 
-            // select the channel area
-            area_idx = (has_multi_channel(handle) && opts.multi_channel) ? handle->mulch_area_idx : handle->twoch_area_idx;
+                initialize_ripping();
 
-            albumdir      = get_album_dir();
-            recursive_mkdir(albumdir, 0666);
+                // select the channel area
+                area_idx = (has_multi_channel(handle) && opts.multi_channel) ? handle->mulch_area_idx : handle->twoch_area_idx;
+
+                albumdir      = get_album_dir();
+                recursive_mkdir(albumdir, 0666);
 
 #if 1
-            // fill the queue with items to rip
-            for (i = 0; i < handle->area[area_idx].area_toc->track_count; i++) 
-            {
-                musicfilename = get_music_filename(area_idx, i);
-                if (opts.output_dsf)
+                // fill the queue with items to rip
+                for (i = 0; i < handle->area[area_idx].area_toc->track_count; i++) 
                 {
-                    file_path     = make_filename(".", albumdir, musicfilename, "dsf");
-                    queue_track_to_rip(area_idx, i, file_path, "dsf", 
-                        handle->area[area_idx].area_tracklist_offset->track_start_lsn[i], 
-                        handle->area[area_idx].area_tracklist_offset->track_length_lsn[i], 
-                        handle->area[area_idx].area_toc->frame_format == FRAME_FORMAT_DST);
-                }
-                else
-                {
-                    file_path     = make_filename(".", albumdir, musicfilename, "dff");
-                    queue_track_to_rip(area_idx, i, file_path, "dsdiff", 
-                        handle->area[area_idx].area_tracklist_offset->track_start_lsn[i], 
-                        handle->area[area_idx].area_tracklist_offset->track_length_lsn[i], 
-                        handle->area[area_idx].area_toc->frame_format == FRAME_FORMAT_DST);
-                }
-
-                free(musicfilename);
-                free(file_path);
-            }
-#else
-            {
-                #define FAT32_SECTOR_LIMIT 100000
-                uint32_t total_sectors = sacd_get_total_sectors(sacd_reader);
-                uint32_t sector_size = FAT32_SECTOR_LIMIT;
-                uint32_t sector_offset = 0;
-                if (total_sectors > FAT32_SECTOR_LIMIT)
-                {
-                    for (i = 0; total_sectors != 0; i++)
+                    musicfilename = get_music_filename(area_idx, i);
+                    if (opts.output_dsf)
                     {
-                        sector_size = min(total_sectors, FAT32_SECTOR_LIMIT);
-                        queue_track_to_rip(0, 0, generate_trackname(i), "iso", sector_offset, sector_size, 0);
-                        sector_offset += sector_size;
-                        total_sectors -= sector_size;
+                        file_path     = make_filename(".", albumdir, musicfilename, "dsf");
+                        queue_track_to_rip(area_idx, i, file_path, "dsf", 
+                            handle->area[area_idx].area_tracklist_offset->track_start_lsn[i], 
+                            handle->area[area_idx].area_tracklist_offset->track_length_lsn[i], 
+                            handle->area[area_idx].area_toc->frame_format == FRAME_FORMAT_DST);
+                    }
+                    else
+                    {
+                        file_path     = make_filename(".", albumdir, musicfilename, "dff");
+                        queue_track_to_rip(area_idx, i, file_path, "dsdiff", 
+                            handle->area[area_idx].area_tracklist_offset->track_start_lsn[i], 
+                            handle->area[area_idx].area_tracklist_offset->track_length_lsn[i], 
+                            handle->area[area_idx].area_toc->frame_format == FRAME_FORMAT_DST);
+                    }
+
+                    free(musicfilename);
+                    free(file_path);
+                }
+#else
+                {
+#define FAT32_SECTOR_LIMIT 100000
+                    uint32_t total_sectors = sacd_get_total_sectors(sacd_reader);
+                    uint32_t sector_size = FAT32_SECTOR_LIMIT;
+                    uint32_t sector_offset = 0;
+                    if (total_sectors > FAT32_SECTOR_LIMIT)
+                    {
+                        for (i = 0; total_sectors != 0; i++)
+                        {
+                            sector_size = min(total_sectors, FAT32_SECTOR_LIMIT);
+                            queue_track_to_rip(0, 0, generate_trackname(i), "iso", sector_offset, sector_size, 0);
+                            sector_offset += sector_size;
+                            total_sectors -= sector_size;
+                        }
+                    }
+                    else
+                    {
+                        queue_track_to_rip(0, 0, "filename.iso", "iso", 0, total_sectors, 0);
                     }
                 }
-                else
-                {
-                    queue_track_to_rip(0, 0, "filename.iso", "iso", 0, total_sectors, 0);
-                }
-            }
 #endif
 
-            init_stats(handle_status_update_callback);
-            start_ripping(handle);
-            scarletbook_close(handle);
+                init_stats(handle_status_update_callback);
+                start_ripping(handle);
+                scarletbook_close(handle);
 
-            free(albumdir);
+                free(albumdir);
 
-            printf("\rWe are done..                                     \n");
+                printf("\rWe are done..                                     \n");
+            }
         }
 
         sacd_close(sacd_reader);
