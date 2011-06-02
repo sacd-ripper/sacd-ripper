@@ -86,14 +86,18 @@ scarletbook_handle_t *scarletbook_open(sacd_reader_t *sacd, int title)
         }
 
         if (!sacd_read_block_raw(sacd, sb->master_toc->area_1_toc_1_start, sb->master_toc->area_1_toc_size, sb->area[sb->area_count].area_data))
-            return 0;
-
-        if (!scarletbook_read_area_toc(sb, sb->area_count))
         {
-            fprintf(stderr, "libsacdread: Can't read Area TOC 1.\n");
+            sb->master_toc->area_1_toc_1_start = 0;
         }
         else
-            ++sb->area_count;
+        {
+            if (!scarletbook_read_area_toc(sb, sb->area_count))
+            {
+                fprintf(stderr, "libsacdread: Can't read Area TOC 1.\n");
+            }
+            else
+                ++sb->area_count;
+        }
     }
     if (sb->master_toc->area_2_toc_1_start)
     {
@@ -105,7 +109,10 @@ scarletbook_handle_t *scarletbook_open(sacd_reader_t *sacd, int title)
         }
 
         if (!sacd_read_block_raw(sacd, sb->master_toc->area_2_toc_1_start, sb->master_toc->area_2_toc_size, sb->area[sb->area_count].area_data))
-            return 0;
+        {
+            sb->master_toc->area_2_toc_1_start = 0;
+            return sb;
+        }
 
         if (!scarletbook_read_area_toc(sb, sb->area_count))
         {

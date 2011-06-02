@@ -4,6 +4,7 @@ TODO
 
     - test PS3 ripping pipeline
     - add dst decoding
+        - convert current dst code to psl1ght
     - write log along each consecutive rip
     - use output_format_t.error_number for error handling
 
@@ -23,3 +24,13 @@ TODO
   testing:
   
      - test multi channel exports
+
+
+version 0.x.0
+ 
+     - catch read failures 
+        - do not stop and continue decoding and reading
+        - specify max amount of read errors
+        - skipping DST/DSD frames
+        - skip TOCs
+
