@@ -107,7 +107,6 @@ typedef struct
     uint8_t                     * write_buffer;
 } sac_accessor_t;
 
-extern sac_accessor_t *sa;
 extern int create_sac_accessor(void);
 extern int destroy_sac_accessor(void);
 extern int sac_exec_initialize(void);

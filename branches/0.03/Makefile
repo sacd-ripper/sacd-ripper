@@ -1,5 +1,3 @@
-TARGETS      := libs
-
 #---------------------------------------------------------------------------------
 # Clear the implicit built in rules
 #---------------------------------------------------------------------------------
@@ -24,6 +22,7 @@ ICON0		:=	../bin/ICON0.PNG
 # INCLUDES is a list of directories containing extra header files
 #---------------------------------------------------------------------------------
 TARGET		:=	$(notdir $(CURDIR))
+TARGETS     :=  libs
 BUILD		:=	build
 SOURCES		:=	src
 DATA		:=	
@@ -106,12 +105,14 @@ export OUTPUT	:=	$(CURDIR)/$(TARGET)
 
 #---------------------------------------------------------------------------------
 $(BUILD):
+	@for TARGET in $(TARGETS); do $(MAKE) --no-print-directory -C $$TARGET; done 
 	@[ -d $@ ] || mkdir -p $@
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
 #---------------------------------------------------------------------------------
 clean:
 	@echo clean ...
+	@for TARGET in $(TARGETS); do $(MAKE) --no-print-directory -C $$TARGET clean; done 
 	@rm -fr $(BUILD) $(OUTPUT).elf $(OUTPUT).self
 
 #---------------------------------------------------------------------------------
