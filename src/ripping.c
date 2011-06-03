@@ -26,6 +26,8 @@
 #include <sys/systime.h>
 #include <sys/file.h>
 #include <sys/atomic.h>
+#include <sys/stat.h>
+#include <errno.h>
 #include <utils.h>
 #include <fileutils.h>
 #include <logging.h>
@@ -56,6 +58,7 @@ char *get_album_dir(scarletbook_handle_t *handle)
     char disc_artist[60];
     char disc_album_title[60];
     char disc_album_year[5];
+    char *albumdir, *ret;
     master_text_t *master_text = handle->master_text[0];
     int disc_artist_position = (master_text->disc_artist_position ? master_text->disc_artist_position : master_text->disc_artist_phonetic_position);
     int disc_album_title_position = (master_text->disc_title_position ? master_text->disc_title_position : master_text->disc_title_phonetic_position);
@@ -86,13 +89,18 @@ char *get_album_dir(scarletbook_handle_t *handle)
     sanitize_filename(disc_album_title);
 
     if (strlen(disc_artist) > 0 && strlen(disc_album_title) > 0)
-        return parse_format("%A - %L", 0, disc_album_year, disc_artist, disc_album_title, NULL);
+        albumdir = parse_format("%A - %L", 0, disc_album_year, disc_artist, disc_album_title, NULL);
     else if (strlen(disc_artist) > 0)
-        return parse_format("%A", 0, disc_album_year, disc_artist, disc_album_title, NULL);
+        albumdir = parse_format("%A", 0, disc_album_year, disc_artist, disc_album_title, NULL);
     else if (strlen(disc_album_title) > 0)
-        return parse_format("%L", 0, disc_album_year, disc_artist, disc_album_title, NULL);
+        albumdir = parse_format("%L", 0, disc_album_year, disc_artist, disc_album_title, NULL);
     else
-        return parse_format("Unknown Album", 0, disc_album_year, disc_artist, disc_album_title, NULL);
+        albumdir = parse_format("Unknown Album", 0, disc_album_year, disc_artist, disc_album_title, NULL);
+
+    ret = make_filename(output_device, albumdir, 0, 0);
+    free(albumdir);
+
+    return ret;
 }
 
 char *get_music_filename(scarletbook_handle_t *handle, int area, int track)
@@ -172,7 +180,7 @@ int start_ripping_gui(void)
     sacd_reader_t   *sacd_reader;
     scarletbook_handle_t *handle;
     msgType          dialog_type;
-    int              area_idx, i;
+    int              area_idx, i, ret;
 
     //uint32_t prev_upper_progress = 0;
     uint32_t prev_lower_progress = 0;
@@ -193,19 +201,32 @@ int start_ripping_gui(void)
     sacd_reader = sacd_open("/dev_bdvd");
     if (sacd_reader) 
     {
+        ret = sacd_authenticate(sacd_reader);
+        if (ret != 0)
+        {
+            LOG(lm_main, LOG_ERROR, ("authentication failed: %x", ret));
+        }
+        
         handle = scarletbook_open(sacd_reader, 0);
 
         // select the channel area
         area_idx = (has_multi_channel(handle) && 0/*opts.multi_channel*/) ? handle->mulch_area_idx : handle->twoch_area_idx;
 
         albumdir      = get_album_dir(handle);
-        recursive_mkdir(albumdir, 0666);
+        LOG(lm_main, LOG_NOTICE, (albumdir));
+        ret = recursive_mkdir(albumdir, 0777);
+        if (ret != 0)
+        {
+            LOG(lm_main, LOG_ERROR, ("mkdir failed: [%s] %x %x %s", albumdir, ret, errno, strerror(errno)));
+        }
+
+        initialize_ripping();
 
         // fill the queue with items to rip
         for (i = 0; i < handle->area[area_idx].area_toc->track_count; i++) 
         {
             musicfilename = get_music_filename(handle, area_idx, i);
-            file_path     = make_filename(".", albumdir, musicfilename, "dff");
+            file_path     = make_filename(output_device, albumdir, musicfilename, "dff");
             queue_track_to_rip(area_idx, i, file_path, "dsdiff", 
                 handle->area[area_idx].area_tracklist_offset->track_start_lsn[i], 
                 handle->area[area_idx].area_tracklist_offset->track_length_lsn[i], 
@@ -250,10 +271,7 @@ int start_ripping_gui(void)
         }
         msgDialogAbort();
 
-        // user requested abort
-        if (dialog_action != 0)
-            stop_ripping(handle);
-
+        stop_ripping(handle);
         scarletbook_close(handle);
     }
     sacd_close(sacd_reader);

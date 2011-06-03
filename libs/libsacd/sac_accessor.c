@@ -237,7 +237,7 @@ int destroy_sac_accessor(void)
 
     if (sa == NULL)
     {
-        return -1;
+        return 0;
     }
 
     if (sa->module_buffer)
@@ -440,7 +440,7 @@ int exchange_data(int func_nr
     
     if (sa == NULL)
     {
-        return -1;
+        return 0;
     }
 
     sa->error_code = 0xfffffff1;

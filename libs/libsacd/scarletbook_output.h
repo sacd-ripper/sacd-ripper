@@ -23,8 +23,11 @@
 #define SCARLETBOOK_OUTPUT_H_INCLUDED
 
 #ifdef __lv2ppu__
-#include <sys/atomic.h>
+#include <sys/thread.h>
+#else
+#include <pthread.h>
 #endif
+#include <sys/atomic.h>
 
 #include "scarletbook.h"
 
@@ -32,6 +35,13 @@
 
 // forward declaration
 typedef struct scarletbook_output_format_t scarletbook_output_format_t;
+
+enum
+{
+    OUTPUT_FLAG_RAW = 1 << 0,
+    OUTPUT_FLAG_DSD = 1 << 1,
+    OUTPUT_FLAG_DST = 1 << 2
+};
 
 // Handler structure defined by each output format.
 typedef struct scarletbook_format_handler_t 
@@ -41,7 +51,7 @@ typedef struct scarletbook_format_handler_t
     int (*startwrite)(scarletbook_output_format_t *ft);
     size_t (*write)(scarletbook_output_format_t *ft, const uint8_t *buf, size_t len, int last_frame);
     int (*stopwrite)(scarletbook_output_format_t *ft);
-    int         preprocess_audio_frames;
+    int         flags;
     size_t      priv_size;
 } 
 scarletbook_format_handler_t;
@@ -59,7 +69,6 @@ struct scarletbook_output_format_t
     uint64_t                        write_length;
     uint64_t                        write_offset;
     int                             dst_encoded;
-    int                             encrypted;
 
     scarletbook_format_handler_t    handler;
     void                           *priv;
@@ -92,18 +101,14 @@ typedef struct scarletbook_output_t
 
     struct list_head    ripping_queue;
 
+    uint8_t            *read_buffer;
+
 #ifdef __lv2ppu__
-    // processing 
-    sys_cond_t          processing_cond;
-    sys_mutex_t         processing_mutex;
-
     sys_ppu_thread_t    processing_thread_id;
-
-    atomic_t            stop_processing;            // indicates if the thread needs to stop or has stopped
-    atomic_t            outstanding_read_requests;
 #else
-    int                 stop_processing;
+    pthread_t           processing_thread_id;
 #endif
+    atomic_t            stop_processing;            // indicates if the thread needs to stop or has stopped
 
     audio_sector_t      scarletbook_audio_sector;
 
@@ -128,6 +133,8 @@ void init_stats(stats_callback_t);
 scarletbook_format_handler_t const * sacd_find_output_format(char const *);
 
 void initialize_ripping(void);
+void interrupt_ripping(void);
+int is_ripping(void);
 int start_ripping(scarletbook_handle_t *);
 int stop_ripping(scarletbook_handle_t *);
 int queue_track_to_rip(int area, int track, char *file_path, char *fmt, 
