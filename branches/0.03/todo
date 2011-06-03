@@ -2,29 +2,22 @@ TODO
 
   core:
 
+    - make scarletbook_helper
+    - interface: 
+        - ask which area to rip (in case of multiple)
+        - show not enough disc space message (do fstat during ripping)
+        - show correct progress information
+            - title
+            - current filename
+            - progress total & MB/sec
+        - ripping complete message
+    - test writing speed problem
+
     - test PS3 ripping pipeline
     - add dst decoding
         - convert current dst code to psl1ght
     - write log along each consecutive rip
     - use output_format_t.error_number for error handling
-
-  interface: 
-  
-    - ask which area to rip (in case of multiple)
-    - show not enough disc space message (do fstat during ripping)
-    - show correct progress information
-        - title
-        - current filename
-        - progress total & MB/sec
-
-  bug:
-  
-    - test the incorrect?? output length (audiogate tells me the tracks are a couple of frames bigger..)
-
-  testing:
-  
-     - test multi channel exports
-
 
 version 0.x.0
  

@@ -58,7 +58,7 @@ char *get_album_dir(scarletbook_handle_t *handle)
     char disc_artist[60];
     char disc_album_title[60];
     char disc_album_year[5];
-    char *albumdir, *ret;
+    char *albumdir;
     master_text_t *master_text = handle->master_text[0];
     int disc_artist_position = (master_text->disc_artist_position ? master_text->disc_artist_position : master_text->disc_artist_phonetic_position);
     int disc_album_title_position = (master_text->disc_title_position ? master_text->disc_title_position : master_text->disc_title_phonetic_position);
@@ -97,10 +97,7 @@ char *get_album_dir(scarletbook_handle_t *handle)
     else
         albumdir = parse_format("Unknown Album", 0, disc_album_year, disc_artist, disc_album_title, NULL);
 
-    ret = make_filename(output_device, albumdir, 0, 0);
-    free(albumdir);
-
-    return ret;
+    return albumdir;
 }
 
 char *get_music_filename(scarletbook_handle_t *handle, int area, int track)
@@ -212,13 +209,11 @@ int start_ripping_gui(void)
         // select the channel area
         area_idx = (has_multi_channel(handle) && 0/*opts.multi_channel*/) ? handle->mulch_area_idx : handle->twoch_area_idx;
 
-        albumdir      = get_album_dir(handle);
-        LOG(lm_main, LOG_NOTICE, (albumdir));
-        ret = recursive_mkdir(albumdir, 0777);
-        if (ret != 0)
-        {
-            LOG(lm_main, LOG_ERROR, ("mkdir failed: [%s] %x %x %s", albumdir, ret, errno, strerror(errno)));
-        }
+        albumdir = get_album_dir(handle);
+        file_path = make_filename(output_device, albumdir, 0, 0);
+        LOG(lm_main, LOG_NOTICE, ("setting output folder to: %s", file_path));
+        recursive_mkdir(file_path, 0777);
+        free(file_path);
 
         initialize_ripping();
 
@@ -226,10 +221,12 @@ int start_ripping_gui(void)
         for (i = 0; i < handle->area[area_idx].area_toc->track_count; i++) 
         {
             musicfilename = get_music_filename(handle, area_idx, i);
-            file_path     = make_filename(output_device, albumdir, musicfilename, "dff");
+            file_path = make_filename(output_device, albumdir, musicfilename, "dff");
+            LOG(lm_main, LOG_NOTICE, ("adding file [%s] to queue", file_path));
             queue_track_to_rip(area_idx, i, file_path, "dsdiff", 
                 handle->area[area_idx].area_tracklist_offset->track_start_lsn[i], 
-                handle->area[area_idx].area_tracklist_offset->track_length_lsn[i], 
+                10, 
+                //handle->area[area_idx].area_tracklist_offset->track_length_lsn[i], 
                 handle->area[area_idx].area_toc->frame_format == FRAME_FORMAT_DST);
 
             free(musicfilename);
@@ -246,7 +243,7 @@ int start_ripping_gui(void)
         dialog_action = 0;
         dialog_type   = MSG_DIALOG_MUTE_ON | MSG_DIALOG_DOUBLE_PROGRESSBAR;
         msgDialogOpen2(dialog_type, "Copying to:...", dialog_handler, NULL, NULL);
-        while (!user_requested_exit() && dialog_action == 0) // TODO: && atomic_read(&stop_processing) == 0
+        while (!user_requested_exit() && dialog_action == 0 && is_ripping())
         {
             uint32_t tmp_stats_total_sectors_processed = atomic_read(&stats_total_sectors_processed);
             uint32_t tmp_stats_total_sectors = atomic_read(&stats_total_sectors);

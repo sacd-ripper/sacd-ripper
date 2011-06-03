@@ -79,15 +79,6 @@ int create_sac_accessor(void)
     sa->read_buffer = (uint8_t *) malloc(DMA_BUFFER_SIZE);
     sa->write_buffer = (uint8_t *) malloc(DMA_BUFFER_SIZE);
 
-    // Initialize SPUs
-    LOG(lm_main, LOG_DEBUG, ("Initializing SPUs\n"));
-    ret = sysSpuInitialize(MAX_PHYSICAL_SPU, MAX_RAW_SPU);
-    if (ret != 0)
-    {
-        LOG(lm_main, LOG_ERROR, ("sysSpuInitialize failed: %d\n", ret));
-        return ret;
-    }
-
 #ifdef USE_ISOSELF
     ret = file_alloc_load(SAC_MODULE_LOCATION, &sa->module_buffer, &sa->module_size);
     if (ret != 0)
