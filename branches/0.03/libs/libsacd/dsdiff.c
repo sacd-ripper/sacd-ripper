@@ -368,20 +368,6 @@ int dsdiff_create_header(scarletbook_output_format_t *ft)
         timeinfo = localtime(&rawtime);
 
         comment                    = (comment_t *) comment_ptr;
-        comment->timestamp_year    = hton16(sb_handle->master_toc->disc_date_year);
-        comment->timestamp_month   = sb_handle->master_toc->disc_date_month;
-        comment->timestamp_day     = sb_handle->master_toc->disc_date_day;
-        comment->timestamp_hour    = 0;
-        comment->timestamp_minutes = 0;
-        comment->comment_type      = hton16(COMT_TYPE_FILE_HISTORY);
-        comment->comment_reference = hton16(COMT_TYPE_CHANNEL_FILE_HISTORY_CREATING_MACHINE);
-        sprintf(data, SACD_RIPPER_VERSION);
-        comment->count = hton32(strlen(data));
-        memcpy(comment->comment_text, data, strlen(data));
-
-        comment_ptr += CEIL_ODD_NUMBER(COMMENT_SIZE + strlen(data));
-
-        comment                    = (comment_t *) comment_ptr;
         comment->timestamp_year    = hton16(timeinfo->tm_year + 1900);
         comment->timestamp_month   = timeinfo->tm_mon;
         comment->timestamp_day     = timeinfo->tm_mday;
@@ -390,6 +376,20 @@ int dsdiff_create_header(scarletbook_output_format_t *ft)
         comment->comment_type      = hton16(COMT_TYPE_FILE_HISTORY);
         comment->comment_reference = hton16(COMT_TYPE_CHANNEL_FILE_HISTORY_GENERAL);
         sprintf(data, "Material ripped from SACD: %s", (char *) get_mtoc_title_text(sb_handle));
+        comment->count = hton32(strlen(data));
+        memcpy(comment->comment_text, data, strlen(data));
+
+        comment_ptr += CEIL_ODD_NUMBER(COMMENT_SIZE + strlen(data));
+
+        comment                    = (comment_t *) comment_ptr;
+        comment->timestamp_year    = hton16(sb_handle->master_toc->disc_date_year);
+        comment->timestamp_month   = sb_handle->master_toc->disc_date_month;
+        comment->timestamp_day     = sb_handle->master_toc->disc_date_day;
+        comment->timestamp_hour    = 0;
+        comment->timestamp_minutes = 0;
+        comment->comment_type      = hton16(COMT_TYPE_FILE_HISTORY);
+        comment->comment_reference = hton16(COMT_TYPE_CHANNEL_FILE_HISTORY_CREATING_MACHINE);
+        sprintf(data, SACD_RIPPER_VERSION);
         comment->count = hton32(strlen(data));
         memcpy(comment->comment_text, data, strlen(data));
 
@@ -516,7 +516,7 @@ scarletbook_format_handler_t const * dsdiff_format_fn(void)
         dsdiff_create, 
         dsdiff_write_frame,
         dsdiff_close, 
-        1,
+        OUTPUT_FLAG_DSD | OUTPUT_FLAG_DST,
         sizeof(dsdiff_handle_t)
     };
     return &handler;

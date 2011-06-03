@@ -241,7 +241,7 @@ int recursive_mkdir(char* path_and_name, mode_t mode)
 
             path_and_name[count + 1] = charReplaced;
 
-            if (rc != 0 && !(errno == EEXIST || errno == EISDIR))
+            if (rc != 0 && !(errno == EEXIST || errno == EISDIR || errno == EACCES || errno == EROFS))
                 return rc;
         }
     }

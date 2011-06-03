@@ -50,6 +50,7 @@ static struct opts_s
     int            multi_channel;
     int            output_dsf;
     int            output_dsdiff;
+    int            output_iso;
     int            convert_dst;
     int            print_only;
     char          *input_device; /* Access method driver should use for control */
@@ -149,7 +150,7 @@ static int parse_options(int argc, char *argv[]) {
 void handle_sigint(int sig_no)
 {
     printf("\rUser interrupted..                                \n");
-    stop_ripping(handle);
+    interrupt_ripping();
 }
 
 void handle_status_update_callback(uint32_t stats_total_sectors, uint32_t stats_total_sectors_processed,
@@ -172,6 +173,7 @@ static void init(void) {
     opts.two_channel   = 0;
     opts.multi_channel = 0;
     opts.output_dsf    = 0;
+    opts.output_iso    = 0;
     opts.output_dsdiff = 1;
     opts.convert_dst   = 0;
     opts.print_only    = 0;
@@ -194,6 +196,7 @@ char *get_album_dir()
     char disc_artist[60];
     char disc_album_title[60];
     char disc_album_year[5];
+    char *albumdir;
     master_text_t *master_text = handle->master_text[0];
     int disc_artist_position = (master_text->disc_artist_position ? master_text->disc_artist_position : master_text->disc_artist_phonetic_position);
     int disc_album_title_position = (master_text->disc_title_position ? master_text->disc_title_position : master_text->disc_title_phonetic_position);
@@ -224,13 +227,15 @@ char *get_album_dir()
     sanitize_filename(disc_album_title);
 
     if (strlen(disc_artist) > 0 && strlen(disc_album_title) > 0)
-        return parse_format("%A - %L", 0, disc_album_year, disc_artist, disc_album_title, NULL);
+        albumdir = parse_format("%A - %L", 0, disc_album_year, disc_artist, disc_album_title, NULL);
     else if (strlen(disc_artist) > 0)
-        return parse_format("%A", 0, disc_album_year, disc_artist, disc_album_title, NULL);
+        albumdir = parse_format("%A", 0, disc_album_year, disc_artist, disc_album_title, NULL);
     else if (strlen(disc_album_title) > 0)
-        return parse_format("%L", 0, disc_album_year, disc_artist, disc_album_title, NULL);
+        albumdir = parse_format("%L", 0, disc_album_year, disc_artist, disc_album_title, NULL);
     else
-        return parse_format("Unknown Album", 0, disc_album_year, disc_artist, disc_album_title, NULL);
+        albumdir = parse_format("Unknown Album", 0, disc_album_year, disc_artist, disc_album_title, NULL);
+
+    return albumdir;
 }
 
 char *get_music_filename(int area, int track)
@@ -320,56 +325,65 @@ int main(int argc, char* argv[]) {
                 albumdir      = get_album_dir();
                 recursive_mkdir(albumdir, 0666);
 
-#if 1
-                // fill the queue with items to rip
-                for (i = 0; i < handle->area[area_idx].area_toc->track_count; i++) 
+                if (opts.output_iso)
                 {
-                    musicfilename = get_music_filename(area_idx, i);
-                    if (opts.output_dsf)
-                    {
-                        file_path     = make_filename(".", albumdir, musicfilename, "dsf");
-                        queue_track_to_rip(area_idx, i, file_path, "dsf", 
-                            handle->area[area_idx].area_tracklist_offset->track_start_lsn[i], 
-                            handle->area[area_idx].area_tracklist_offset->track_length_lsn[i], 
-                            handle->area[area_idx].area_toc->frame_format == FRAME_FORMAT_DST);
-                    }
-                    else
-                    {
-                        file_path     = make_filename(".", albumdir, musicfilename, "dff");
-                        queue_track_to_rip(area_idx, i, file_path, "dsdiff", 
-                            handle->area[area_idx].area_tracklist_offset->track_start_lsn[i], 
-                            handle->area[area_idx].area_tracklist_offset->track_length_lsn[i], 
-                            handle->area[area_idx].area_toc->frame_format == FRAME_FORMAT_DST);
-                    }
-
-                    free(musicfilename);
-                    free(file_path);
-                }
-#else
-                {
-#define FAT32_SECTOR_LIMIT 100000
+                    #define FAT32_SECTOR_LIMIT 100000
                     uint32_t total_sectors = sacd_get_total_sectors(sacd_reader);
                     uint32_t sector_size = FAT32_SECTOR_LIMIT;
                     uint32_t sector_offset = 0;
                     if (total_sectors > FAT32_SECTOR_LIMIT)
                     {
-                        for (i = 0; total_sectors != 0; i++)
+                        musicfilename = (char *) malloc(512);
+                        file_path = make_filename(0, 0, albumdir, "iso");
+                        for (i = 1; total_sectors != 0; i++)
                         {
                             sector_size = min(total_sectors, FAT32_SECTOR_LIMIT);
-                            queue_track_to_rip(0, 0, generate_trackname(i), "iso", sector_offset, sector_size, 0);
+                            snprintf(musicfilename, 512, "%s.%03d", file_path, i);
+                            queue_track_to_rip(0, 0, musicfilename, "iso", sector_offset, sector_size, 0);
                             sector_offset += sector_size;
                             total_sectors -= sector_size;
                         }
+                        free(file_path);
+                        free(musicfilename);
                     }
                     else
                     {
-                        queue_track_to_rip(0, 0, "filename.iso", "iso", 0, total_sectors, 0);
+                        file_path = make_filename(0, 0, albumdir, "iso");
+                        queue_track_to_rip(0, 0, file_path, "iso", 0, total_sectors, 0);
+                        free(file_path);
                     }
                 }
-#endif
+                else 
+                {
+                    // fill the queue with items to rip
+                    for (i = 0; i < 1; i++) //handle->area[area_idx].area_toc->track_count; i++) 
+                    {
+                        musicfilename = get_music_filename(area_idx, i);
+                        if (opts.output_dsf)
+                        {
+                            file_path     = make_filename(0, albumdir, musicfilename, "dsf");
+                            queue_track_to_rip(area_idx, i, file_path, "dsf", 
+                                handle->area[area_idx].area_tracklist_offset->track_start_lsn[i], 
+                                handle->area[area_idx].area_tracklist_offset->track_length_lsn[i], 
+                                handle->area[area_idx].area_toc->frame_format == FRAME_FORMAT_DST);
+                        }
+                        else if (opts.output_dsdiff)
+                        {
+                            file_path     = make_filename(0, albumdir, musicfilename, "dff");
+                            queue_track_to_rip(area_idx, i, file_path, "dsdiff", 
+                                handle->area[area_idx].area_tracklist_offset->track_start_lsn[i], 
+                                handle->area[area_idx].area_tracklist_offset->track_length_lsn[i], 
+                                handle->area[area_idx].area_toc->frame_format == FRAME_FORMAT_DST);
+                        }
+
+                        free(musicfilename);
+                        free(file_path);
+                    }
+                }
 
                 init_stats(handle_status_update_callback);
                 start_ripping(handle);
+                stop_ripping(handle);
                 scarletbook_close(handle);
 
                 free(albumdir);
