@@ -101,6 +101,11 @@ ssize_t sacd_read_async_block_raw(sacd_reader_t *, int, int, sacd_aio_callback_t
 int sacd_decrypt(sacd_reader_t *, uint8_t *, int);
 
 /**
+ * Authenticates disc, only available on PS3
+ */
+int sacd_authenticate(sacd_reader_t *);
+
+/**
  * returns the total sector size of the image / disc
  */
 uint32_t sacd_get_total_sectors(sacd_reader_t *);

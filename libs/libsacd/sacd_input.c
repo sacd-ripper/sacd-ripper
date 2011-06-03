@@ -56,7 +56,7 @@
 #define ESRCH                            (-17)
 #define SYS_NO_TIMEOUT                   (0)
 #define SYS_EVENT_QUEUE_DESTROY_FORCE    (1)
-#define AIO_MAXIO                        (4)
+#define AIO_MAXIO                        (2)
 #endif
 
 struct sacd_input_s
@@ -108,7 +108,8 @@ static void sacd_input_handle_async_read(void *arg)
             {
                 // An unexpected error
                 LOG(lm_main, LOG_ERROR, ("sacd_input_handle_async_read: sys_event_queue_receive failed (%#x)\n", ret));
-                sysThreadExit(-1);
+                sysThreadExit(0);
+                return;
             }
         }
 
@@ -125,6 +126,33 @@ static void sacd_input_handle_async_read(void *arg)
     sysThreadExit(0);
 }
 #endif
+
+int sacd_input_authenticate(sacd_input_t dev)
+{
+#if defined(__lv2ppu__)
+    int ret = create_sac_accessor();
+    if (ret != 0)
+    {
+        LOG(lm_main, LOG_ERROR, ("create_sac_accessor (%#x)\n", ret));
+        return ret;
+    }
+
+    ret = sac_exec_initialize();
+    if (ret != 0)
+    {
+        LOG(lm_main, LOG_ERROR, ("sac_exec_initialize (%#x)\n", ret));
+        return ret;
+    }
+
+    ret = sac_exec_key_exchange(dev->fd);
+    if (ret != 0)
+    {
+        LOG(lm_main, LOG_ERROR, ("sac_exec_key_exchange (%#x)\n", ret));
+        return ret;
+    }
+#endif
+    return 0;
+}
 
 int sacd_input_decrypt(sacd_input_t dev, uint8_t *buffer, int blocks)
 {
@@ -157,7 +185,7 @@ sacd_input_t sacd_input_open(const char *target)
     sacd_input_t dev;
 
     /* Allocate the library structure */
-    dev = (sacd_input_t) calloc(sizeof(*dev), 1);
+    dev = (sacd_input_t) calloc(sizeof(struct sacd_input_s), 1);
     if (dev == NULL)
     {
         fprintf(stderr, "libsacdread: Could not allocate memory.\n");
@@ -171,8 +199,6 @@ sacd_input_t sacd_input_open(const char *target)
     dev->io_buffer = (uint8_t *) malloc(MAX_PROCESSING_BLOCK_SIZE * SACD_LSN_SIZE);
 #elif defined(__lv2ppu__)
     {
-        sys_cond_attr_t         cond_attr;
-        sys_mutex_attr_t        mutex_attr;
         sys_event_queue_attr_t  queue_attr;
         uint8_t                 buffer[64];
         int                     ret, tmp;
@@ -183,7 +209,8 @@ sacd_input_t sacd_input_open(const char *target)
             goto error;
         }
 
-        if (sys_storage_open(BD_DEVICE, &dev->fd) != 0)
+        ret = sys_storage_open(BD_DEVICE, &dev->fd);
+        if (ret != 0)
         {
             goto error;
         }
@@ -202,27 +229,6 @@ sacd_input_t sacd_input_open(const char *target)
         if (dev->device_info.sector_size != SACD_LSN_SIZE)
         {
             LOG(lm_main, LOG_ERROR, ("incorrect LSN size [%x]\n", dev->device_info.sector_size));
-            goto error;
-        }
-
-        ret = create_sac_accessor();
-        if (ret != 0)
-        {
-            LOG(lm_main, LOG_ERROR, ("create_sac_accessor (%#x)\n", ret));
-            goto error;
-        }
-
-        ret = sac_exec_initialize();
-        if (ret != 0)
-        {
-            LOG(lm_main, LOG_ERROR, ("sac_exec_initialize (%#x)\n", ret));
-            goto error;
-        }
-
-        ret = sac_exec_key_exchange(dev->fd);
-        if (ret != 0)
-        {
-            LOG(lm_main, LOG_ERROR, ("sac_exec_key_exchange (%#x)\n", ret));
             goto error;
         }
 
@@ -245,6 +251,9 @@ sacd_input_t sacd_input_open(const char *target)
             goto error;
         }
 
+        ret = sys_io_buffer_allocate(dev->io_buffer, &dev->io_block1);
+        ret = sys_io_buffer_allocate(dev->io_buffer, &dev->io_block2);
+
         ret = sys_storage_async_configure(dev->fd, dev->io_buffer, dev->queue, &tmp);
         if (ret != 0)
         {
@@ -252,15 +261,6 @@ sacd_input_t sacd_input_open(const char *target)
             goto error;
         }
         LOG(lm_main, LOG_DEBUG, ("sys_storage_async_configure[%x]\n", ret));
-
-        memset(&cond_attr, 0, sizeof(sys_cond_attr_t));
-        cond_attr.attr_pshared = SYS_COND_ATTR_PSHARED;
-
-        memset(&mutex_attr, 0, sizeof(sys_mutex_attr_t));
-        mutex_attr.attr_protocol  = SYS_MUTEX_PROTOCOL_PRIO;
-        mutex_attr.attr_recursive = SYS_MUTEX_ATTR_NOT_RECURSIVE;
-        mutex_attr.attr_pshared   = SYS_MUTEX_ATTR_PSHARED;
-        mutex_attr.attr_adaptive  = SYS_MUTEX_ATTR_NOT_ADAPTIVE;
 
         // Initialze input thread
         ret = sysThreadCreate(&dev->thread_id,
@@ -403,29 +403,36 @@ int sacd_input_close(sacd_input_t dev)
 #if defined(__lv2ppu__)
     uint64_t thr_exit_code;
 
-    /*  clean event_queue for spu_printf */
-    ret = sysEventQueueDestroy(dev->queue, SYS_EVENT_QUEUE_DESTROY_FORCE);
-    if (ret)
+    if (dev->queue)
     {
-        LOG(lm_main, LOG_ERROR, ("sys_event_queue_destroy failed %x\n", ret));
-        return ret;
+        ret = sysEventQueueDestroy(dev->queue, SYS_EVENT_QUEUE_DESTROY_FORCE);
+        if (ret)
+        {
+            LOG(lm_main, LOG_ERROR, ("sys_event_queue_destroy failed %x\n", ret));
+        }
     }
 
-    ret = sys_io_buffer_destroy(dev->io_buffer);
-    if (ret != 0)
+    if (dev->io_buffer)
     {
-        LOG(lm_main, LOG_ERROR, ("sys_io_buffer_destroy (%#x) %x\n", ret, dev->io_buffer));
-        return ret;
+        ret = sys_io_buffer_destroy(dev->io_buffer);
+        if (ret != 0)
+        {
+            LOG(lm_main, LOG_ERROR, ("sys_io_buffer_destroy (%#x) %x\n", ret, dev->io_buffer));
+        }
     }
-
-    LOG(lm_main, LOG_DEBUG, ("Wait for the PPU thread %llu exits.\n", dev->thread_id));
-    ret = sysThreadJoin(dev->thread_id, &thr_exit_code);
-    if (ret != 0)
+    
+    if (dev->thread_id)
     {
-        LOG(lm_main, LOG_ERROR, ("sys_ppu_thread_join failed (%#x)\n", ret));
-        return ret;
+        LOG(lm_main, LOG_DEBUG, ("Wait for the PPU thread %llu exits.\n", dev->thread_id));
+        ret = sysThreadJoin(dev->thread_id, &thr_exit_code);
+        if (ret != 0)
+        {
+            LOG(lm_main, LOG_ERROR, ("sys_ppu_thread_join failed (%#x)\n", ret));
+            return ret;
+        }
     }
-
+    
+#if 0
     ret = sac_exec_exit();
     if (ret != 0)
     {
@@ -437,6 +444,7 @@ int sacd_input_close(sacd_input_t dev)
     {
         LOG(lm_main, LOG_ERROR, ("destroy_sac_accessor (%#x)\n", ret));
     }
+#endif
 
     ret = sys_storage_close(dev->fd);
 #else

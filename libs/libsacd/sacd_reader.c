@@ -391,6 +391,14 @@ ssize_t sacd_read_async_block_raw(sacd_reader_t *sacd, int pos, int blocks, sacd
     return sacd_input_async_read(sacd->dev, pos, blocks, cb, user_data);
 }
 
+int sacd_authenticate(sacd_reader_t *sacd)
+{
+    if (!sacd->dev)
+        return 0;
+
+    return sacd_input_authenticate(sacd->dev);
+}
+
 int sacd_decrypt(sacd_reader_t *sacd, uint8_t *buffer, int blocks)
 {
     if (!sacd->dev)

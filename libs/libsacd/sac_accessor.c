@@ -50,7 +50,7 @@ int sac_exec_validate_key_2(uint8_t *, uint32_t);
 int sac_exec_validate_key_3(uint8_t *, uint32_t);
 int exchange_data(int, uint8_t *, int, uint8_t *, int, uint32_t);
 
-sac_accessor_t *sa = NULL;
+static sac_accessor_t *sa = NULL;
 
 int create_sac_accessor(void)
 {
@@ -437,6 +437,11 @@ int exchange_data(int func_nr
                   , uint32_t timeout)
 {
     int ret;
+    
+    if (sa == NULL)
+    {
+        return -1;
+    }
 
     sa->error_code = 0xfffffff1;
 
