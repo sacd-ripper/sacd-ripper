@@ -54,9 +54,6 @@ extern "C" {
 
 #define SPU_INTR_CLASS_2               (2)
 
-#define MAX_PHYSICAL_SPU               6
-#define MAX_RAW_SPU                    1
-
 #define EIEIO                          __asm__ volatile ("eieio")
 
 /** configuration of sac accessor thread */

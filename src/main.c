@@ -36,6 +36,7 @@
 #include <sys/file.h>
 #include <sys/stat.h>
 #include <sys/thread.h> 
+#include <sys/spu.h> 
 
 #include <sys/storage.h>
 #include <ioctl.h>
@@ -52,6 +53,9 @@
 #include "ripping.h"
 
 #include <logging.h>
+
+#define MAX_PHYSICAL_SPU               6
+#define MAX_RAW_SPU                    1
 
 static int dialog_action = 0;
 static int bd_contains_sacd_disc = -1;      // information about the current disc
@@ -432,6 +436,15 @@ int main(int argc, char *argv[])
     load_modules();
 
     init_logging();
+
+    // Initialize SPUs
+    LOG(lm_main, LOG_DEBUG, ("Initializing SPUs\n"));
+    ret = sysSpuInitialize(MAX_PHYSICAL_SPU, MAX_RAW_SPU);
+    if (ret != 0)
+    {
+        LOG(lm_main, LOG_ERROR, ("sysSpuInitialize failed: %d\n", ret));
+        goto quit;
+    }
 
     init_screen(host_addr, HOST_SIZE);
     ioPadInit(7);

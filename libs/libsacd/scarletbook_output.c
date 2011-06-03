@@ -26,6 +26,7 @@
 #include <inttypes.h>
 #include <malloc.h>
 #include <pthread.h>
+#include <errno.h>
 #ifdef __lv2ppu__
 #include <sys/file.h>
 #elif defined(WIN32)
@@ -114,18 +115,14 @@ static int create_output_file(scarletbook_output_format_t *ft)
 
 #ifdef __lv2ppu__
     if (sysFsOpen(ft->filename, SYS_O_RDWR | SYS_O_CREAT | SYS_O_TRUNC, &ft->fd, 0, 0) != 0)
-    {
-        fprintf(stderr, "error creating %s", ft->filename);
-        goto error;
-    }
 #else
     ft->fd = open(ft->filename, O_RDWR | O_CREAT | O_TRUNC | O_BINARY, 0666);
     if (ft->fd == -1)
+#endif
     {
-        fprintf(stderr, "error creating %s", ft->filename);
+        LOG(lm_main, LOG_ERROR, ("error creating %s, errno: %d, %s", ft->filename, errno, strerror(errno)));
         goto error;
     }
-#endif
 
     ft->priv = calloc(1, ft->handler.priv_size);
 
@@ -387,6 +384,7 @@ static void *processing_thread(void *arg)
     scarletbook_handle_t *handle = (scarletbook_handle_t *) arg;
     struct list_head * node_ptr;
     scarletbook_output_format_t * output_format_ptr;
+    ssize_t ret;
 
     if (output.initialized)
     {
@@ -467,7 +465,8 @@ static void *processing_thread(void *arg)
                         block_size = min(end_lsn - ft->current_lsn, block_size);
 
                         // read some blocks
-                        sacd_read_block_raw(ft->sb_handle->sacd, ft->current_lsn, block_size, output.read_buffer);
+                        ret = sacd_read_block_raw(ft->sb_handle->sacd, ft->current_lsn, block_size, output.read_buffer);
+                        //LOG(lm_main, LOG_NOTICE, ("read: %d, blocks: %d, pos: %d", ret, block_size, ft->current_lsn));
 
                         // encrypted blocks need to be decrypted first
                         if (encrypted)
@@ -540,7 +539,7 @@ void initialize_ripping(void)
 
 int is_ripping(void)
 {
-    return atomic_read(&output.stop_processing);
+    return atomic_read(&output.stop_processing) == 0;
 }
 
 int start_ripping(scarletbook_handle_t *handle)
@@ -576,19 +575,17 @@ int stop_ripping(scarletbook_handle_t *handle)
     int     ret = 0;
 
 #ifdef __lv2ppu__
-    {
-        uint64_t thr_exit_code;
-        ret = sysThreadJoin(output.processing_thread_id, &thr_exit_code);
-    }
+    uint64_t thr_exit_code;
+    interrupt_ripping();
+    ret = sysThreadJoin(output.processing_thread_id, &thr_exit_code);
 #else
-    {
-        void *thr_exit_code;
-        ret = pthread_join(output.processing_thread_id, &thr_exit_code);
-    }
+    void *thr_exit_code;
+    interrupt_ripping();
+    ret = pthread_join(output.processing_thread_id, &thr_exit_code);
 #endif    
     if (ret != 0)
     {
-        LOG(lm_main, LOG_ERROR, ("processing thread didn't close properly..."));
+        LOG(lm_main, LOG_ERROR, ("processing thread didn't close properly... %x", thr_exit_code));
     }
 
     output.initialized = 0;
