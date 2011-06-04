@@ -2,7 +2,7 @@ TODO
 
 version 0.1.0:
 
-    - convert current dst code to psl1ght and integrate
+    - find out why the DST decoder instantiation is crashing, ARGHHHH...
     - test PS3 ripping pipeline
  
 version 0.1.x
