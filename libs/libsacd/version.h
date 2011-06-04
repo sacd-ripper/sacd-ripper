@@ -23,7 +23,7 @@
 #define VERSION_H_INCLUDED
 
 #define SACD_RIPPER_VERSION                              \
-    "SACD Ripper release 0.03\n"                         \
+    "SACD Ripper release 0.10\n"                         \
     "Copyright (c) 2010-2011 by respective authors.\n\n" \
     "Report bugs to mr_wicked@hotmail.com\n"
 

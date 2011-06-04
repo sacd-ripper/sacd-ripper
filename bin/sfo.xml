@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <sfo>
-	<value name="APP_VER" type="string">00.01</value>
+	<value name="APP_VER" type="string">00.10</value>
 	<value name="ATTRIBUTE" type="integer">
 		0
 	</value>
@@ -31,5 +31,4 @@
 	<value name="TITLE_ID" type="string">
 		SACDRIP01
 	</value>
-	<value name="VERSION" type="string">00.01</value>
 </sfo>
