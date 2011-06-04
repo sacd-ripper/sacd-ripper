@@ -65,7 +65,8 @@ struct scarletbook_output_format_t
     uint32_t                        current_lsn;
     char                           *filename;
 
-    int                             fd;
+    FILE                           *fd;
+    char                           *write_cache;
     uint64_t                        write_length;
     uint64_t                        write_offset;
     int                             dst_encoded;
@@ -107,9 +108,9 @@ typedef struct scarletbook_output_t
     uint8_t            *read_buffer;
 
 #ifdef __lv2ppu__
-    sys_ppu_thread_t    processing_thread_id;
+    sys_ppu_thread_t    read_thread_id;
 #else
-    pthread_t           processing_thread_id;
+    pthread_t           read_thread_id;
 #endif
     atomic_t            stop_processing;            // indicates if the thread needs to stop or has stopped
     atomic_t            processing;

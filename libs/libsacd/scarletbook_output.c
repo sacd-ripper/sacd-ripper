@@ -116,16 +116,19 @@ static int create_output_file(scarletbook_output_format_t *ft)
 {
     int result;
 
-#ifdef __lv2ppu__
-    if (sysFsOpen(ft->filename, SYS_O_RDWR | SYS_O_CREAT | SYS_O_TRUNC, &ft->fd, 0, 0) != 0)
-#else
-    ft->fd = open(ft->filename, O_RDWR | O_CREAT | O_TRUNC | O_BINARY, 0666);
-    if (ft->fd == -1)
-#endif
+    ft->fd = fopen(ft->filename, "wb");
+    if (ft->fd == 0)
     {
         LOG(lm_main, LOG_ERROR, ("error creating %s, errno: %d, %s", ft->filename, errno, strerror(errno)));
         goto error;
     }
+
+#ifdef __lv2ppu__
+    sysFsChmod(ft->filename, S_IFMT | 0777); 
+#endif
+
+    ft->write_cache = malloc(2 * 1024 * 1024);
+    setvbuf(ft->fd, ft->write_cache, _IOFBF , 2 * 1024 * 1024);
 
     ft->priv = calloc(1, ft->handler.priv_size);
 
@@ -135,11 +138,10 @@ static int create_output_file(scarletbook_output_format_t *ft)
 
 error:
     if (ft->fd)
-#ifdef __lv2ppu__
-        sysFsClose(ft->fd);
-#else
-        close(ft->fd);
-#endif
+    {
+        fclose(ft->fd);
+    }
+    free(ft->write_cache);
     free(ft->priv);
     free(ft);
     return -1;
@@ -152,11 +154,10 @@ static inline int close_output_file(scarletbook_output_format_t * ft)
     result = ft->handler.stopwrite ? (*ft->handler.stopwrite)(ft) : 0;
 
     if (ft->fd)
-#ifdef __lv2ppu__
-        sysFsClose(ft->fd);
-#else
-        close(ft->fd);
-#endif
+    {
+        fclose(ft->fd);
+        free(ft->write_cache);
+    }
     return result;
 }
 
@@ -240,13 +241,9 @@ static void free_round_robin_frame_buffer(void)
 
 static inline size_t write_block(scarletbook_output_format_t * ft, const uint8_t *buf, size_t len, int last_frame)
 {
-#if 0
     size_t actual = ft->handler.write? (*ft->handler.write)(ft, buf, len, last_frame) : 0;
     ft->write_length += actual;
     return actual;
-#else
-    return 0;
-#endif
 }
 
 static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int pos, int blocks)
@@ -387,9 +384,9 @@ static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int
 }
 
 #ifdef __lv2ppu__
-static void processing_thread(void *arg)
+static void read_thread(void *arg)
 #else
-static void *processing_thread(void *arg)
+static void *read_thread(void *arg)
 #endif
 {
     scarletbook_handle_t *handle = (scarletbook_handle_t *) arg;
@@ -397,7 +394,7 @@ static void *processing_thread(void *arg)
     scarletbook_output_format_t * output_format_ptr;
     ssize_t ret;
 
-    atomic_set(&output.processing, 1);
+    sysAtomicSet(&output.processing, 1);
     if (output.initialized)
     {
         while (!list_empty(&output.ripping_queue))
@@ -441,9 +438,9 @@ static void *processing_thread(void *arg)
                 ft->current_lsn = ft->start_lsn;
                 end_lsn = ft->start_lsn + ft->length_lsn;
 
-                atomic_set(&output.stop_processing, 0);
+                sysAtomicSet(&output.stop_processing, 0);
 
-                while (atomic_read(&output.stop_processing) == 0)
+                while (sysAtomicRead(&output.stop_processing) == 0)
                 {
                     if (ft->current_lsn < end_lsn)
                     {
@@ -477,7 +474,6 @@ static void *processing_thread(void *arg)
 
                         // read some blocks
                         ret = sacd_read_block_raw(ft->sb_handle->sacd, ft->current_lsn, block_size, output.read_buffer);
-                        //LOG(lm_main, LOG_NOTICE, ("read: %d, blocks: %d, pos: %d", ret, block_size, ft->current_lsn));
 
                         // encrypted blocks need to be decrypted first
                         if (encrypted)
@@ -506,12 +502,11 @@ static void *processing_thread(void *arg)
                 }
 
             }
-
             close_output_file(output_format_ptr);
 
-            if (atomic_read(&output.stop_processing) == 1)
+            if (sysAtomicRead(&output.stop_processing) == 1)
             {
-                atomic_set(&output.processing, 0);
+                sysAtomicSet(&output.processing, 0);
 
                 // remove the file being worked on
                 remove(output_format_ptr->filename);
@@ -529,7 +524,7 @@ static void *processing_thread(void *arg)
         destroy_ripping_queue();
     }
 
-    atomic_set(&output.processing, 0);
+    sysAtomicSet(&output.processing, 0);
 
 #ifdef __lv2ppu__
     sysThreadExit(-1);
@@ -553,7 +548,7 @@ void initialize_ripping(void)
 
 int is_ripping(void)
 {
-    return atomic_read(&output.processing);
+    return sysAtomicRead(&output.processing);
 }
 
 int start_ripping(scarletbook_handle_t *handle)
@@ -561,15 +556,15 @@ int start_ripping(scarletbook_handle_t *handle)
     int ret = 0;
 
 #ifdef __lv2ppu__
-    ret = sysThreadCreate(&output.processing_thread_id,
-                          processing_thread,
+    ret = sysThreadCreate(&output.read_thread_id,
+                          read_thread,
                           (void *) handle,
                           1050,
                           8192,
                           THREAD_JOINABLE,
-                          "processing_thread");
+                          "read_thread");
 #else
-    ret = pthread_create(&output.processing_thread_id, NULL, processing_thread, (void *) handle);
+    ret = pthread_create(&output.read_thread_id, NULL, read_thread, (void *) handle);
 #endif
     if (ret)
     {
@@ -581,7 +576,7 @@ int start_ripping(scarletbook_handle_t *handle)
 
 void interrupt_ripping(void)
 {
-    atomic_set(&output.stop_processing, 1);
+    sysAtomicSet(&output.stop_processing, 1);
 }
 
 int stop_ripping(scarletbook_handle_t *handle)
@@ -594,11 +589,11 @@ int stop_ripping(scarletbook_handle_t *handle)
 #ifdef __lv2ppu__
         uint64_t thr_exit_code;
         interrupt_ripping();
-        ret = sysThreadJoin(output.processing_thread_id, &thr_exit_code);
+        ret = sysThreadJoin(output.read_thread_id, &thr_exit_code);
 #else
         void *thr_exit_code;
         interrupt_ripping();
-        ret = pthread_join(output.processing_thread_id, &thr_exit_code);
+        ret = pthread_join(output.read_thread_id, &thr_exit_code);
 #endif    
         if (ret != 0)
         {

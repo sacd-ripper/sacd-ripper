@@ -2,12 +2,12 @@ TODO
 
 version 0.1.0:
 
-    - test writing speed problem
-    - test PS3 ripping pipeline
     - convert current dst code to psl1ght and integrate
+    - test PS3 ripping pipeline
  
 version 0.1.x
- 
+
+    - proper naming on scarletbook_output, it's a mess.. 
     - write log along each consecutive rip
     - use output_format_t.error_number for error handling
      - catch read failures 

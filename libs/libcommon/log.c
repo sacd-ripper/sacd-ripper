@@ -44,6 +44,8 @@
 #ifdef __lv2ppu__
 #include <sys/mutex.h>
 #include <sys/thread.h>
+#include <sys/stat.h>
+#include <sys/file.h>
 #endif
 
 #include "log.h"
@@ -259,6 +261,9 @@ int set_log_file(const char *file)
         _UNLOCK_LOG();
         return -1;
     }
+#ifdef __lv2ppu__
+    sysFsChmod(file, S_IFMT | 0777); 
+#endif
 
     if (log_file && log_file != stdout && log_file != stderr)
     {

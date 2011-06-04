@@ -221,6 +221,11 @@ char * parse_format(const char * format, int tracknum, const char * year, const 
     return ret;
 }
 
+#ifdef __lv2ppu__
+#include <sys/stat.h>
+#include <sys/file.h>
+#endif
+
 // Uses mkdir() for every component of the path
 // and returns if any of those fails with anything other than EEXIST.
 int recursive_mkdir(char* path_and_name, mode_t mode)
@@ -238,7 +243,9 @@ int recursive_mkdir(char* path_and_name, mode_t mode)
             path_and_name[count + 1] = '\0';
 
             rc = mkdir(path_and_name, mode);
-
+#ifdef __lv2ppu__
+            sysFsChmod(path_and_name, S_IFMT | 0777); 
+#endif
             path_and_name[count + 1] = charReplaced;
 
             if (rc != 0 && !(errno == EEXIST || errno == EISDIR || errno == EACCES || errno == EROFS))
@@ -247,7 +254,11 @@ int recursive_mkdir(char* path_and_name, mode_t mode)
     }
 
     // in case the path doesn't have a trailing slash:
-    return mkdir(path_and_name, mode);
+    rc = mkdir(path_and_name, mode);
+#ifdef __lv2ppu__
+    sysFsChmod(path_and_name, S_IFMT | 0777);
+#endif
+    return rc;
 }
 
 // Uses mkdir() for every component of the path except the last one,
