@@ -1,0 +1,21 @@
+TODO
+
+version 0.1.0:
+
+    - find out why the DST decoder instantiation is crashing, ARGHHHH...
+    - test PS3 ripping pipeline
+ 
+version 0.1.x
+
+    - proper naming on scarletbook_output, it's a mess.. 
+    - logging
+        - cleanup logging, split lm_main into multiple destinations
+        - write log along each consecutive rip
+        - write INFO,NOTICE,etc..
+    - use output_format_t.error_number for error handling
+     - catch read failures 
+        - do not stop and continue decoding and reading
+        - specify max amount of read errors
+        - skipping DST/DSD frames
+        - skip TOCs
+        - log read errors
