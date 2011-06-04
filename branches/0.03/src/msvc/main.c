@@ -230,7 +230,7 @@ int main(int argc, char* argv[]) {
 
                 if (opts.output_iso)
                 {
-                    #define FAT32_SECTOR_LIMIT 100000
+                    #define FAT32_SECTOR_LIMIT 2097152
                     uint32_t total_sectors = sacd_get_total_sectors(sacd_reader);
                     uint32_t sector_size = FAT32_SECTOR_LIMIT;
                     uint32_t sector_offset = 0;
@@ -259,7 +259,7 @@ int main(int argc, char* argv[]) {
                 else 
                 {
                     // fill the queue with items to rip
-                    for (i = 0; i < 1; i++) //handle->area[area_idx].area_toc->track_count; i++) 
+                    for (i = 0; i < handle->area[area_idx].area_toc->track_count; i++) 
                     {
                         musicfilename = get_music_filename(handle, area_idx, i);
                         if (opts.output_dsf)

@@ -39,6 +39,8 @@
 #include "scarletbook_output.h"
 #include "sacd_reader.h"
 
+#define WRITE_CACHE_SIZE 1 * 1024 * 1024
+
 // TODO: allocate dynamically
 static scarletbook_output_t output;
 
@@ -127,8 +129,8 @@ static int create_output_file(scarletbook_output_format_t *ft)
     sysFsChmod(ft->filename, S_IFMT | 0777); 
 #endif
 
-    ft->write_cache = malloc(2 * 1024 * 1024);
-    setvbuf(ft->fd, ft->write_cache, _IOFBF , 2 * 1024 * 1024);
+    ft->write_cache = malloc(WRITE_CACHE_SIZE);
+    setvbuf(ft->fd, ft->write_cache, _IOFBF , WRITE_CACHE_SIZE);
 
     ft->priv = calloc(1, ft->handler.priv_size);
 
@@ -156,16 +158,13 @@ static inline int close_output_file(scarletbook_output_format_t * ft)
     if (ft->fd)
     {
         fclose(ft->fd);
-        free(ft->write_cache);
     }
-    return result;
-}
-
-static inline void destroy_output_format(scarletbook_output_format_t * ft)
-{
+    free(ft->write_cache);
     free(ft->filename);
     free(ft->priv);
     free(ft);
+
+    return result;
 }
 
 void init_stats(stats_track_callback_t cb_track, stats_progress_callback_t cb_progress)
@@ -502,15 +501,28 @@ static void *read_thread(void *arg)
                 }
 
             }
-            close_output_file(output_format_ptr);
 
             if (sysAtomicRead(&output.stop_processing) == 1)
             {
+                // make a copy of the filename
+                char *file_to_remove = strdup(output_format_ptr->filename);
+
                 sysAtomicSet(&output.processing, 0);
 
+                // before removal we close the file
+                close_output_file(output_format_ptr);
+
                 // remove the file being worked on
-                remove(output_format_ptr->filename);
-                destroy_output_format(output_format_ptr);
+#ifdef __lv2ppu__
+                if (sysFsUnlink(file_to_remove) != 0)
+#else
+                if (remove(file_to_remove) != 0)
+#endif
+                {
+                    LOG(lm_main, LOG_ERROR, ("user cancelled, error removing: %s, [%s]", file_to_remove, strerror(errno)));
+                }
+                free(file_to_remove);
+
                 destroy_ripping_queue();
 #ifdef __lv2ppu__
                 sysThreadExit(-1);
@@ -519,7 +531,7 @@ static void *read_thread(void *arg)
 #endif
             }
 
-            destroy_output_format(output_format_ptr);
+            close_output_file(output_format_ptr);
         } 
         destroy_ripping_queue();
     }
