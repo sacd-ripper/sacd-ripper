@@ -42,6 +42,7 @@
 #define WRITE_CACHE_SIZE 1 * 1024 * 1024
 
 // TODO: allocate dynamically
+// TODO: refactor, creation & destruction & cleanup..
 static scarletbook_output_t output;
 
 extern scarletbook_format_handler_t const * dsdiff_format_fn(void);
@@ -316,7 +317,16 @@ static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int
                                     // when buffer is full we write to disk
                                     if (frame_ptr->full)
                                     {
-                                        write_block(ft, frame_ptr->data, frame_ptr->size, 0);
+                                        if (ft->decode_dst)
+                                        {
+                                            // add to dst queue
+                                            // wait for dst decoder
+                                            // write output to disk
+                                        }
+                                        else
+                                        {
+                                            write_block(ft, frame_ptr->data, frame_ptr->size, 0);
+                                        }
                                         
                                         // mark frame as empty
                                         frame_ptr->full = 0;
@@ -372,9 +382,6 @@ static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int
 
             output.full_frame_count = 0;
         }
-
-        // decode DSD frames
-
     }
     else if (ft->handler.flags & OUTPUT_FLAG_RAW)
     {
@@ -547,8 +554,10 @@ static void *read_thread(void *arg)
 #endif
 }
 
-void initialize_ripping(void)
+int initialize_ripping(void)
 {
+    int ret = 0;
+
     memset(&output, 0, sizeof(scarletbook_output_t));
 
     INIT_LIST_HEAD(&output.ripping_queue);
@@ -556,6 +565,16 @@ void initialize_ripping(void)
     output.initialized = 1;
 
     allocate_round_robin_frame_buffer();
+
+#ifdef __lv2ppu__
+    //ret = create_dst_decoder(&output.dst_decoder);
+    if (ret != 0)
+    {
+        LOG(lm_main, LOG_ERROR, ("create_dst_decoder failed: %#.8x", ret));
+    }
+#endif
+
+    return ret;
 }
 
 int is_ripping(void)
@@ -593,7 +612,7 @@ void interrupt_ripping(void)
 
 int stop_ripping(scarletbook_handle_t *handle)
 {
-    int     ret = 0;
+    int ret = 0;
 
     if (output.initialized)
     {
@@ -614,6 +633,14 @@ int stop_ripping(scarletbook_handle_t *handle)
 
         free_round_robin_frame_buffer();
         free(output.read_buffer);
+
+#ifdef __lv2ppu__
+        //ret = destroy_dst_decoder(&output.dst_decoder);
+        if (ret != 0)
+        {
+            LOG(lm_main, LOG_ERROR, ("destroy_dst_decoder failed: %#.8x", ret));
+        }
+#endif
 
         output.initialized = 0;
     }

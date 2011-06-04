@@ -30,6 +30,9 @@
 #include <sys/atomic.h>
 
 #include "scarletbook.h"
+#ifdef __lv2ppu__
+#include "dst_decoder.h"
+#endif
 
 #define PACKET_FRAME_BUFFER_COUNT 5
 
@@ -133,6 +136,10 @@ typedef struct scarletbook_output_t
     uint32_t            stats_current_file_sectors_processed;
     stats_progress_callback_t stats_progress_callback;
     stats_track_callback_t stats_track_callback;
+
+#ifdef __lv2ppu__
+    dst_decoder_t       dst_decoder;
+#endif
 }
 scarletbook_output_t;
 
@@ -140,7 +147,7 @@ void init_stats(stats_track_callback_t, stats_progress_callback_t);
 
 scarletbook_format_handler_t const * sacd_find_output_format(char const *);
 
-void initialize_ripping(void);
+int initialize_ripping(void);
 void interrupt_ripping(void);
 int is_ripping(void);
 int start_ripping(scarletbook_handle_t *);

@@ -47,6 +47,7 @@ OBJS		:= \
 			scarletbook.o \
 			dsdiff.o \
 			dsf.o \
+			dst_decoder.o \
             sacd_input.o \
             scarletbook_print.o \
             scarletbook_id3.o \
