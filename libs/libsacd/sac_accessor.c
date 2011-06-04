@@ -72,6 +72,7 @@ int create_sac_accessor(void)
         LOG(lm_main, LOG_ERROR, ("sac_accessor_t malloc failed\n"));
         return -1;
     }
+    sa->id = -1;
 
     sa->buffer = (uint8_t *) memalign(128, DMA_BUFFER_SIZE);
     memset(sa->buffer, 0, DMA_BUFFER_SIZE);
@@ -237,7 +238,7 @@ int destroy_sac_accessor(void)
         sa->module_buffer = 0;
     }
 
-    if (sa->id != 0)
+    if (sa->id != -1)
     {
         ret = sysSpuRawReadProblemStorage(sa->id, SPU_Status);
         EIEIO;
@@ -274,7 +275,7 @@ int destroy_sac_accessor(void)
         }
     }
 
-    if (sa->id != 0)
+    if (sa->id != -1)
     {
 #ifdef USE_ISOSELF
         if ((ret = sys_isoself_spu_destroy(sa->id)) != 0)
