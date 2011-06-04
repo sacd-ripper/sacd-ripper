@@ -211,7 +211,7 @@ int start_ripping_gui(int ripping_flags)
             else 
             {
                 // fill the queue with items to rip
-                for (i = 0; i < 2; i++) //handle->area[area_idx].area_toc->track_count; i++) 
+                for (i = 0; i < 1; i++) //handle->area[area_idx].area_toc->track_count; i++) 
                 {
                     musicfilename = get_music_filename(handle, area_idx, i);
                     if (ripping_flags & RIP_DSF)
@@ -273,8 +273,8 @@ int start_ripping_gui(int ripping_flags)
                     {
                         memset(progress_message, 0, 64);
        
-                        // HACK: substr is not thread safe, but it's only used in this thread..
                         musicfilename = get_music_filename(handle, area_idx, tmp_current_track - 1);
+                        // HACK: substr is not thread safe, but it's only used in this thread..
                         snprintf(progress_message, 63, "Track (%d/%d): [%s...]", tmp_current_track, atomic_read(&stats_total_tracks), substr(musicfilename, 0, 40));
                         free(musicfilename);
 

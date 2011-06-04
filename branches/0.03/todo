@@ -2,7 +2,6 @@ TODO
 
 version 0.1.0:
 
-    - fix sac_accessor closing problem
     - test writing speed problem
     - test PS3 ripping pipeline
     - convert current dst code to psl1ght and integrate

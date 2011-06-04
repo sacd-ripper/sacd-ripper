@@ -61,7 +61,7 @@ extern "C" {
 #define PRIMARY_PPU_STACK_SIZE         (0x2000)
 
 #define DMA_BUFFER_SIZE                (4 * 2048)
-#define EXIT_SAC_CMD                   (0xFEFEFEFF)
+#define EXIT_SAC_CMD                   (0xfefefeff)
 
 #ifdef USE_ISOSELF
         #define SAC_MODULE_LOCATION    "/dev_flash/vsh/module/SacModule.spu.isoself"
