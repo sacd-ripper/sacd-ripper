@@ -19,21 +19,33 @@
  *
  */
 
-#include <stdlib.h>
-#include "logging.h"
+#ifndef __DST_DECODER_H__
+#define __DST_DECODER_H__
 
-log_module_info_t * lm_main = 0;  
-
-void init_logging()
-{
-#ifndef _WIN32
-    setenv("LOG_MODULES", "all:5", 0); //,bufsize:16384
+#ifndef __lv2ppu__
+#error you need the psl1ght/lv2 ppu compatible compiler!
 #endif
-    lm_main = create_log_module("main");
-    log_init();
-}
 
-void destroy_logging()
+#include <ppu-types.h>
+
+typedef struct dst_decoder_thread_s *dst_decoder_thread_t;
+
+#define NUM_DST_DECODERS                1 /* The number of DST decoders (SPUs) */ 
+
+typedef struct dst_decoder_t
 {
-    log_destroy();
+    sys_event_queue_t               recv_queue;
+
+    int                             event_count;
+
+    dst_decoder_thread_t            decoder[NUM_DST_DECODERS];
 }
+dst_decoder_t;
+
+int create_dst_decoder(dst_decoder_t *);
+int destroy_dst_decoder(dst_decoder_t *);
+int decode_dst_frame(dst_decoder_t *, uint8_t *, size_t, int, int);
+int dst_decoder_wait(dst_decoder_t *, int);
+int get_dsd_frame(dst_decoder_t *, int, uint8_t **, size_t *);
+
+#endif /* __DST_DECODER_H__ */
