@@ -144,6 +144,7 @@ int start_ripping_gui(int ripping_flags)
     uint32_t prev_stats_total_sectors_processed = 0;
     uint32_t prev_stats_current_file_sectors_processed = 0;
     uint64_t tb_start, tb_freq;
+    uint64_t tmp_total_ripping_sectors = 0;
 
     char progress_message[64];
 
@@ -207,11 +208,12 @@ int start_ripping_gui(int ripping_flags)
                     LOG(lm_main, LOG_NOTICE, ("adding iso to queue: %s (%d, %d)", file_path, 0, total_sectors));
                     free(file_path);
                 }
+                tmp_total_ripping_sectors = total_sectors;
             }
             else 
             {
                 // fill the queue with items to rip
-                for (i = 0; i < 1; i++) //handle->area[area_idx].area_toc->track_count; i++) 
+                for (i = 0; i < handle->area[area_idx].area_toc->track_count; i++) 
                 {
                     musicfilename = get_music_filename(handle, area_idx, i);
                     if (ripping_flags & RIP_DSF)
@@ -235,6 +237,8 @@ int start_ripping_gui(int ripping_flags)
                             LOG(lm_main, LOG_NOTICE, ("adding dsdiff to queue: %s", file_path));
                     }
 
+                    tmp_total_ripping_sectors += handle->area[area_idx].area_tracklist_offset->track_length_lsn[i];
+
                     free(musicfilename);
                     free(file_path);
                 }
@@ -248,11 +252,13 @@ int start_ripping_gui(int ripping_flags)
 
             {
                 char *message = (char *) malloc(512);
+
                 file_path = make_filename(output_device, albumdir, 0, 0);
-                snprintf(message, 512, "Title: %s\nOutput: %s\nFormat: %s\nArea: %s\nEncoding: %s", 
+                snprintf(message, 512, "Title: %s\nOutput: %s\nFormat: %s\nSize: %.2fGB\nArea: %s\nEncoding: %s", 
                         substr(albumdir, 0, 100), 
                         file_path, 
                         (ripping_flags & RIP_DSDIFF ? "DSDIFF" : (ripping_flags & RIP_DSF ? "DSF" : "ISO")),
+                        ((double) (tmp_total_ripping_sectors * SACD_LSN_SIZE) / 1073741824.00),
                         (ripping_flags & RIP_2CH ? "2ch" : "mch"),
                         (ripping_flags & RIP_2CH_DST || ripping_flags & RIP_MCH_DST ? "DST" : (ripping_flags & RIP_ISO ? "DECRYPTED" : "DSD"))
                         );
@@ -296,7 +302,10 @@ int start_ripping_gui(int ripping_flags)
                         prev_lower_progress += delta;
                         msgDialogProgressBarInc(MSG_PROGRESSBAR_INDEX1, delta);
 
-                        snprintf(progress_message, 64, "Ripping speed: (%.2f MB/sec)", (float)((float) tmp_stats_total_sectors_processed * SACD_LSN_SIZE / 1048576.00) / (float)((__gettime() - tb_start) / (float)(tb_freq)));
+                        snprintf(progress_message, 64, "Ripping %.1fMB/%.1fMB at %.2fMB/sec", 
+                                ((float)(tmp_stats_current_file_sectors_processed * SACD_LSN_SIZE) / 1048576.00),
+                                ((float)(tmp_stats_current_file_total_sectors * SACD_LSN_SIZE) / 1048576.00),
+                                (float)((float) tmp_stats_total_sectors_processed * SACD_LSN_SIZE / 1048576.00) / (float)((__gettime() - tb_start) / (float)(tb_freq)));
                         
                         msgDialogProgressBarSetMsg(MSG_PROGRESSBAR_INDEX0, progress_message);
                         
