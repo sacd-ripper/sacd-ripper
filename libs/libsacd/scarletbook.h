@@ -554,38 +554,6 @@ typedef struct
 } 
 scarletbook_handle_t;
 
-/**
- * helper functions..
- */
-static inline int has_two_channel(scarletbook_handle_t *handle)
-{
-    return handle->twoch_area_idx != -1;
-}
-
-static inline int has_multi_channel(scarletbook_handle_t *handle)
-{
-    return handle->mulch_area_idx != -1;
-}
-
-static inline int has_both_channels(scarletbook_handle_t *handle)
-{
-    return handle->twoch_area_idx != -1 && handle->mulch_area_idx != -1;
-}
-
-static inline area_toc_t* get_two_channel(scarletbook_handle_t *handle)
-{
-    return(handle->twoch_area_idx == -1 ? 0 : handle->area[handle->twoch_area_idx].area_toc);
-}
-
-static inline area_toc_t* get_multi_channel(scarletbook_handle_t *handle)
-{
-    return(handle->mulch_area_idx == -1 ? 0 : handle->area[handle->mulch_area_idx].area_toc);
-}
-
-char *get_speaker_config_string(area_toc_t *);
-
-char *get_frame_format_string(area_toc_t *);
-
 #if PRAGMA_PACK
 #pragma pack()
 #endif

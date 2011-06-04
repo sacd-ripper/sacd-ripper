@@ -39,6 +39,7 @@
 #include <scarletbook_read.h>
 #include <scarletbook_output.h>
 #include <scarletbook_print.h>
+#include <scarletbook_helpers.h>
 #include <scarletbook_id3.h>
 #include <endianess.h>
 #include <fileutils.h>
@@ -153,14 +154,15 @@ void handle_sigint(int sig_no)
     interrupt_ripping();
 }
 
-void handle_status_update_callback(uint32_t stats_total_sectors, uint32_t stats_total_sectors_processed,
-                                 uint32_t stats_current_file_total_sectors, uint32_t stats_current_file_sectors_processed,
-                                 char *filename)
+static void handle_status_update_track_callback(char *filename, int current_track, int total_tracks)
 {
-    if (filename)
-    {
-        printf("\rProcessing [%s]..\n", filename);
-    }
+    printf("\rProcessing [%s] (%d/%d)..\n", filename, current_track, total_tracks);
+    fflush(stdout);
+}
+
+static void handle_status_update_progress_callback(uint32_t stats_total_sectors, uint32_t stats_total_sectors_processed,
+                                 uint32_t stats_current_file_total_sectors, uint32_t stats_current_file_sectors_processed)
+{
     printf("\rCompleted: %d%%, Total: %d%%", (stats_current_file_sectors_processed*100/stats_current_file_total_sectors), 
                                              (stats_total_sectors_processed*100/stats_total_sectors));
     fflush(stdout);
@@ -190,105 +192,6 @@ static void init(void) {
 
     init_logging();
 } 
-
-char *get_album_dir()
-{
-    char disc_artist[60];
-    char disc_album_title[60];
-    char disc_album_year[5];
-    char *albumdir;
-    master_text_t *master_text = handle->master_text[0];
-    int disc_artist_position = (master_text->disc_artist_position ? master_text->disc_artist_position : master_text->disc_artist_phonetic_position);
-    int disc_album_title_position = (master_text->disc_title_position ? master_text->disc_title_position : master_text->disc_title_phonetic_position);
-
-    memset(disc_artist, 0, sizeof(disc_artist));
-    if (disc_artist_position)
-    {
-        char *c = (char *) master_text + disc_artist_position;
-        char *pos = strchr(c, ';');
-        if (!pos)
-            pos = c + strlen(c);
-        strncpy(disc_artist, c, min(pos - c, 59));
-    }
-
-    memset(disc_album_title, 0, sizeof(disc_album_title));
-    if (disc_album_title_position)
-    {
-        char *c = (char *) master_text + disc_album_title_position;
-        char *pos = strchr(c, ';');
-        if (!pos)
-            pos = c + strlen(c);
-        strncpy(disc_album_title, c, min(pos - c, 59));
-    }
-
-    snprintf(disc_album_year, sizeof(disc_album_year), "%04d", handle->master_toc->disc_date_year);
-    
-    sanitize_filename(disc_artist);
-    sanitize_filename(disc_album_title);
-
-    if (strlen(disc_artist) > 0 && strlen(disc_album_title) > 0)
-        albumdir = parse_format("%A - %L", 0, disc_album_year, disc_artist, disc_album_title, NULL);
-    else if (strlen(disc_artist) > 0)
-        albumdir = parse_format("%A", 0, disc_album_year, disc_artist, disc_album_title, NULL);
-    else if (strlen(disc_album_title) > 0)
-        albumdir = parse_format("%L", 0, disc_album_year, disc_artist, disc_album_title, NULL);
-    else
-        albumdir = parse_format("Unknown Album", 0, disc_album_year, disc_artist, disc_album_title, NULL);
-
-    return albumdir;
-}
-
-char *get_music_filename(int area, int track)
-{
-    char *c;
-    char track_artist[60];
-    char track_title[60];
-    char disc_album_title[60];
-    char disc_album_year[5];
-    master_text_t *master_text = handle->master_text[0];
-    int disc_album_title_position = (master_text->disc_title_position ? master_text->disc_title_position : master_text->disc_title_phonetic_position);
-
-    memset(track_artist, 0, sizeof(track_artist));
-    c = handle->area[area].area_track_text[track].track_type_performer;
-    if (c)
-    {
-        strncpy(track_artist, c, 59);
-    }
-
-    memset(track_title, 0, sizeof(track_title));
-    c = handle->area[area].area_track_text[track].track_type_title;
-    if (c)
-    {
-        strncpy(track_title, c, 59);
-    }
-
-    memset(disc_album_title, 0, sizeof(disc_album_title));
-    if (disc_album_title_position)
-    {
-        char *c = (char *) master_text + disc_album_title_position;
-        char *pos = strchr(c, ';');
-        if (!pos)
-            pos = c + strlen(c);
-        strncpy(disc_album_title, c, min(pos - c, 59));
-    }
-
-    snprintf(disc_album_year, sizeof(disc_album_year), "%04d", handle->master_toc->disc_date_year);
-
-    sanitize_filename(track_artist);
-    sanitize_filename(disc_album_title);
-    sanitize_filename(track_title);
-
-    if (strlen(track_artist) > 0 && strlen(track_title) > 0)
-        return parse_format("%N - %A - %T", track + 1, disc_album_year, track_artist, disc_album_title, track_title);
-    else if (strlen(track_artist) > 0)
-        return parse_format("%N - %A", track + 1, disc_album_year, track_artist, disc_album_title, track_title);
-    else if (strlen(track_title) > 0)
-        return parse_format("%N - %T", track + 1, disc_album_year, track_artist, disc_album_title, track_title);
-    else if (strlen(disc_album_title) > 0)
-        return parse_format("%N - %L", track + 1, disc_album_year, track_artist, disc_album_title, track_title);
-    else
-        return parse_format("%N - Unknown Artist", track + 1, disc_album_year, track_artist, disc_album_title, track_title);
-}
 
 int main(int argc, char* argv[]) {
     char *albumdir, *musicfilename, *file_path;
@@ -322,7 +225,7 @@ int main(int argc, char* argv[]) {
                 // select the channel area
                 area_idx = (has_multi_channel(handle) && opts.multi_channel) ? handle->mulch_area_idx : handle->twoch_area_idx;
 
-                albumdir      = get_album_dir();
+                albumdir      = get_album_dir(handle);
                 recursive_mkdir(albumdir, 0666);
 
                 if (opts.output_iso)
@@ -339,7 +242,7 @@ int main(int argc, char* argv[]) {
                         {
                             sector_size = min(total_sectors, FAT32_SECTOR_LIMIT);
                             snprintf(musicfilename, 512, "%s.%03d", file_path, i);
-                            queue_track_to_rip(0, 0, musicfilename, "iso", sector_offset, sector_size, 0);
+                            queue_track_to_rip(0, 0, musicfilename, "iso", sector_offset, sector_size, 0, 0);
                             sector_offset += sector_size;
                             total_sectors -= sector_size;
                         }
@@ -349,7 +252,7 @@ int main(int argc, char* argv[]) {
                     else
                     {
                         file_path = make_filename(0, 0, albumdir, "iso");
-                        queue_track_to_rip(0, 0, file_path, "iso", 0, total_sectors, 0);
+                        queue_track_to_rip(0, 0, file_path, "iso", 0, total_sectors, 0, 0);
                         free(file_path);
                     }
                 }
@@ -358,14 +261,16 @@ int main(int argc, char* argv[]) {
                     // fill the queue with items to rip
                     for (i = 0; i < 1; i++) //handle->area[area_idx].area_toc->track_count; i++) 
                     {
-                        musicfilename = get_music_filename(area_idx, i);
+                        musicfilename = get_music_filename(handle, area_idx, i);
                         if (opts.output_dsf)
                         {
                             file_path     = make_filename(0, albumdir, musicfilename, "dsf");
                             queue_track_to_rip(area_idx, i, file_path, "dsf", 
                                 handle->area[area_idx].area_tracklist_offset->track_start_lsn[i], 
                                 handle->area[area_idx].area_tracklist_offset->track_length_lsn[i], 
-                                handle->area[area_idx].area_toc->frame_format == FRAME_FORMAT_DST);
+                                handle->area[area_idx].area_toc->frame_format == FRAME_FORMAT_DST,
+                                1
+                                );
                         }
                         else if (opts.output_dsdiff)
                         {
@@ -373,7 +278,9 @@ int main(int argc, char* argv[]) {
                             queue_track_to_rip(area_idx, i, file_path, "dsdiff", 
                                 handle->area[area_idx].area_tracklist_offset->track_start_lsn[i], 
                                 handle->area[area_idx].area_tracklist_offset->track_length_lsn[i], 
-                                handle->area[area_idx].area_toc->frame_format == FRAME_FORMAT_DST);
+                                handle->area[area_idx].area_toc->frame_format == FRAME_FORMAT_DST,
+                                handle->area[area_idx].area_toc->frame_format != FRAME_FORMAT_DST
+                                );
                         }
 
                         free(musicfilename);
@@ -381,7 +288,7 @@ int main(int argc, char* argv[]) {
                     }
                 }
 
-                init_stats(handle_status_update_callback);
+                init_stats(handle_status_update_track_callback, handle_status_update_progress_callback);
                 start_ripping(handle);
                 stop_ripping(handle);
                 scarletbook_close(handle);
