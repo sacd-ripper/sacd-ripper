@@ -35,6 +35,7 @@
 #include <sacd_reader.h>
 #include <scarletbook_read.h>
 #include <scarletbook_output.h>
+#include <scarletbook_helpers.h>
 #include <sac_accessor.h>
 
 #include "ripping.h"
@@ -49,108 +50,8 @@ static atomic_t stats_total_sectors_processed;
 static atomic_t stats_current_file_total_sectors;               // total amount of block to process
 static atomic_t stats_current_file_sectors_processed; 
 
-static atomic_t selected_progress_message;
-static char     progress_message_upper[2][64];
-static char     progress_message_lower[2][64];
-
-char *get_album_dir(scarletbook_handle_t *handle)
-{
-    char disc_artist[60];
-    char disc_album_title[60];
-    char disc_album_year[5];
-    char *albumdir;
-    master_text_t *master_text = handle->master_text[0];
-    int disc_artist_position = (master_text->disc_artist_position ? master_text->disc_artist_position : master_text->disc_artist_phonetic_position);
-    int disc_album_title_position = (master_text->disc_title_position ? master_text->disc_title_position : master_text->disc_title_phonetic_position);
-
-    memset(disc_artist, 0, sizeof(disc_artist));
-    if (disc_artist_position)
-    {
-        char *c = (char *) master_text + disc_artist_position;
-        char *pos = strchr(c, ';');
-        if (!pos)
-            pos = c + strlen(c);
-        strncpy(disc_artist, c, min(pos - c, 59));
-    }
-
-    memset(disc_album_title, 0, sizeof(disc_album_title));
-    if (disc_album_title_position)
-    {
-        char *c = (char *) master_text + disc_album_title_position;
-        char *pos = strchr(c, ';');
-        if (!pos)
-            pos = c + strlen(c);
-        strncpy(disc_album_title, c, min(pos - c, 59));
-    }
-
-    snprintf(disc_album_year, sizeof(disc_album_year), "%04d", handle->master_toc->disc_date_year);
-    
-    sanitize_filename(disc_artist);
-    sanitize_filename(disc_album_title);
-
-    if (strlen(disc_artist) > 0 && strlen(disc_album_title) > 0)
-        albumdir = parse_format("%A - %L", 0, disc_album_year, disc_artist, disc_album_title, NULL);
-    else if (strlen(disc_artist) > 0)
-        albumdir = parse_format("%A", 0, disc_album_year, disc_artist, disc_album_title, NULL);
-    else if (strlen(disc_album_title) > 0)
-        albumdir = parse_format("%L", 0, disc_album_year, disc_artist, disc_album_title, NULL);
-    else
-        albumdir = parse_format("Unknown Album", 0, disc_album_year, disc_artist, disc_album_title, NULL);
-
-    return albumdir;
-}
-
-char *get_music_filename(scarletbook_handle_t *handle, int area, int track)
-{
-    char *c;
-    char track_artist[60];
-    char track_title[60];
-    char disc_album_title[60];
-    char disc_album_year[5];
-    master_text_t *master_text = handle->master_text[0];
-    int disc_album_title_position = (master_text->disc_title_position ? master_text->disc_title_position : master_text->disc_title_phonetic_position);
-
-    memset(track_artist, 0, sizeof(track_artist));
-    c = handle->area[area].area_track_text[track].track_type_performer;
-    if (c)
-    {
-        strncpy(track_artist, c, 59);
-    }
-
-    memset(track_title, 0, sizeof(track_title));
-    c = handle->area[area].area_track_text[track].track_type_title;
-    if (c)
-    {
-        strncpy(track_title, c, 59);
-    }
-
-    memset(disc_album_title, 0, sizeof(disc_album_title));
-    if (disc_album_title_position)
-    {
-        char *c = (char *) master_text + disc_album_title_position;
-        char *pos = strchr(c, ';');
-        if (!pos)
-            pos = c + strlen(c);
-        strncpy(disc_album_title, c, min(pos - c, 59));
-    }
-
-    snprintf(disc_album_year, sizeof(disc_album_year), "%04d", handle->master_toc->disc_date_year);
-
-    sanitize_filename(track_artist);
-    sanitize_filename(disc_album_title);
-    sanitize_filename(track_title);
-
-    if (strlen(track_artist) > 0 && strlen(track_title) > 0)
-        return parse_format("%N - %A - %T", track + 1, disc_album_year, track_artist, disc_album_title, track_title);
-    else if (strlen(track_artist) > 0)
-        return parse_format("%N - %A", track + 1, disc_album_year, track_artist, disc_album_title, track_title);
-    else if (strlen(track_title) > 0)
-        return parse_format("%N - %T", track + 1, disc_album_year, track_artist, disc_album_title, track_title);
-    else if (strlen(disc_album_title) > 0)
-        return parse_format("%N - %L", track + 1, disc_album_year, track_artist, disc_album_title, track_title);
-    else
-        return parse_format("%N - Unknown Artist", track + 1, disc_album_year, track_artist, disc_album_title, track_title);
-}
+static atomic_t stats_current_track;
+static atomic_t stats_total_tracks;
 
 static void dialog_handler(msgButton button, void *user_data)
 {
@@ -171,7 +72,63 @@ static void dialog_handler(msgButton button, void *user_data)
     }
 }
 
-int start_ripping_gui(void)
+static int check_disc_space(sacd_reader_t *sacd_reader, scarletbook_handle_t *handle, int ripping_flags)
+{
+    uint64_t needed_sectors = 0;
+
+    if (ripping_flags & RIP_ISO)
+    {
+        needed_sectors = sacd_get_total_sectors(sacd_reader);
+    }
+    else if (has_two_channel(handle) && ripping_flags & RIP_2CH)
+    {
+        needed_sectors = get_two_channel(handle)->track_end - get_two_channel(handle)->track_start;
+    }
+    else if (has_both_channels(handle) && ripping_flags & RIP_MCH)
+    {
+        needed_sectors = get_multi_channel(handle)->track_end - get_multi_channel(handle)->track_start;
+    }
+
+    if (needed_sectors > output_device_sectors)
+    {
+        msgType  dialog_type;
+        char     *message   = (char *) malloc(512);
+
+        LOG(lm_main, LOG_ERROR, ("no enough disc space on %s (%llu), needs: %llu", output_device, output_device_sectors, needed_sectors));
+
+        snprintf(message, 512, "Ripping aborted.\nYou do not have enough disc space on [%s (%.2fGB available)].", output_device, output_device_space);
+        dialog_type = (MSG_DIALOG_NORMAL | MSG_DIALOG_BTN_TYPE_OK | MSG_DIALOG_DISABLE_CANCEL_ON);
+        dialog_action = 0;
+        msgDialogOpen2(dialog_type, message, dialog_handler, NULL, NULL);
+        while (!user_requested_exit() && !dialog_action)
+        {
+            sysUtilCheckCallback();
+            flip();
+        }
+        msgDialogAbort();
+        free(message);
+
+        return 0;
+    }
+    return 1;
+}
+
+static void handle_status_update_track_callback(char *filename, int current_track, int total_tracks)
+{
+    atomic_set(&stats_current_track, current_track);
+    atomic_set(&stats_total_tracks, total_tracks);
+}
+
+static void handle_status_update_progress_callback(uint32_t total_sectors, uint32_t total_sectors_processed,
+                                 uint32_t current_file_total_sectors, uint32_t current_file_sectors_processed)
+{
+    atomic_set(&stats_total_sectors, total_sectors);
+    atomic_set(&stats_total_sectors_processed, total_sectors_processed);
+    atomic_set(&stats_current_file_total_sectors, current_file_total_sectors);
+    atomic_set(&stats_current_file_sectors_processed, current_file_sectors_processed);
+}
+
+int start_ripping_gui(int ripping_flags)
 {
     char *albumdir, *musicfilename, *file_path;
     sacd_reader_t   *sacd_reader;
@@ -179,105 +136,196 @@ int start_ripping_gui(void)
     msgType          dialog_type;
     int              area_idx, i, ret;
 
-    //uint32_t prev_upper_progress = 0;
+    uint32_t prev_upper_progress = 0;
     uint32_t prev_lower_progress = 0;
     uint32_t delta;
 
+    int prev_current_track = 0;
     uint32_t prev_stats_total_sectors_processed = 0;
+    uint32_t prev_stats_current_file_sectors_processed = 0;
     uint64_t tb_start, tb_freq;
 
-    atomic_set(&selected_progress_message, 0);
+    char progress_message[64];
+
     atomic_set(&stats_total_sectors, 0);
     atomic_set(&stats_total_sectors_processed, 0);
     atomic_set(&stats_current_file_total_sectors, 0);
     atomic_set(&stats_current_file_sectors_processed, 0); 
-
-    memset(progress_message_upper, 0, sizeof(progress_message_upper));
-    memset(progress_message_lower, 0, sizeof(progress_message_lower));
+    atomic_set(&stats_current_track, 0);
+    atomic_set(&stats_total_tracks, 0);
 
     sacd_reader = sacd_open("/dev_bdvd");
     if (sacd_reader) 
     {
-        ret = sacd_authenticate(sacd_reader);
-        if (ret != 0)
-        {
-            LOG(lm_main, LOG_ERROR, ("authentication failed: %x", ret));
-        }
-        
         handle = scarletbook_open(sacd_reader, 0);
 
-        // select the channel area
-        area_idx = (has_multi_channel(handle) && 0/*opts.multi_channel*/) ? handle->mulch_area_idx : handle->twoch_area_idx;
-
-        albumdir = get_album_dir(handle);
-        file_path = make_filename(output_device, albumdir, 0, 0);
-        LOG(lm_main, LOG_NOTICE, ("setting output folder to: %s", file_path));
-        recursive_mkdir(file_path, 0777);
-        free(file_path);
-
-        initialize_ripping();
-
-        // fill the queue with items to rip
-        for (i = 0; i < handle->area[area_idx].area_toc->track_count; i++) 
+        if (check_disc_space(sacd_reader, handle, ripping_flags))
         {
-            musicfilename = get_music_filename(handle, area_idx, i);
-            file_path = make_filename(output_device, albumdir, musicfilename, "dff");
-            LOG(lm_main, LOG_NOTICE, ("adding file [%s] to queue", file_path));
-            queue_track_to_rip(area_idx, i, file_path, "dsdiff", 
-                handle->area[area_idx].area_tracklist_offset->track_start_lsn[i], 
-                10, 
-                //handle->area[area_idx].area_tracklist_offset->track_length_lsn[i], 
-                handle->area[area_idx].area_toc->frame_format == FRAME_FORMAT_DST);
-
-            free(musicfilename);
-            free(file_path);
-        }
-        free(albumdir);
-
-        //init_stats(handle_status_update_callback);
-        start_ripping(handle);
-
-        tb_freq = sysGetTimebaseFrequency();
-        tb_start = __gettime(); 
-
-        dialog_action = 0;
-        dialog_type   = MSG_DIALOG_MUTE_ON | MSG_DIALOG_DOUBLE_PROGRESSBAR;
-        msgDialogOpen2(dialog_type, "Copying to:...", dialog_handler, NULL, NULL);
-        while (!user_requested_exit() && dialog_action == 0 && is_ripping())
-        {
-            uint32_t tmp_stats_total_sectors_processed = atomic_read(&stats_total_sectors_processed);
-            uint32_t tmp_stats_total_sectors = atomic_read(&stats_total_sectors);
-            if (tmp_stats_total_sectors != 0 && prev_stats_total_sectors_processed != tmp_stats_total_sectors_processed)
+            ret = sacd_authenticate(sacd_reader);
+            if (ret != 0)
             {
-                //msgDialogProgressBarInc(MSG_PROGRESSBAR_INDEX0, delta);
-
-                delta = (tmp_stats_total_sectors_processed + (tmp_stats_total_sectors_processed - prev_stats_total_sectors_processed)) * 100 / tmp_stats_total_sectors - prev_lower_progress;
-                prev_lower_progress += delta;
-                msgDialogProgressBarInc(MSG_PROGRESSBAR_INDEX1, delta);
-
-                snprintf(progress_message_lower[0], 64, "transfer rate: (%8.3f MB/sec)", (float)((float) tmp_stats_total_sectors_processed * SACD_LSN_SIZE / 1048576.00) / (float)((__gettime() - tb_start) / (float)(tb_freq)));
-                
-                //msgDialogProgressBarSetMsg(MSG_PROGRESSBAR_INDEX0, progress_message_upper[atomic_read(&selected_progress_message)]);
-                msgDialogProgressBarSetMsg(MSG_PROGRESSBAR_INDEX1, progress_message_lower[0]);
-                
-                prev_stats_total_sectors_processed = tmp_stats_total_sectors_processed;
+                LOG(lm_main, LOG_ERROR, ("authentication failed: %x", ret));
             }
 
-            sysUtilCheckCallback();
-            flip();
-        }
-        msgDialogAbort();
+            // select the channel area
+            area_idx = (has_multi_channel(handle) && ripping_flags & RIP_MCH) ? handle->mulch_area_idx : handle->twoch_area_idx;
 
-        stop_ripping(handle);
+            albumdir = get_album_dir(handle);
+            file_path = make_filename(output_device, albumdir, 0, 0);
+            LOG(lm_main, LOG_NOTICE, ("setting output folder to: %s", file_path));
+            recursive_mkdir(file_path, 0777);
+            free(file_path);
+
+            initialize_ripping();
+
+            if (ripping_flags & RIP_ISO)
+            {
+                #define FAT32_SECTOR_LIMIT 2097152
+                uint32_t total_sectors = sacd_get_total_sectors(sacd_reader);
+                uint32_t sector_size = FAT32_SECTOR_LIMIT;
+                uint32_t sector_offset = 0;
+                if (total_sectors > FAT32_SECTOR_LIMIT)
+                {
+                    musicfilename = (char *) malloc(512);
+                    file_path = make_filename(output_device, 0, albumdir, "iso");
+                    for (i = 1; total_sectors != 0; i++)
+                    {
+                        sector_size = min(total_sectors, FAT32_SECTOR_LIMIT);
+                        snprintf(musicfilename, 512, "%s.%03d", file_path, i);
+                        queue_track_to_rip(0, 0, musicfilename, "iso", sector_offset, sector_size, 0, 0);
+                        LOG(lm_main, LOG_NOTICE, ("adding iso to queue: %s (%d, %d)", musicfilename, sector_offset, sector_size));
+                        sector_offset += sector_size;
+                        total_sectors -= sector_size;
+                    }
+                    free(file_path);
+                    free(musicfilename);
+                }
+                else
+                {
+                    file_path = make_filename(output_device, 0, albumdir, "iso");
+                    queue_track_to_rip(0, 0, file_path, "iso", 0, total_sectors, 0, 0);
+                    LOG(lm_main, LOG_NOTICE, ("adding iso to queue: %s (%d, %d)", file_path, 0, total_sectors));
+                    free(file_path);
+                }
+            }
+            else 
+            {
+                // fill the queue with items to rip
+                for (i = 0; i < 2; i++) //handle->area[area_idx].area_toc->track_count; i++) 
+                {
+                    musicfilename = get_music_filename(handle, area_idx, i);
+                    if (ripping_flags & RIP_DSF)
+                    {
+                        file_path     = make_filename(output_device, albumdir, musicfilename, "dsf");
+                        queue_track_to_rip(area_idx, i, file_path, "dsf", 
+                            handle->area[area_idx].area_tracklist_offset->track_start_lsn[i], 
+                            handle->area[area_idx].area_tracklist_offset->track_length_lsn[i], 
+                            handle->area[area_idx].area_toc->frame_format == FRAME_FORMAT_DST,
+                            1 /* always decode to DSD */);
+                        LOG(lm_main, LOG_NOTICE, ("adding dsf to queue: %s", file_path));
+                    }
+                    else if (ripping_flags & RIP_DSDIFF)
+                    {
+                        file_path     = make_filename(output_device, albumdir, musicfilename, "dff");
+                        queue_track_to_rip(area_idx, i, file_path, "dsdiff", 
+                            handle->area[area_idx].area_tracklist_offset->track_start_lsn[i], 
+                            handle->area[area_idx].area_tracklist_offset->track_length_lsn[i], 
+                            handle->area[area_idx].area_toc->frame_format == FRAME_FORMAT_DST,
+                            ((ripping_flags & RIP_2CH_DST || ripping_flags & RIP_MCH_DST) ? 1 : 0));
+                            LOG(lm_main, LOG_NOTICE, ("adding dsdiff to queue: %s", file_path));
+                    }
+
+                    free(musicfilename);
+                    free(file_path);
+                }
+            }
+
+            init_stats(handle_status_update_track_callback, handle_status_update_progress_callback);
+            start_ripping(handle);
+
+            tb_freq = sysGetTimebaseFrequency();
+            tb_start = __gettime(); 
+
+            {
+                char *message = (char *) malloc(512);
+                file_path = make_filename(output_device, albumdir, 0, 0);
+                snprintf(message, 512, "Title: %s\nOutput: %s\nFormat: %s\nArea: %s\nEncoding: %s", 
+                        substr(albumdir, 0, 100), 
+                        file_path, 
+                        (ripping_flags & RIP_DSDIFF ? "DSDIFF" : (ripping_flags & RIP_DSF ? "DSF" : "ISO")),
+                        (ripping_flags & RIP_2CH ? "2ch" : "mch"),
+                        (ripping_flags & RIP_2CH_DST || ripping_flags & RIP_MCH_DST ? "DST" : (ripping_flags & RIP_ISO ? "DECRYPTED" : "DSD"))
+                        );
+                free(file_path);
+
+                dialog_action = 0;
+                dialog_type   = MSG_DIALOG_MUTE_ON | MSG_DIALOG_DOUBLE_PROGRESSBAR;
+                msgDialogOpen2(dialog_type, message, dialog_handler, NULL, NULL);
+                while (!user_requested_exit() && dialog_action == 0 && is_ripping())
+                {
+                    uint32_t tmp_stats_total_sectors_processed = atomic_read(&stats_total_sectors_processed);
+                    uint32_t tmp_stats_total_sectors = atomic_read(&stats_total_sectors);
+                    uint32_t tmp_stats_current_file_sectors_processed = atomic_read(&stats_current_file_sectors_processed);
+                    uint32_t tmp_stats_current_file_total_sectors = atomic_read(&stats_current_file_total_sectors);
+                    int tmp_current_track = atomic_read(&stats_current_track);
+
+                    if (tmp_current_track != 0 && tmp_current_track != prev_current_track)
+                    {
+                        memset(progress_message, 0, 64);
+       
+                        // HACK: substr is not thread safe, but it's only used in this thread..
+                        musicfilename = get_music_filename(handle, area_idx, tmp_current_track - 1);
+                        snprintf(progress_message, 63, "Track (%d/%d): [%s...]", tmp_current_track, atomic_read(&stats_total_tracks), substr(musicfilename, 0, 40));
+                        free(musicfilename);
+
+                        msgDialogProgressBarReset(MSG_PROGRESSBAR_INDEX0);
+                        msgDialogProgressBarSetMsg(MSG_PROGRESSBAR_INDEX1, progress_message);
+                        prev_upper_progress = 0;
+                        prev_stats_current_file_sectors_processed = 0;
+
+                        prev_current_track = tmp_current_track;
+                    }
+
+                    if (tmp_stats_total_sectors != 0 && prev_stats_total_sectors_processed != tmp_stats_total_sectors_processed)
+                    {
+                        delta = (tmp_stats_current_file_sectors_processed + (tmp_stats_current_file_sectors_processed - prev_stats_current_file_sectors_processed)) * 100 / tmp_stats_current_file_total_sectors - prev_upper_progress;
+                        prev_upper_progress += delta;
+                        msgDialogProgressBarInc(MSG_PROGRESSBAR_INDEX0, delta);
+
+                        delta = (tmp_stats_total_sectors_processed + (tmp_stats_total_sectors_processed - prev_stats_total_sectors_processed)) * 100 / tmp_stats_total_sectors - prev_lower_progress;
+                        prev_lower_progress += delta;
+                        msgDialogProgressBarInc(MSG_PROGRESSBAR_INDEX1, delta);
+
+                        snprintf(progress_message, 64, "Ripping speed: (%.2f MB/sec)", (float)((float) tmp_stats_total_sectors_processed * SACD_LSN_SIZE / 1048576.00) / (float)((__gettime() - tb_start) / (float)(tb_freq)));
+                        
+                        msgDialogProgressBarSetMsg(MSG_PROGRESSBAR_INDEX0, progress_message);
+                        
+                        prev_stats_total_sectors_processed = tmp_stats_total_sectors_processed;
+                        prev_stats_current_file_sectors_processed = tmp_stats_current_file_sectors_processed;
+                    }
+
+                    sysUtilCheckCallback();
+                    flip();
+                }
+                msgDialogAbort();
+                free(message);
+            }
+            free(albumdir);
+
+            stop_ripping(handle);
+        }
         scarletbook_close(handle);
     }
     sacd_close(sacd_reader);
 
-    // did we complete?
-    if (1)
+    if (user_requested_exit())
+    {
+        return 0;
+    }
+    else if (1)
     {
         dialog_type = (MSG_DIALOG_NORMAL | MSG_DIALOG_BTN_TYPE_OK | MSG_DIALOG_DISABLE_CANCEL_ON);
-        msgDialogOpen2(dialog_type, "Ripping was successful!", dialog_handler, NULL, NULL);
+        msgDialogOpen2(dialog_type, "ripping process completed.", dialog_handler, NULL, NULL);
 
         dialog_action = 0;
         while (!dialog_action && !user_requested_exit())

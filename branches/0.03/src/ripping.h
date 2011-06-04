@@ -28,7 +28,19 @@
 extern "C" {
 #endif
 
-int start_ripping_gui(void);
+enum
+{
+    RIP_2CH         = 1 << 0,
+    RIP_2CH_DST     = 1 << 1,
+    RIP_MCH         = 1 << 2,
+    RIP_MCH_DST     = 1 << 3,
+
+    RIP_DSDIFF      = 1 << 4,
+    RIP_DSF         = 1 << 5,
+    RIP_ISO         = 1 << 6
+};
+
+int start_ripping_gui(int);
 
 #ifdef __cplusplus
 }

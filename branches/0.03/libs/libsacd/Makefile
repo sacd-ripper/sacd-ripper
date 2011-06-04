@@ -52,6 +52,7 @@ OBJS		:= \
             scarletbook_id3.o \
             scarletbook_read.o \
             scarletbook_output.o \
+            scarletbook_helpers.o \
             sac_accessor.o \
             ioctl.o \
             iso_writer.o \

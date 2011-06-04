@@ -70,6 +70,8 @@ struct scarletbook_output_format_t
     uint64_t                        write_offset;
     int                             dst_encoded;
 
+    int                             decode_dst;
+
     scarletbook_format_handler_t    handler;
     void                           *priv;
 
@@ -81,9 +83,10 @@ struct scarletbook_output_format_t
     struct list_head                siblings;
 }; 
 
-typedef void (*stats_callback_t)(uint32_t stats_total_sectors, uint32_t stats_total_sectors_processed,
-                                 uint32_t stats_current_file_total_sectors, uint32_t stats_current_file_sectors_processed,
-                                 char *filename);
+typedef void (*stats_progress_callback_t)(uint32_t stats_total_sectors, uint32_t stats_total_sectors_processed,
+                                          uint32_t stats_current_file_total_sectors, uint32_t stats_current_file_sectors_processed);
+
+typedef void (*stats_track_callback_t)(char *filename, int current_track, int total_tracks);
 
 typedef struct audio_frame_t
 {
@@ -109,6 +112,7 @@ typedef struct scarletbook_output_t
     pthread_t           processing_thread_id;
 #endif
     atomic_t            stop_processing;            // indicates if the thread needs to stop or has stopped
+    atomic_t            processing;
 
     audio_sector_t      scarletbook_audio_sector;
 
@@ -120,15 +124,18 @@ typedef struct scarletbook_output_t
     int                 full_frame_count;
 
     // stats
+    int                 stats_total_tracks;
+    int                 stats_current_track;
     uint32_t            stats_total_sectors;
     uint32_t            stats_total_sectors_processed;
     uint32_t            stats_current_file_total_sectors;
     uint32_t            stats_current_file_sectors_processed;
-    stats_callback_t    stats_callback;
+    stats_progress_callback_t stats_progress_callback;
+    stats_track_callback_t stats_track_callback;
 }
 scarletbook_output_t;
 
-void init_stats(stats_callback_t);
+void init_stats(stats_track_callback_t, stats_progress_callback_t);
 
 scarletbook_format_handler_t const * sacd_find_output_format(char const *);
 
@@ -138,6 +145,6 @@ int is_ripping(void);
 int start_ripping(scarletbook_handle_t *);
 int stop_ripping(scarletbook_handle_t *);
 int queue_track_to_rip(int area, int track, char *file_path, char *fmt, 
-                                uint32_t start_lsn, uint32_t length_lsn, int dst_encoded);
+                                uint32_t start_lsn, uint32_t length_lsn, int dst_encoded, int decode_dst);
 
 #endif /* SCARLETBOOK_OUTPUT_H_INCLUDED */

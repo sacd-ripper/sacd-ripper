@@ -223,6 +223,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\libs\libsacd\scarletbook_helpers.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\libs\libsacd\scarletbook_id3.c"
 				>
 			</File>
@@ -286,6 +290,10 @@
 			</File>
 			<File
 				RelativePath="..\..\libs\libsacd\scarletbook.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\libs\libsacd\scarletbook_helpers.h"
 				>
 			</File>
 			<File

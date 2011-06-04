@@ -26,6 +26,7 @@
 int    output_device_changed = -1;
 char   *output_device        = 0;
 double output_device_space   = 0;
+uint64_t output_device_sectors   = 0;
 
 int poll_output_devices(void)
 {
@@ -38,6 +39,7 @@ int poll_output_devices(void)
     uint32_t          current_devices      = 0;
     char              *largest_device      = 0;
     double            largest_device_space = 0;
+    uint64_t          largest_device_sectors = 0;
     int               i;
 
     for (i = 0; i < 11; i++)
@@ -71,6 +73,7 @@ int poll_output_devices(void)
                 {
                     largest_device       = (char *) device_list[i];
                     largest_device_space = free_disk_space;
+                    largest_device_sectors = (((uint64_t) block_size * free_block_count)) / 2048;
                 }
             }
         }
@@ -83,6 +86,7 @@ int poll_output_devices(void)
         {
             output_device         = largest_device;
             output_device_space   = largest_device_space;
+            output_device_sectors = largest_device_sectors;
             output_device_changed = 1;
             return 1;
         }

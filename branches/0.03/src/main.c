@@ -44,6 +44,7 @@
 #include <utils.h>
 
 #include <scarletbook_read.h>
+#include <scarletbook_helpers.h>
 #include <sacd_reader.h>
 
 #include "rsxutil.h"
@@ -62,6 +63,38 @@ static int bd_contains_sacd_disc = -1;      // information about the current dis
 static int bd_disc_changed = -1;            // when a disc has changed this is set to zero
 static int loaded_modules = 0;
 static int output_format = 0;
+static int output_format_changed = 0;
+static int current_ripping_flags = 0;
+static char message_output[150];
+static char message_info[450];
+
+static const int output_format_options[7] =
+{
+    RIP_2CH | RIP_DSDIFF,                   // 2ch DSD/DSDIFF
+    RIP_2CH | RIP_DSDIFF | RIP_2CH_DST ,    // 2ch DST/DSDIFF
+    RIP_2CH | RIP_DSF,                      // 2ch DSD/DSF
+
+    RIP_MCH | RIP_DSDIFF,                   // mch DSD/DSDIFF
+    RIP_MCH | RIP_DSDIFF | RIP_MCH_DST,     // mch DST/DSDIFF
+    RIP_MCH | RIP_DSF,                      // mch DSD/DSF
+
+    RIP_ISO                                 // ISO
+};
+
+static void validate_output_format(void)
+{
+    // skip over to MCH format?
+    if (output_format == 0 && !(current_ripping_flags & RIP_2CH))
+        output_format += 3;
+
+    // skip over DST/DSDIFF format? 
+    if (output_format == 1 && !(current_ripping_flags & RIP_2CH_DST))
+        output_format++;
+
+    // skip over to ISO format?
+    if (output_format == 3 && !(current_ripping_flags & RIP_MCH))
+        output_format += 3;
+}
 
 static int load_modules(void)
 {
@@ -273,7 +306,7 @@ void main_loop(void)
     }
 
     // did the disc change?
-    if (bd_contains_sacd_disc && (output_device_changed || bd_disc_changed))
+    if (bd_contains_sacd_disc && bd_disc_changed)
     {
         // open the BD device
         sacd_reader = sacd_open("/dev_bdvd");
@@ -299,43 +332,51 @@ void main_loop(void)
                      }
                 }
 
-                // output device
-                if (output_device)
-                    idx = snprintf(message, 35, "Output: %s %.2fGB\n", output_device, output_device_space);
-                else
-                    idx = snprintf(message, 35, "Output: NO DEVICE\n");
-
-                // output format
-                idx += snprintf(message + idx, 20, "Format: ISO"); //%d\n", output_format);
-                idx += snprintf(message + idx, 2, "\n");
-
                 if (master_text->disc_title_position || master_text->disc_title_phonetic_position)
-                    idx += snprintf(message + idx, 60, "Title: %s\n", substr((char *) master_text + (master_text->disc_title_position ? master_text->disc_title_position : master_text->disc_title_phonetic_position), 0, 50));
+                    idx += snprintf(message_info + idx, 60, "Title: %s\n", substr((char *) master_text + (master_text->disc_title_position ? master_text->disc_title_position : master_text->disc_title_phonetic_position), 0, 50));
 
-                if (message[idx - 1] != '\n') { message[idx++] = '\n'; message[idx] = '\0'; } 
+                if (message_info[idx - 1] != '\n') { message_info[idx++] = '\n'; message_info[idx] = '\0'; } 
 
                 if (master_text->disc_artist_position || master_text->disc_artist_phonetic_position)
-                    idx += snprintf(message + idx, 60, "Artist: %s\n", substr((char *) master_text + (master_text->disc_artist_position ? master_text->disc_artist_position : master_text->disc_artist_phonetic_position), 0, 50));
+                    idx += snprintf(message_info + idx, 60, "Artist: %s\n", substr((char *) master_text + (master_text->disc_artist_position ? master_text->disc_artist_position : master_text->disc_artist_phonetic_position), 0, 50));
 
-                if (message[idx - 1] != '\n') { message[idx++] = '\n'; message[idx] = '\0'; } 
+                if (message_info[idx - 1] != '\n') { message_info[idx++] = '\n'; message_info[idx] = '\0'; } 
 
-                idx += snprintf(message + idx, 20, "Version: %02i.%02i\n", mtoc->version.major, mtoc->version.minor);
-                idx += snprintf(message + idx, 25, "Created: %4i-%02i-%02i\n", mtoc->disc_date_year, mtoc->disc_date_month, mtoc->disc_date_day);
+                idx += snprintf(message_info + idx, 20, "Version: %02i.%02i\n", mtoc->version.major, mtoc->version.minor);
+                idx += snprintf(message_info + idx, 25, "Created: %4i-%02i-%02i\n", mtoc->disc_date_year, mtoc->disc_date_month, mtoc->disc_date_day);
                 
-                idx += snprintf(message + idx, 15, "Track 0:\n");
-                idx += snprintf(message + idx, 35, "   Speakers: %s\n", get_speaker_config_string(sb_handle->area[0].area_toc));
-                idx += snprintf(message + idx, 35, "   Encoding: %s\n", get_frame_format_string(sb_handle->area[0].area_toc));
-                idx += snprintf(message + idx, 25, "   Tracks: %d (%.2fGB)\n", sb_handle->area[0].area_toc->track_count, ((double) (sb_handle->area[0].area_toc->track_end - sb_handle->area[0].area_toc->track_start) * SACD_LSN_SIZE) / 1073741824.00);
+                idx += snprintf(message_info + idx, 15, "Track 0:\n");
+                idx += snprintf(message_info + idx, 35, "   Speakers: %s\n", get_speaker_config_string(sb_handle->area[0].area_toc));
+                idx += snprintf(message_info + idx, 35, "   Encoding: %s\n", get_frame_format_string(sb_handle->area[0].area_toc));
+                idx += snprintf(message_info + idx, 25, "   Tracks: %d (%.2fGB)\n", sb_handle->area[0].area_toc->track_count, ((double) (sb_handle->area[0].area_toc->track_end - sb_handle->area[0].area_toc->track_start) * SACD_LSN_SIZE) / 1073741824.00);
                 if (has_both_channels(sb_handle)) 
                 {
-                    idx += snprintf(message + idx, 2, "\n");
-                    idx += snprintf(message + idx, 15, "Track 1:\n");
-                    idx += snprintf(message + idx, 35, "   Speakers: %s\n", get_speaker_config_string(sb_handle->area[1].area_toc));
-                    idx += snprintf(message + idx, 35, "   Encoding: %s\n", get_frame_format_string(sb_handle->area[1].area_toc));
-                    idx += snprintf(message + idx, 25, "   Tracks: %d (%.2fGB)", sb_handle->area[1].area_toc->track_count, ((double) (sb_handle->area[1].area_toc->track_end - sb_handle->area[1].area_toc->track_start) * SACD_LSN_SIZE) / 1073741824.00);
+                    idx += snprintf(message_info + idx, 2, "\n");
+                    idx += snprintf(message_info + idx, 15, "Track 1:\n");
+                    idx += snprintf(message_info + idx, 35, "   Speakers: %s\n", get_speaker_config_string(sb_handle->area[1].area_toc));
+                    idx += snprintf(message_info + idx, 35, "   Encoding: %s\n", get_frame_format_string(sb_handle->area[1].area_toc));
+                    idx += snprintf(message_info + idx, 25, "   Tracks: %d (%.2fGB)\n", sb_handle->area[1].area_toc->track_count, ((double) (sb_handle->area[1].area_toc->track_end - sb_handle->area[1].area_toc->track_start) * SACD_LSN_SIZE) / 1073741824.00);
                 }
 
-                idx += snprintf(message + idx, 50, "\nclick X to start ripping, O to change output");
+                idx += snprintf(message_info + idx, 50, "\nclick X to start ripping, O to change output");
+
+                current_ripping_flags = 0;
+                if (has_two_channel(sb_handle))
+                {
+                    current_ripping_flags |= RIP_2CH;
+                    if (sb_handle->area[sb_handle->twoch_area_idx].area_toc->frame_format == FRAME_FORMAT_DST)
+                    {
+                        current_ripping_flags |= RIP_2CH_DST;
+                    }
+                }
+                if (has_both_channels(sb_handle))
+                {
+                    current_ripping_flags |= RIP_MCH;
+                }
+
+                // validate output format as the ripping flags have changed
+                output_format_changed = 1;
+                validate_output_format();
 
                 scarletbook_close(sb_handle);
                 sb_handle = 0;
@@ -354,21 +395,63 @@ void main_loop(void)
             bd_contains_sacd_disc = 0;
         }
     }
+    
+    if (output_device_changed || output_format_changed)
+    {
+        // output device
+        if (output_device)
+            idx = snprintf(message_output, 35, "Output: %s %.2fGB\n", output_device, output_device_space);
+        else
+            idx = snprintf(message_output, 35, "Output: NO DEVICE\n");
+
+        // output format
+        idx += snprintf(message_output + idx, 20, "Format: ");
+
+        switch (output_format)
+        {
+        case 0:
+            idx += snprintf(message_output + idx, 20, "2ch DSDIFF (DSD)\n");
+            break;
+        case 1:
+            idx += snprintf(message_output + idx, 20, "2ch DSDIFF (DST)\n");
+            break;
+        case 2:
+            idx += snprintf(message_output + idx, 20, "2ch DSF (DSD)\n");
+            break;
+        case 3:
+            idx += snprintf(message_output + idx, 20, "mch DSDIFF (DSD)\n");
+            break;
+        case 4:
+            idx += snprintf(message_output + idx, 20, "mch DSDIFF (DST)\n");
+            break;
+        case 5:
+            idx += snprintf(message_output + idx, 20, "mch DSF (DSF)\n");
+            break;
+        case 6:
+            idx += snprintf(message_output + idx, 20, "ISO\n");
+            break;
+        }
+        idx += snprintf(message_output + idx, 2, "\n");
+    }
 
     // by default we have no user controls
     dialog_type = (MSG_DIALOG_NORMAL | MSG_DIALOG_DISABLE_CANCEL_ON);
 
-    if (!bd_contains_sacd_disc)
+    if (bd_contains_sacd_disc)
+    {
+        snprintf(message, 512, "%s%s", message_output, message_info);
+    }
+    else
     {
         // was the disc changed since startup?
         if (bd_disc_changed == -1 || !output_device)
         {
-            snprintf(message + idx, 512, "The current disc is empty or not recognized as an SACD, please re-insert.\n\n%s"
+            snprintf(message, 512, "The current disc is empty or not recognized as an SACD, please re-insert.\n\n%s"
                      , (output_device ? "" : "(Also make sure you connect an external fat32 formatted harddisk!)"));
         }
         else
         {
-            snprintf(message + idx, 512, "The containing disc is not recognized as an SACD.\n"
+            snprintf(message, 512, "The containing disc is not recognized as an SACD.\n"
                      "Would you like to RAW dump the first 2Mb to [%s (%.2fGB available)] for analysis?",
                      output_device, output_device_space);
 
@@ -387,6 +470,7 @@ void main_loop(void)
     dialog_action         = 0;
     bd_disc_changed       = 0;
     output_device_changed = 0;
+    output_format_changed = 0;
     while (!dialog_action && !user_requested_exit() && bd_disc_changed == 0 && output_device_changed == 0)
     {
         // poll for new output devices
@@ -408,19 +492,26 @@ void main_loop(void)
     // did user request to start the ripping process?
     else if (dialog_action == 1 && bd_contains_sacd_disc)
     {
-        start_ripping_gui();
+        start_ripping_gui(output_format_options[output_format]);
 
         // action is handled
         dialog_action = 0;
-        bd_disc_changed = 1;
     }
     else if (dialog_action == 2)
     {
-        output_format += 1;
+        output_format++;
 
-        // TODO: refactor message handling..
+        // max of 7 output options
+        if (output_format > 6)
+        {
+            output_format = 0;
+        }
+
+        // is the current selection valid?
+        validate_output_format();
+
         // action is handled
-        bd_disc_changed = 1;
+        output_format_changed = 1;
         dialog_action = 0;
     }
 

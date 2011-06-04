@@ -31,6 +31,7 @@ extern "C" {
 extern char   *output_device;
 extern double output_device_space;
 extern int    output_device_changed;
+extern uint64_t output_device_sectors;
 
 int poll_output_devices(void);
 

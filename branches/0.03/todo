@@ -1,26 +1,16 @@
 TODO
 
-  core:
+version 0.1.0:
 
-    - make scarletbook_helper
-    - interface: 
-        - ask which area to rip (in case of multiple)
-        - show not enough disc space message (do fstat during ripping)
-        - show correct progress information
-            - title
-            - current filename
-            - progress total & MB/sec
-        - ripping complete message
+    - fix sac_accessor closing problem
     - test writing speed problem
-
     - test PS3 ripping pipeline
-    - add dst decoding
-        - convert current dst code to psl1ght
+    - convert current dst code to psl1ght and integrate
+ 
+version 0.1.x
+ 
     - write log along each consecutive rip
     - use output_format_t.error_number for error handling
-
-version 0.x.0
- 
      - catch read failures 
         - do not stop and continue decoding and reading
         - specify max amount of read errors

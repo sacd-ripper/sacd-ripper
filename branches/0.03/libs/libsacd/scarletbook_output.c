@@ -87,7 +87,9 @@ static void destroy_ripping_queue()
 }
 
 int queue_track_to_rip(int area, int track, char *file_path, char *fmt, 
-                                uint32_t start_lsn, uint32_t length_lsn, int dst_encoded)
+                       uint32_t start_lsn, uint32_t length_lsn, int dst_encoded,
+                       int decode_dst
+                       )
 {
     scarletbook_format_handler_t const * handler;
     scarletbook_output_format_t * output_format_ptr;
@@ -102,6 +104,7 @@ int queue_track_to_rip(int area, int track, char *file_path, char *fmt,
         output_format_ptr->start_lsn = start_lsn;
         output_format_ptr->length_lsn = length_lsn;
         output_format_ptr->dst_encoded = dst_encoded;
+        output_format_ptr->decode_dst = decode_dst;
         list_add_tail(&output_format_ptr->siblings, &output.ripping_queue);
 
         return 0;
@@ -164,7 +167,7 @@ static inline void destroy_output_format(scarletbook_output_format_t * ft)
     free(ft);
 }
 
-void init_stats(stats_callback_t cb)
+void init_stats(stats_track_callback_t cb_track, stats_progress_callback_t cb_progress)
 {
     if (output.initialized)
     {
@@ -175,12 +178,16 @@ void init_stats(stats_callback_t cb)
         output.stats_total_sectors_processed = 0;
         output.stats_current_file_total_sectors = 0;
         output.stats_current_file_sectors_processed = 0;
-        output.stats_callback = cb;
+        output.stats_track_callback = cb_track;
+        output.stats_progress_callback = cb_progress;
+        output.stats_current_track = 0;
+        output.stats_total_tracks = 0;
 
         list_for_each(node_ptr, &output.ripping_queue)
         {
             output_format_ptr = list_entry(node_ptr, scarletbook_output_format_t, siblings);
             output.stats_total_sectors += output_format_ptr->length_lsn;
+            output.stats_total_tracks++;
         }
     }
 }
@@ -233,9 +240,13 @@ static void free_round_robin_frame_buffer(void)
 
 static inline size_t write_block(scarletbook_output_format_t * ft, const uint8_t *buf, size_t len, int last_frame)
 {
+#if 0
     size_t actual = ft->handler.write? (*ft->handler.write)(ft, buf, len, last_frame) : 0;
     ft->write_length += actual;
     return actual;
+#else
+    return 0;
+#endif
 }
 
 static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int pos, int blocks)
@@ -386,6 +397,7 @@ static void *processing_thread(void *arg)
     scarletbook_output_format_t * output_format_ptr;
     ssize_t ret;
 
+    atomic_set(&output.processing, 1);
     if (output.initialized)
     {
         while (!list_empty(&output.ripping_queue))
@@ -398,12 +410,11 @@ static void *processing_thread(void *arg)
 
             output.stats_current_file_total_sectors = output_format_ptr->length_lsn;
             output.stats_current_file_sectors_processed = 0;
+            output.stats_current_track++;
 
-            if (output.stats_callback)
+            if (output.stats_track_callback)
             {
-                output.stats_callback(output.stats_total_sectors, output.stats_total_sectors_processed, 
-                    output.stats_current_file_total_sectors, output.stats_current_file_sectors_processed,
-                    output_format_ptr->filename);
+                output.stats_track_callback(output_format_ptr->filename, output.stats_current_track, output.stats_total_tracks);
             }
 
             create_output_file(output_format_ptr);
@@ -480,11 +491,10 @@ static void *processing_thread(void *arg)
                         output.stats_total_sectors_processed += block_size;
                         output.stats_current_file_sectors_processed += block_size;
 
-                        if (output.stats_callback)
+                        if (output.stats_progress_callback)
                         {
-                            output.stats_callback(output.stats_total_sectors, output.stats_total_sectors_processed, 
-                                output.stats_current_file_total_sectors, output.stats_current_file_sectors_processed,
-                                0);
+                            output.stats_progress_callback(output.stats_total_sectors, output.stats_total_sectors_processed, 
+                                output.stats_current_file_total_sectors, output.stats_current_file_sectors_processed);
                         }
 
                         ft->current_lsn += block_size;
@@ -501,6 +511,8 @@ static void *processing_thread(void *arg)
 
             if (atomic_read(&output.stop_processing) == 1)
             {
+                atomic_set(&output.processing, 0);
+
                 // remove the file being worked on
                 remove(output_format_ptr->filename);
                 destroy_output_format(output_format_ptr);
@@ -516,6 +528,8 @@ static void *processing_thread(void *arg)
         } 
         destroy_ripping_queue();
     }
+
+    atomic_set(&output.processing, 0);
 
 #ifdef __lv2ppu__
     sysThreadExit(-1);
@@ -539,7 +553,7 @@ void initialize_ripping(void)
 
 int is_ripping(void)
 {
-    return atomic_read(&output.stop_processing) == 0;
+    return atomic_read(&output.processing);
 }
 
 int start_ripping(scarletbook_handle_t *handle)
@@ -574,23 +588,28 @@ int stop_ripping(scarletbook_handle_t *handle)
 {
     int     ret = 0;
 
-#ifdef __lv2ppu__
-    uint64_t thr_exit_code;
-    interrupt_ripping();
-    ret = sysThreadJoin(output.processing_thread_id, &thr_exit_code);
-#else
-    void *thr_exit_code;
-    interrupt_ripping();
-    ret = pthread_join(output.processing_thread_id, &thr_exit_code);
-#endif    
-    if (ret != 0)
+    if (output.initialized)
     {
-        LOG(lm_main, LOG_ERROR, ("processing thread didn't close properly... %x", thr_exit_code));
-    }
 
-    output.initialized = 0;
-    free_round_robin_frame_buffer();
-    free(output.read_buffer);
+#ifdef __lv2ppu__
+        uint64_t thr_exit_code;
+        interrupt_ripping();
+        ret = sysThreadJoin(output.processing_thread_id, &thr_exit_code);
+#else
+        void *thr_exit_code;
+        interrupt_ripping();
+        ret = pthread_join(output.processing_thread_id, &thr_exit_code);
+#endif    
+        if (ret != 0)
+        {
+            LOG(lm_main, LOG_ERROR, ("processing thread didn't close properly... %x", thr_exit_code));
+        }
+
+        free_round_robin_frame_buffer();
+        free(output.read_buffer);
+
+        output.initialized = 0;
+    }
 
     return ret;
 }
