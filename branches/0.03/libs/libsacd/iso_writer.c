@@ -34,15 +34,7 @@
 
 size_t iso_write_frame(scarletbook_output_format_t *ft, const uint8_t *buf, size_t len, int last_frame)
 {
-#ifdef __lv2ppu__
-    {
-        uint64_t nrw;
-        sysFsWrite(ft->fd, buf, len * SACD_LSN_SIZE, &nrw);
-        return nrw;
-    }
-#else
-    return write(ft->fd, buf, len * SACD_LSN_SIZE);
-#endif
+    return fwrite(buf, 1, len * SACD_LSN_SIZE, ft->fd);
 }
 
 scarletbook_format_handler_t const * iso_format_fn(void) 

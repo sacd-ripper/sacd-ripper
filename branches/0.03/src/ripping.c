@@ -115,17 +115,17 @@ static int check_disc_space(sacd_reader_t *sacd_reader, scarletbook_handle_t *ha
 
 static void handle_status_update_track_callback(char *filename, int current_track, int total_tracks)
 {
-    atomic_set(&stats_current_track, current_track);
-    atomic_set(&stats_total_tracks, total_tracks);
+    sysAtomicSet(&stats_current_track, current_track);
+    sysAtomicSet(&stats_total_tracks, total_tracks);
 }
 
 static void handle_status_update_progress_callback(uint32_t total_sectors, uint32_t total_sectors_processed,
                                  uint32_t current_file_total_sectors, uint32_t current_file_sectors_processed)
 {
-    atomic_set(&stats_total_sectors, total_sectors);
-    atomic_set(&stats_total_sectors_processed, total_sectors_processed);
-    atomic_set(&stats_current_file_total_sectors, current_file_total_sectors);
-    atomic_set(&stats_current_file_sectors_processed, current_file_sectors_processed);
+    sysAtomicSet(&stats_total_sectors, total_sectors);
+    sysAtomicSet(&stats_total_sectors_processed, total_sectors_processed);
+    sysAtomicSet(&stats_current_file_total_sectors, current_file_total_sectors);
+    sysAtomicSet(&stats_current_file_sectors_processed, current_file_sectors_processed);
 }
 
 int start_ripping_gui(int ripping_flags)
@@ -147,12 +147,12 @@ int start_ripping_gui(int ripping_flags)
 
     char progress_message[64];
 
-    atomic_set(&stats_total_sectors, 0);
-    atomic_set(&stats_total_sectors_processed, 0);
-    atomic_set(&stats_current_file_total_sectors, 0);
-    atomic_set(&stats_current_file_sectors_processed, 0); 
-    atomic_set(&stats_current_track, 0);
-    atomic_set(&stats_total_tracks, 0);
+    sysAtomicSet(&stats_total_sectors, 0);
+    sysAtomicSet(&stats_total_sectors_processed, 0);
+    sysAtomicSet(&stats_current_file_total_sectors, 0);
+    sysAtomicSet(&stats_current_file_sectors_processed, 0); 
+    sysAtomicSet(&stats_current_track, 0);
+    sysAtomicSet(&stats_total_tracks, 0);
 
     sacd_reader = sacd_open("/dev_bdvd");
     if (sacd_reader) 
@@ -263,11 +263,11 @@ int start_ripping_gui(int ripping_flags)
                 msgDialogOpen2(dialog_type, message, dialog_handler, NULL, NULL);
                 while (!user_requested_exit() && dialog_action == 0 && is_ripping())
                 {
-                    uint32_t tmp_stats_total_sectors_processed = atomic_read(&stats_total_sectors_processed);
-                    uint32_t tmp_stats_total_sectors = atomic_read(&stats_total_sectors);
-                    uint32_t tmp_stats_current_file_sectors_processed = atomic_read(&stats_current_file_sectors_processed);
-                    uint32_t tmp_stats_current_file_total_sectors = atomic_read(&stats_current_file_total_sectors);
-                    int tmp_current_track = atomic_read(&stats_current_track);
+                    uint32_t tmp_stats_total_sectors_processed = sysAtomicRead(&stats_total_sectors_processed);
+                    uint32_t tmp_stats_total_sectors = sysAtomicRead(&stats_total_sectors);
+                    uint32_t tmp_stats_current_file_sectors_processed = sysAtomicRead(&stats_current_file_sectors_processed);
+                    uint32_t tmp_stats_current_file_total_sectors = sysAtomicRead(&stats_current_file_total_sectors);
+                    int tmp_current_track = sysAtomicRead(&stats_current_track);
 
                     if (tmp_current_track != 0 && tmp_current_track != prev_current_track)
                     {
@@ -275,7 +275,7 @@ int start_ripping_gui(int ripping_flags)
        
                         musicfilename = get_music_filename(handle, area_idx, tmp_current_track - 1);
                         // HACK: substr is not thread safe, but it's only used in this thread..
-                        snprintf(progress_message, 63, "Track (%d/%d): [%s...]", tmp_current_track, atomic_read(&stats_total_tracks), substr(musicfilename, 0, 40));
+                        snprintf(progress_message, 63, "Track (%d/%d): [%s...]", tmp_current_track, sysAtomicRead(&stats_total_tracks), substr(musicfilename, 0, 40));
                         free(musicfilename);
 
                         msgDialogProgressBarReset(MSG_PROGRESSBAR_INDEX0);

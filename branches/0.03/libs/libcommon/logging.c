@@ -27,7 +27,7 @@ log_module_info_t * lm_main = 0;
 void init_logging()
 {
 #ifndef _WIN32
-    setenv("LOG_MODULES", "all:5", 0);
+    setenv("LOG_MODULES", "all:5, bufsize:16384", 0);
 #endif
     lm_main = create_log_module("main");
     log_init();

@@ -158,14 +158,7 @@ int dsf_create_header(scarletbook_output_format_t *ft)
     dsd_chunk->total_file_size = htole64(handle->header_size + handle->audio_data_size + handle->footer_size);
     dsd_chunk->metadata_offset = htole64(handle->footer_size ? handle->header_size + handle->audio_data_size + DSD_CHUNK_HEADER_SIZE : 0);
 
-#ifdef __lv2ppu__
-    {
-        uint64_t nrw;
-        sysFsWrite(ft->fd, handle->header, handle->header_size, &nrw);
-    }
-#else
-    write(ft->fd, handle->header, handle->header_size);
-#endif
+    fwrite(handle->header, 1, handle->header_size, ft->fd);
 
     return 0;
 }
@@ -180,16 +173,8 @@ int dsf_close(scarletbook_output_format_t *ft)
 {
     dsf_handle_t *handle = (dsf_handle_t *) ft->priv;
 
-#ifdef __lv2ppu__
-    {
-        uint64_t nrw;
-        sysFsWrite(ft->fd, handle->footer, handle->footer_size, &nrw);
-    }
-#else
-    write(ft->fd, handle->footer, handle->footer_size);
-#endif
-
-    lseek(ft->fd, 0, SEEK_SET);
+    fwrite(handle->footer, 1, handle->footer_size, ft->fd);
+    fseek(ft->fd, 0, SEEK_SET);
     
     // write the final header
     dsf_create_header(ft);
@@ -232,21 +217,9 @@ size_t dsf_write_frame(scarletbook_output_format_t *ft, const uint8_t *buf, size
 
             handle->sample_count += handle->buffer_ptr[i] - handle->buffer[i];
 
-#ifdef __lv2ppu__
-            {
-                uint64_t nrw;
-                sysFsWrite(ft->fd, handle->buffer[i], SACD_BLOCK_SIZE_PER_CHANNEL, &nrw);
-                memset(handle->buffer[i], 0, SACD_BLOCK_SIZE_PER_CHANNEL);
-                handle->buffer_ptr[i] = handle->buffer[i];
-            }
-#else
-            {
-                size_t nrw;
-                nrw = write(ft->fd, handle->buffer[i], SACD_BLOCK_SIZE_PER_CHANNEL);
-                memset(handle->buffer[i], 0, SACD_BLOCK_SIZE_PER_CHANNEL);
-                handle->buffer_ptr[i] = handle->buffer[i];
-            }
-#endif
+            fwrite(handle->buffer[i], 1, SACD_BLOCK_SIZE_PER_CHANNEL, ft->fd);
+            memset(handle->buffer[i], 0, SACD_BLOCK_SIZE_PER_CHANNEL);
+            handle->buffer_ptr[i] = handle->buffer[i];
 
             handle->audio_data_size += SACD_BLOCK_SIZE_PER_CHANNEL;
 

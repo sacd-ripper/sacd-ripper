@@ -402,14 +402,7 @@ int dsdiff_create_header(scarletbook_output_format_t *ft)
     handle->header_size = CEIL_ODD_NUMBER(write_ptr - handle->header);
     form_dsd_chunk->chunk_data_size = CALC_CHUNK_SIZE(handle->header_size + handle->footer_size - COMMENTS_CHUNK_SIZE + handle->audio_data_size);
 
-#ifdef __lv2ppu__
-    {
-        uint64_t nrw;
-        sysFsWrite(ft->fd, handle->header, handle->header_size, &nrw);
-    }
-#else
-    write(ft->fd, handle->header, handle->header_size);
-#endif
+    fwrite(handle->header, 1, handle->header_size, ft->fd);
 
     return 0;
 }
@@ -424,28 +417,15 @@ int dsdiff_close(scarletbook_output_format_t *ft)
 {
     dsdiff_handle_t *handle = (dsdiff_handle_t *) ft->priv;
 
-#ifdef __lv2ppu__
-    {
-        uint64_t nrw;
-        if (handle->audio_data_size % 2)
-        {
-            uint8_t dummy = 0;
-            sysFsWrite(ft->fd, &dummy, 1, &nrw);
-            handle->audio_data_size += 1;
-        }
-        sysFsWrite(ft->fd, handle->footer, handle->footer_size, &nrw);
-    }
-#else
     if (handle->audio_data_size % 2)
     {
         uint8_t dummy = 0;
-        write(ft->fd, &dummy, 1);
+        fwrite(&dummy, 1, 1, ft->fd);
         handle->audio_data_size += 1;
     }
-    write(ft->fd, handle->footer, handle->footer_size);
-#endif
+    fwrite(handle->footer, 1, handle->footer_size, ft->fd);
 
-    lseek(ft->fd, 0, SEEK_SET);
+    fseek(ft->fd, 0, SEEK_SET);
     
     // write the final header
     dsdiff_create_header(ft);
@@ -469,41 +449,20 @@ size_t dsdiff_write_frame(scarletbook_output_format_t *ft, const uint8_t *buf, s
         dst_frame_data_chunk_t dst_frame_data_chunk;
         dst_frame_data_chunk.chunk_id = DSTF_MARKER;
         dst_frame_data_chunk.chunk_data_size = CALC_CHUNK_SIZE(len);
-#ifdef __lv2ppu__
-        {
-            uint64_t nrw;
-            sysFsWrite(ft->fd, &dst_frame_data_chunk, DST_FRAME_DATA_CHUNK_SIZE, &nrw);
-            handle->audio_data_size += DST_FRAME_DATA_CHUNK_SIZE;
-            sysFsWrite(ft->fd, buf, CEIL_ODD_NUMBER(len), &nrw);
-            return nrw + DST_FRAME_DATA_CHUNK_SIZE;
-        }
-#else
         {
             size_t nrw;
-            nrw = write(ft->fd, &dst_frame_data_chunk, DST_FRAME_DATA_CHUNK_SIZE);
-            nrw += write(ft->fd, buf, CEIL_ODD_NUMBER(len));
+            nrw = fwrite(&dst_frame_data_chunk, 1, DST_FRAME_DATA_CHUNK_SIZE, ft->fd);
+            nrw += fwrite(buf, 1, CEIL_ODD_NUMBER(len), ft->fd);
             handle->audio_data_size += nrw;
             return nrw;
         }
-#endif
     }
     else
     {
-#ifdef __lv2ppu__
-        {
-            uint64_t nrw;
-            sysFsWrite(ft->fd, buf, len, &nrw);
-            handle->audio_data_size += nrw;
-            return nrw;
-        }
-#else
-        {
-            size_t nrw;
-            nrw = write(ft->fd, buf, len);
-            handle->audio_data_size += nrw;
-            return nrw;
-        }
-#endif
+        size_t nrw;
+        nrw = fwrite(buf, 1, len, ft->fd);
+        handle->audio_data_size += nrw;
+        return nrw;
     }
 }
 

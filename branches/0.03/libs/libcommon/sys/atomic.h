@@ -1,42 +1,43 @@
+/*! \file atomic.h
+ \brief Atomic Operations.
+*/ 
+
 /*
  * PowerPC atomic operations
  *
  * Copied from the linux 2.6.x kernel sources:
+ *  - renamed functions to psl1ght convention
  *  - removed all kernel dependencies
  *  - removed PPC_ACQUIRE_BARRIER, PPC_RELEASE_BARRIER macros
  *  - removed PPC405_ERR77 macro
  *
  */
 
-#ifndef _ASM_POWERPC_ATOMIC_H_
-#define _ASM_POWERPC_ATOMIC_H_
+#ifndef __SYS_ATOMIC_H__
+#define __SYS_ATOMIC_H__
 
-#ifndef __lv2ppu__
-#error you need the psl1ght/lv2 ppu compatible compiler!
-#endif
+#include <ppu-types.h>
 
-#include <stdint.h>
+typedef struct { volatile u32 counter; } atomic_t; 
+typedef struct { u64 counter; } atomic64_t;
 
-typedef struct { volatile uint32_t counter; } atomic_t; 
-typedef struct { uint64_t counter; } atomic64_t;
-
-static inline uint32_t atomic_read(const atomic_t *v)
+static inline u32 sysAtomicRead(const atomic_t *v)
 {
-        uint32_t t;
+        u32 t;
 
         __asm__ volatile("lwz%U1%X1 %0,%1" : "=r"(t) : "m"(v->counter));
 
         return t;
 }
 
-static inline void atomic_set(atomic_t *v, int i)
+static inline void sysAtomicSet(atomic_t *v, int i)
 {
         __asm__ volatile("stw%U0%X0 %1,%0" : "=m"(v->counter) : "r"(i));
 }
 
-static inline void atomic_add(uint32_t a, atomic_t *v)
+static inline void sysAtomicAdd(u32 a, atomic_t *v)
 {
-        uint32_t t;
+        u32 t;
 
         __asm__ volatile(
 "1:     lwarx   %0,0,%3         # atomic_add\n\
@@ -48,9 +49,9 @@ static inline void atomic_add(uint32_t a, atomic_t *v)
         : "cc");
 }
 
-static inline uint32_t atomic_add_return(uint32_t a, atomic_t *v)
+static inline u32 sysAtomicAddReturn(u32 a, atomic_t *v)
 {
-        uint32_t t;
+        u32 t;
 
         __asm__ volatile(
 "1:     lwarx   %0,0,%2         # atomic_add_return\n\
@@ -64,11 +65,11 @@ static inline uint32_t atomic_add_return(uint32_t a, atomic_t *v)
         return t;
 }
 
-#define atomic_add_negative(a, v)       (atomic_add_return((a), (v)) < 0)
+#define sysAtomicAddNegative(a, v)       (sysAtomicAddReturn((a), (v)) < 0)
 
-static inline void atomic_sub(uint32_t a, atomic_t *v)
+static inline void sysAtomicSub(u32 a, atomic_t *v)
 {
-        uint32_t t;
+        u32 t;
 
         __asm__ volatile(
 "1:     lwarx   %0,0,%3         # atomic_sub\n\
@@ -80,9 +81,9 @@ static inline void atomic_sub(uint32_t a, atomic_t *v)
         : "cc");
 }
 
-static inline uint32_t atomic_sub_return(uint32_t a, atomic_t *v)
+static inline u32 sysAtomicSubReturn(u32 a, atomic_t *v)
 {
-        uint32_t t;
+        u32 t;
 
         __asm__ volatile(
 "1:     lwarx   %0,0,%2         # atomic_sub_return\n\
@@ -96,9 +97,9 @@ static inline uint32_t atomic_sub_return(uint32_t a, atomic_t *v)
         return t;
 }
 
-static inline void atomic_inc(atomic_t *v)
+static inline void sysAtomicInc(atomic_t *v)
 {
-        uint32_t t;
+        u32 t;
 
         __asm__ volatile(
 "1:     lwarx   %0,0,%2         # atomic_inc\n\
@@ -110,9 +111,9 @@ static inline void atomic_inc(atomic_t *v)
         : "cc", "xer");
 }
 
-static inline uint32_t atomic_inc_return(atomic_t *v)
+static inline u32 sysAtomicIncReturn(atomic_t *v)
 {
-        uint32_t t;
+        u32 t;
 
         __asm__ volatile(
 "1:     lwarx   %0,0,%1         # atomic_inc_return\n\
@@ -134,11 +135,11 @@ static inline uint32_t atomic_inc_return(atomic_t *v)
  * and returns true if the result is zero, or false for all
  * other cases.
  */
-#define atomic_inc_and_test(v) (atomic_inc_return(v) == 0)
+#define sysAtomicIncAndTest(v) (sysAtomicIncReturn(v) == 0)
 
-static inline void atomic_dec(atomic_t *v)
+static inline void sysAtomicDec(atomic_t *v)
 {
-        uint32_t t;
+        u32 t;
 
         __asm__ volatile(
 "1:     lwarx   %0,0,%2         # atomic_dec\n\
@@ -150,9 +151,9 @@ static inline void atomic_dec(atomic_t *v)
         : "cc", "xer");
 }
 
-static inline uint32_t atomic_dec_return(atomic_t *v)
+static inline u32 sysAtomicDecReturn(atomic_t *v)
 {
-        uint32_t t;
+        u32 t;
 
         __asm__ volatile(
 "1:     lwarx   %0,0,%1         # atomic_dec_return\n\
@@ -172,9 +173,9 @@ static inline uint32_t atomic_dec_return(atomic_t *v)
  * Changes the memory location '*ptr' to be val and returns
  * the previous value stored there.
  */
-static inline uint32_t __xchg_u32(volatile void *p, uint32_t val)
+static inline u32 __xchg_u32(volatile void *p, u32 val)
 {
-    uint32_t prev;
+    u32 prev;
 
     __asm__ volatile(
 "1: lwarx   %0,0,%2 \n"
@@ -187,15 +188,15 @@ static inline uint32_t __xchg_u32(volatile void *p, uint32_t val)
     return prev;
 }
 
-static inline uint32_t __xchg_u64(volatile void *p, uint32_t val)
+static inline u32 __xchg_u64(volatile void *p, u32 val)
 {
-    uint32_t prev;
+    u32 prev;
 
     __asm__ volatile(
 "1: ldarx   %0,0,%2 \n"
 "   stdcx.  %3,0,%2 \n\
     bne-    1b"
-    : "=&r" (prev), "+m" (*(volatile uint32_t *)p)
+    : "=&r" (prev), "+m" (*(volatile u32 *)p)
     : "r" (p), "r" (val)
     : "cc", "memory");
 
@@ -208,7 +209,7 @@ static inline uint32_t __xchg_u64(volatile void *p, uint32_t val)
  */
 extern void __xchg_called_with_bad_pointer(void);
 
-static inline uint32_t __xchg(volatile void *ptr, uint32_t x, unsigned int size)
+static inline u32 __xchg(volatile void *ptr, u32 x, unsigned int size)
 {
     switch (size) {
     case 4:
@@ -223,15 +224,15 @@ static inline uint32_t __xchg(volatile void *ptr, uint32_t x, unsigned int size)
 #define xchg(ptr,x)                              \
   ({                                             \
      __typeof__(*(ptr)) _x_ = (x);               \
-     (__typeof__(*(ptr))) __xchg((ptr), (uint32_t)_x_, sizeof(*(ptr))); \
+     (__typeof__(*(ptr))) __xchg((ptr), (u32)_x_, sizeof(*(ptr))); \
   })
 
 /*
  * Compare and exchange - if *p == old, set it to new,
  * and return the old value of *p.
  */
-static inline uint64_t
-__cmpxchg_u32(volatile unsigned int *p, uint64_t old, uint64_t new)
+static inline u64
+__cmpxchg_u32(volatile unsigned int *p, u64 old, u64 new)
 {
     unsigned int prev;
 
@@ -250,10 +251,10 @@ __cmpxchg_u32(volatile unsigned int *p, uint64_t old, uint64_t new)
     return prev;
 }
 
-static inline uint64_t
-__cmpxchg_u64(volatile uint64_t *p, uint64_t old, uint64_t new)
+static inline u64
+__cmpxchg_u64(volatile u64 *p, u64 old, u64 new)
 {
-    uint64_t prev;
+    u64 prev;
 
     __asm__ volatile (
 "1: ldarx   %0,0,%2     # __cmpxchg_u64\n\
@@ -274,8 +275,8 @@ __cmpxchg_u64(volatile uint64_t *p, uint64_t old, uint64_t new)
    if something tries to do an invalid cmpxchg().  */
 extern void __cmpxchg_called_with_bad_pointer(void);
 
-static inline uint64_t
-__cmpxchg(volatile void *ptr, uint64_t old, uint64_t new,
+static inline u64
+__cmpxchg(volatile void *ptr, u64 old, u64 new,
       unsigned int size)
 {
     switch (size) {
@@ -292,12 +293,12 @@ __cmpxchg(volatile void *ptr, uint64_t old, uint64_t new,
   ({                                     \
      __typeof__(*(ptr)) _o_ = (o);                   \
      __typeof__(*(ptr)) _n_ = (n);                   \
-     (__typeof__(*(ptr))) __cmpxchg((ptr), (uint64_t)_o_,        \
-                    (uint64_t)_n_, sizeof(*(ptr))); \
+     (__typeof__(*(ptr))) __cmpxchg((ptr), (u64)_o_,        \
+                    (u64)_n_, sizeof(*(ptr))); \
   })
 
-#define atomic_cmpxchg(v, o, n) (cmpxchg(&((v)->counter), (o), (n)))
-#define atomic_xchg(v, new) (xchg(&((v)->counter), new))
+#define sysAtomicCompareAndSwap(v, o, n) (cmpxchg(&((v)->counter), (o), (n)))
+#define sysAtomicSwap(v, new) (xchg(&((v)->counter), new))
 
 /**
  * atomic_add_unless - add unless the number is a given value
@@ -308,9 +309,9 @@ __cmpxchg(volatile void *ptr, uint64_t old, uint64_t new,
  * Atomically adds @a to @v, so long as it was not @u.
  * Returns non-zero if @v was not @u, and zero otherwise.
  */
-static inline uint32_t atomic_add_unless(atomic_t *v, uint32_t a, int u)
+static inline u32 sysAtomicAddUnless(atomic_t *v, u32 a, int u)
 {
-        uint32_t t;
+        u32 t;
 
         __asm__ volatile (
 "1:     lwarx   %0,0,%1         # atomic_add_unless\n\
@@ -328,19 +329,19 @@ static inline uint32_t atomic_add_unless(atomic_t *v, uint32_t a, int u)
         return t != u;
 }
 
-#define atomic_inc_not_zero(v) atomic_add_unless((v), 1, 0)
+#define sysAtomicIncNotZero(v) sysAtomicAddUnless((v), 1, 0)
 
-#define atomic_sub_and_test(a, v)       (atomic_sub_return((a), (v)) == 0)
-#define atomic_dec_and_test(v)          (atomic_dec_return((v)) == 0)
+#define sysAtomicSubAndTest(a, v)       (sysAtomicSubReturn((a), (v)) == 0)
+#define sysAtomicDecAndTest(v)          (sysAtomicDecReturn((v)) == 0)
 
 /*
  * Atomically test *v and decrement if it is greater than 0.
  * The function returns the old value of *v minus 1, even if
  * the atomic variable, v, was not decremented.
  */
-static inline uint32_t atomic_dec_if_positive(atomic_t *v)
+static inline u32 sysAtomicDecIfPositive(atomic_t *v)
 {
-        uint32_t t;
+        u32 t;
 
         __asm__ volatile(
 "1:     lwarx   %0,0,%1         # atomic_dec_if_positive\n\
@@ -357,23 +358,23 @@ static inline uint32_t atomic_dec_if_positive(atomic_t *v)
         return t;
 }
 
-static inline uint64_t atomic64_read(const atomic64_t *v)
+static inline u64 sysAtomic64Read(const atomic64_t *v)
 {
-        uint64_t t;
+        u64 t;
 
         __asm__ volatile("ld%U1%X1 %0,%1" : "=r"(t) : "m"(v->counter));
 
         return t;
 }
 
-static inline void atomic64_set(atomic64_t *v, uint64_t i)
+static inline void sysAtomic64Set(atomic64_t *v, u64 i)
 {
         __asm__ volatile("std%U0%X0 %1,%0" : "=m"(v->counter) : "r"(i));
 }
 
-static inline void atomic64_add(uint64_t a, atomic64_t *v)
+static inline void sysAtomic64Add(u64 a, atomic64_t *v)
 {
-        uint64_t t;
+        u64 t;
 
         __asm__ volatile(
 "1:     ldarx   %0,0,%3         # atomic64_add\n\
@@ -385,9 +386,9 @@ static inline void atomic64_add(uint64_t a, atomic64_t *v)
         : "cc");
 }
 
-static inline uint64_t atomic64_add_return(uint64_t a, atomic64_t *v)
+static inline u64 sysAtomic64AddReturn(u64 a, atomic64_t *v)
 {
-        uint64_t t;
+        u64 t;
 
         __asm__ volatile(
 "1:     ldarx   %0,0,%2         # atomic64_add_return\n\
@@ -401,11 +402,11 @@ static inline uint64_t atomic64_add_return(uint64_t a, atomic64_t *v)
         return t;
 }
 
-#define atomic64_add_negative(a, v)     (atomic64_add_return((a), (v)) < 0)
+#define sysAtomic64AddNegative(a, v)     (sysAtomic64AddReturn((a), (v)) < 0)
 
-static inline void atomic64_sub(uint64_t a, atomic64_t *v)
+static inline void sysAtomic64Sub(u64 a, atomic64_t *v)
 {
-        uint64_t t;
+        u64 t;
 
         __asm__ volatile(
 "1:     ldarx   %0,0,%3         # atomic64_sub\n\
@@ -417,9 +418,9 @@ static inline void atomic64_sub(uint64_t a, atomic64_t *v)
         : "cc");
 }
 
-static inline uint64_t atomic64_sub_return(uint64_t a, atomic64_t *v)
+static inline u64 sysAtomic64SubReturn(u64 a, atomic64_t *v)
 {
-        uint64_t t;
+        u64 t;
 
         __asm__ volatile(
 "1:     ldarx   %0,0,%2         # atomic64_sub_return\n\
@@ -433,9 +434,9 @@ static inline uint64_t atomic64_sub_return(uint64_t a, atomic64_t *v)
         return t;
 }
 
-static inline void atomic64_inc(atomic64_t *v)
+static inline void sysAtomic64Inc(atomic64_t *v)
 {
-        uint64_t t;
+        u64 t;
 
         __asm__ volatile(
 "1:     ldarx   %0,0,%2         # atomic64_inc\n\
@@ -447,9 +448,9 @@ static inline void atomic64_inc(atomic64_t *v)
         : "cc", "xer");
 }
 
-static inline uint64_t atomic64_inc_return(atomic64_t *v)
+static inline u64 sysAtomic64IncReturn(atomic64_t *v)
 {
-        uint64_t t;
+        u64 t;
 
         __asm__ volatile(
 "1:     ldarx   %0,0,%1         # atomic64_inc_return\n\
@@ -471,11 +472,11 @@ static inline uint64_t atomic64_inc_return(atomic64_t *v)
  * and returns true if the result is zero, or false for all
  * other cases.
  */
-#define atomic64_inc_and_test(v) (atomic64_inc_return(v) == 0)
+#define sysAtomic64IncAndTest(v) (sysAtomic64IncReturn(v) == 0)
 
-static inline void atomic64_dec(atomic64_t *v)
+static inline void sysAtomic64Dec(atomic64_t *v)
 {
-        uint64_t t;
+        u64 t;
 
         __asm__ volatile(
 "1:     ldarx   %0,0,%2         # atomic64_dec\n\
@@ -487,9 +488,9 @@ static inline void atomic64_dec(atomic64_t *v)
         : "cc", "xer");
 }
 
-static inline uint64_t atomic64_dec_return(atomic64_t *v)
+static inline u64 sysAtomic64DecReturn(atomic64_t *v)
 {
-        uint64_t t;
+        u64 t;
 
         __asm__ volatile(
 "1:     ldarx   %0,0,%1         # atomic64_dec_return\n\
@@ -503,16 +504,16 @@ static inline uint64_t atomic64_dec_return(atomic64_t *v)
         return t;
 }
 
-#define atomic64_sub_and_test(a, v)     (atomic64_sub_return((a), (v)) == 0)
-#define atomic64_dec_and_test(v)        (atomic64_dec_return((v)) == 0)
+#define sysAtomic64SubAndTest(a, v)     (sysAtomic64SubReturn((a), (v)) == 0)
+#define sysAtomic64DecAndTest(v)        (sysAtomic64DecReturn((v)) == 0)
 
 /*
  * Atomically test *v and decrement if it is greater than 0.
  * The function returns the old value of *v minus 1.
  */
-static inline uint64_t atomic64_dec_if_positive(atomic64_t *v)
+static inline u64 sysAtomic64DecIfPositive(atomic64_t *v)
 {
-        uint64_t t;
+        u64 t;
 
         __asm__ volatile(
 "1:     ldarx   %0,0,%1         # atomic64_dec_if_positive\n\
@@ -528,8 +529,8 @@ static inline uint64_t atomic64_dec_if_positive(atomic64_t *v)
         return t;
 }
 
-#define atomic64_cmpxchg(v, o, n) (cmpxchg(&((v)->counter), (o), (n)))
-#define atomic64_xchg(v, new) (xchg(&((v)->counter), new))
+#define sysAtomic64CompareAndSwap(v, o, n) (cmpxchg(&((v)->counter), (o), (n)))
+#define sysAtomic64Swap(v, new) (xchg(&((v)->counter), new))
 
 /**
  * atomic64_add_unless - add unless the number is a given value
@@ -537,12 +538,12 @@ static inline uint64_t atomic64_dec_if_positive(atomic64_t *v)
  * @a: the amount to add to v...
  * @u: ...unless v is equal to u.
  *
- * Atomically adds @a to @v, so uint64_t as it was not @u.
+ * Atomically adds @a to @v, so u64 as it was not @u.
  * Returns non-zero if @v was not @u, and zero otherwise.
  */
-static inline uint32_t atomic64_add_unless(atomic64_t *v, uint64_t a, uint64_t u)
+static inline u32 sysAtomic64AddUnless(atomic64_t *v, u64 a, u64 u)
 {
-        uint64_t t;
+        u64 t;
 
         __asm__ volatile (
 "1:     ldarx   %0,0,%1         # atomic_add_unless\n\
@@ -560,6 +561,6 @@ static inline uint32_t atomic64_add_unless(atomic64_t *v, uint64_t a, uint64_t u
         return t != u;
 }
 
-#define atomic64_inc_not_zero(v) atomic64_add_unless((v), 1, 0)
+#define sysAtomic64IncNotZero(v) sysAtomic64AddUnless((v), 1, 0)
 
-#endif /* _ASM_POWERPC_ATOMIC_H_ */
+#endif /* __SYS_ATOMIC_H__ */

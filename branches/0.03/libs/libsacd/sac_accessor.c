@@ -245,34 +245,19 @@ int destroy_sac_accessor(void)
 
         if (ret & 0x1)
         {
-            LOG(lm_main, LOG_DEBUG, ("sysSpuRawWriteProblemStorage 0x%x\n", EXIT_SAC_CMD));
             sysSpuRawWriteProblemStorage(sa->id, SPU_In_MBox, EXIT_SAC_CMD);
             EIEIO;
         }
     }
 
-    if (ret == 0 && sa->ih != 0)
+    if ((ret = sysInterruptThreadDisestablish(sa->ih)) != 0)
     {
-        if ((ret = sysInterruptThreadDisestablish(sa->ih)) != 0)
-        {
-            LOG(lm_main, LOG_ERROR, ("sysInterruptThreadDisestablish returned %d\n", ret));
-        }
-        else
-        {
-            sa->ih = 0;
-        }
+        LOG(lm_main, LOG_ERROR, ("sysInterruptThreadDisestablish returned %d\n", ret));
     }
 
-    if (sa->intrtag != 0)
+    if ((ret = sysInterruptTagDestroy(sa->intrtag)) != 0)
     {
-        if ((ret = sysInterruptTagDestroy(sa->intrtag)) != 0)
-        {
-            LOG(lm_main, LOG_ERROR, ("sys_interrupt_tag_destroy returned %d\n", ret));
-        }
-        else
-        {
-            sa->intrtag = 0;
-        }
+        LOG(lm_main, LOG_ERROR, ("sys_interrupt_tag_destroy returned %d\n", ret));
     }
 
     if (sa->id != -1)
@@ -308,28 +293,14 @@ int destroy_sac_accessor(void)
         sa->write_buffer = 0;
     }
 
-    if (sa->mmio_cond != 0)
+    if ((ret = sysCondDestroy(sa->mmio_cond)) != 0)
     {
-        if ((ret = sysCondDestroy(sa->mmio_cond)) != 0)
-        {
-            LOG(lm_main, LOG_ERROR, ("destroy mmio_cond failed.\n"));
-        }
-        else
-        {
-            sa->mmio_cond = 0;
-        }
+        LOG(lm_main, LOG_ERROR, ("destroy mmio_cond failed.\n"));
     }
 
-    if (sa->mmio_mutex != 0)
+    if ((ret = sysMutexDestroy(sa->mmio_mutex)) != 0)
     {
-        if ((ret = sysMutexDestroy(sa->mmio_mutex)) != 0)
-        {
-            LOG(lm_main, LOG_ERROR, ("destroy mmio_mutex failed.\n"));
-        }
-        else
-        {
-            sa->mmio_mutex = 0;
-        }
+        LOG(lm_main, LOG_ERROR, ("destroy mmio_mutex failed.\n"));
     }
 
     free(sa);
