@@ -186,7 +186,7 @@ int start_ripping_gui(int ripping_flags)
                 uint32_t sector_size = FAT32_SECTOR_LIMIT;
                 uint32_t sector_offset = 0;
                 if (total_sectors > FAT32_SECTOR_LIMIT)
-                {
+                 {
                     musicfilename = (char *) malloc(512);
                     file_path = make_filename(output_device, 0, albumdir, "iso");
                     for (i = 1; total_sectors != 0; i++)
@@ -194,7 +194,6 @@ int start_ripping_gui(int ripping_flags)
                         sector_size = min(total_sectors, FAT32_SECTOR_LIMIT);
                         snprintf(musicfilename, 512, "%s.%03d", file_path, i);
                         queue_track_to_rip(0, 0, musicfilename, "iso", sector_offset, sector_size, 0, 0);
-                        LOG(lm_main, LOG_NOTICE, ("adding iso to queue: %s (%d, %d)", musicfilename, sector_offset, sector_size));
                         sector_offset += sector_size;
                         total_sectors -= sector_size;
                     }
@@ -205,7 +204,6 @@ int start_ripping_gui(int ripping_flags)
                 {
                     file_path = make_filename(output_device, 0, albumdir, "iso");
                     queue_track_to_rip(0, 0, file_path, "iso", 0, total_sectors, 0, 0);
-                    LOG(lm_main, LOG_NOTICE, ("adding iso to queue: %s (%d, %d)", file_path, 0, total_sectors));
                     free(file_path);
                 }
                 tmp_total_ripping_sectors = total_sectors;
@@ -224,7 +222,6 @@ int start_ripping_gui(int ripping_flags)
                             handle->area[area_idx].area_tracklist_offset->track_length_lsn[i], 
                             handle->area[area_idx].area_toc->frame_format == FRAME_FORMAT_DST,
                             1 /* always decode to DSD */);
-                        LOG(lm_main, LOG_NOTICE, ("adding dsf to queue: %s", file_path));
                     }
                     else if (ripping_flags & RIP_DSDIFF)
                     {
@@ -233,8 +230,7 @@ int start_ripping_gui(int ripping_flags)
                             handle->area[area_idx].area_tracklist_offset->track_start_lsn[i], 
                             handle->area[area_idx].area_tracklist_offset->track_length_lsn[i], 
                             handle->area[area_idx].area_toc->frame_format == FRAME_FORMAT_DST,
-                            ((ripping_flags & RIP_2CH_DST || ripping_flags & RIP_MCH_DST) ? 1 : 0));
-                            LOG(lm_main, LOG_NOTICE, ("adding dsdiff to queue: %s", file_path));
+                            ((ripping_flags & RIP_2CH_DST || ripping_flags & RIP_MCH_DST) ? 0 : 1));
                     }
 
                     tmp_total_ripping_sectors += handle->area[area_idx].area_tracklist_offset->track_length_lsn[i];

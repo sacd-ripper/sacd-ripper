@@ -108,6 +108,9 @@ int queue_track_to_rip(int area, int track, char *file_path, char *fmt,
         output_format_ptr->length_lsn = length_lsn;
         output_format_ptr->dst_encoded = dst_encoded;
         output_format_ptr->decode_dst = decode_dst;
+
+        LOG(lm_main, LOG_NOTICE, ("queuing: %s, area: %d, track %d, start_lsn: %d, length_lsn: %d, dst_encoded: %d, decode_dst: %d", file_path, area, track, start_lsn, length_lsn, dst_encoded, decode_dst));
+
         list_add_tail(&output_format_ptr->siblings, &output.ripping_queue);
 
         return 0;
@@ -183,7 +186,7 @@ void init_stats(stats_track_callback_t cb_track, stats_progress_callback_t cb_pr
         output.stats_progress_callback = cb_progress;
         output.stats_current_track = 0;
         output.stats_total_tracks = 0;
-
+        
         list_for_each(node_ptr, &output.ripping_queue)
         {
             output_format_ptr = list_entry(node_ptr, scarletbook_output_format_t, siblings);
@@ -246,15 +249,16 @@ static inline size_t write_block(scarletbook_output_format_t * ft, const uint8_t
     return actual;
 }
 
-static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int pos, int blocks)
+/**
+ * this is all overly complicated due to the parallel DST decoding..
+ */
+static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int pos, int blocks, int last_frame)
 {
     int i;
 
     if (ft->handler.flags & OUTPUT_FLAG_DSD || ft->handler.flags & OUTPUT_FLAG_DST)
     {
         uint8_t *main_buffer_ptr = buffer;
-        int last_frame = (pos + blocks == ft->start_lsn + ft->length_lsn);
-
         while(blocks--)
         {
             uint8_t *buffer_ptr = main_buffer_ptr;
@@ -289,6 +293,12 @@ static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int
                     buffer_ptr += AUDIO_FRAME_INFO_SIZE - 1;
                 }
             }
+            
+            // store frame type
+            output.frame->dst_encoded = output.scarletbook_audio_sector.header.dst_encoded;
+
+            // TODO, extract channel_count from frame
+
             for (i = 0; i < output.scarletbook_audio_sector.header.packet_info_count; i++)
             {
                 audio_packet_info_t *packet = &output.scarletbook_audio_sector.packet[i];
@@ -311,31 +321,59 @@ static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int
                                 // always start with the full first frame
                                 audio_frame_t * frame_ptr = list_entry(output.frame->siblings.next, audio_frame_t, siblings);
 
-                                // loop until we reach the current frame
-                                while (frame_ptr != output.frame)
+                                if (ft->decode_dst)
                                 {
-                                    // when buffer is full we write to disk
-                                    if (frame_ptr->full)
+#ifdef __lv2ppu__
+                                    size_t dsd_size;
+                                    uint8_t *dsd_data;
+
+                                    prepare_dst_decoder(&output.dst_decoder);
+                                    while (frame_ptr != output.frame)
                                     {
-                                        if (ft->decode_dst)
+                                        if (frame_ptr->full)
                                         {
-                                            // add to dst queue
-                                            // wait for dst decoder
-                                            // write output to disk
+                                            // TODO: get channel_count from frame
+                                            // decode our frame
+                                            decode_dst_frame(&output.dst_decoder, frame_ptr->data, frame_ptr->size, 1, ft->channel_count);
+
+                                            // mark frame as empty
+                                            frame_ptr->full = 0;
+                                            frame_ptr->size = 0;
                                         }
-                                        else
-                                        {
-                                            write_block(ft, frame_ptr->data, frame_ptr->size, 0);
-                                        }
-                                        
-                                        // mark frame as empty
-                                        frame_ptr->full = 0;
-                                        frame_ptr->size = 0;
+
+                                        // advance one frame
+                                        frame_ptr = list_entry(frame_ptr->siblings.next, audio_frame_t, siblings);
                                     }
                                     
-                                    // advance one frame
-                                    frame_ptr = list_entry(frame_ptr->siblings.next, audio_frame_t, siblings);
+                                    // wait for all frames to be decoded (decoding takes around 0.03 seconds per frame)
+                                    dst_decoder_wait(&output.dst_decoder, 500000);
+
+                                    while (get_dsd_frame(&output.dst_decoder, &dsd_data, &dsd_size))
+                                    {
+                                        write_block(ft, dsd_data, dsd_size, 0);
+                                    }
+#endif
                                 }
+                                else
+                                {
+                                    // loop until we reach the current frame
+                                    while (frame_ptr != output.frame)
+                                    {
+                                        // when buffer is full we write to disk
+                                        if (frame_ptr->full)
+                                        {
+                                            write_block(ft, frame_ptr->data, frame_ptr->size, 0);
+                                            
+                                            // mark frame as empty
+                                            frame_ptr->full = 0;
+                                            frame_ptr->size = 0;
+                                        }
+                                        
+                                        // advance one frame
+                                        frame_ptr = list_entry(frame_ptr->siblings.next, audio_frame_t, siblings);
+                                    }
+                                }
+
                                 // let's start over
                                 output.full_frame_count = 0;
                             }
@@ -363,23 +401,30 @@ static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int
         // are there any leftovers?
         if ((output.full_frame_count > 0 || output.frame->size > 0) && last_frame)
         {
-            audio_frame_t * frame_ptr = output.frame;
-
-            // process all frames
-            do
+            if (ft->decode_dst)
             {
-                // always start with the full first frame
-                frame_ptr = list_entry(frame_ptr->siblings.next, audio_frame_t, siblings);
+                // TODO
+            }
+            else
+            {
+                audio_frame_t * frame_ptr = output.frame;
 
-                if (frame_ptr->size > 0)
+                // process all frames
+                do
                 {
-                    write_block(ft, frame_ptr->data, frame_ptr->size, 0);
-                    frame_ptr->full = 0;
-                    frame_ptr->size = 0;
-                }
-        
-            } while (frame_ptr != output.frame);
+                    // always start with the full first frame
+                    frame_ptr = list_entry(frame_ptr->siblings.next, audio_frame_t, siblings);
 
+                    if (frame_ptr->size > 0)
+                    {
+                        write_block(ft, frame_ptr->data, frame_ptr->size, 0);
+                        frame_ptr->full = 0;
+                        frame_ptr->size = 0;
+                    }
+            
+                } while (frame_ptr != output.frame);
+            }
+            
             output.full_frame_count = 0;
         }
     }
@@ -410,6 +455,7 @@ static void *read_thread(void *arg)
             list_del(node_ptr);
 
             output_format_ptr->sb_handle = handle;
+            output_format_ptr->channel_count = handle->area[output_format_ptr->area].area_toc->channel_count;
 
             output.stats_current_file_total_sectors = output_format_ptr->length_lsn;
             output.stats_current_file_sectors_processed = 0;
@@ -430,6 +476,7 @@ static void *read_thread(void *arg)
                 uint32_t encrypted_end_2 = 0;
                 int encrypted;
 
+                // set the encryption range
                 if (handle->area[0].area_toc != 0)
                 {
                     encrypted_start_1 = handle->area[0].area_toc->track_start;
@@ -441,8 +488,9 @@ static void *read_thread(void *arg)
                     encrypted_end_2 = handle->area[1].area_toc->track_end;
                 }
 
+                // what blocks do we need to process?
                 ft->current_lsn = ft->start_lsn;
-                end_lsn = ft->start_lsn + ft->length_lsn;
+                end_lsn = ft->start_lsn + ft->length_lsn + 1;
 
                 sysAtomicSet(&output.stop_processing, 0);
 
@@ -481,6 +529,10 @@ static void *read_thread(void *arg)
                         // read some blocks
                         ret = sacd_read_block_raw(ft->sb_handle->sacd, ft->current_lsn, block_size, output.read_buffer);
 
+                        ft->current_lsn += block_size;
+                        output.stats_total_sectors_processed += block_size;
+                        output.stats_current_file_sectors_processed += block_size;
+
                         // encrypted blocks need to be decrypted first
                         if (encrypted)
                         {
@@ -488,25 +540,20 @@ static void *read_thread(void *arg)
                         }
 
                         // process blocks and write to disk
-                        process_blocks(ft, output.read_buffer, ft->current_lsn, block_size);
+                        process_blocks(ft, output.read_buffer, ft->current_lsn, block_size, ft->current_lsn == end_lsn);
 
-                        output.stats_total_sectors_processed += block_size;
-                        output.stats_current_file_sectors_processed += block_size;
-
+                        // update statistics
                         if (output.stats_progress_callback)
                         {
                             output.stats_progress_callback(output.stats_total_sectors, output.stats_total_sectors_processed, 
                                 output.stats_current_file_total_sectors, output.stats_current_file_sectors_processed);
                         }
-
-                        ft->current_lsn += block_size;
                     }
                     else
                     {
                         break;
                     }
                 }
-
             }
 
             if (sysAtomicRead(&output.stop_processing) == 1)

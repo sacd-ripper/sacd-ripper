@@ -38,6 +38,8 @@ typedef struct dst_decoder_t
 
     int                             event_count;
 
+    int                             current_event;
+
     dst_decoder_thread_t            decoder[NUM_DST_DECODERS];
 }
 dst_decoder_t;
@@ -45,7 +47,8 @@ dst_decoder_t;
 int create_dst_decoder(dst_decoder_t *);
 int destroy_dst_decoder(dst_decoder_t *);
 int decode_dst_frame(dst_decoder_t *, uint8_t *, size_t, int, int);
+int prepare_dst_decoder(dst_decoder_t *);
 int dst_decoder_wait(dst_decoder_t *, int);
-int get_dsd_frame(dst_decoder_t *, int, uint8_t **, size_t *);
+int get_dsd_frame(dst_decoder_t *, uint8_t **, size_t *);
 
 #endif /* __DST_DECODER_H__ */
