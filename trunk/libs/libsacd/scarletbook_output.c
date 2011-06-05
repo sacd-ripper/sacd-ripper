@@ -490,7 +490,7 @@ static void *read_thread(void *arg)
 
                 // what blocks do we need to process?
                 ft->current_lsn = ft->start_lsn;
-                end_lsn = ft->start_lsn + ft->length_lsn + 1;
+                end_lsn = ft->start_lsn + ft->length_lsn;
 
                 sysAtomicSet(&output.stop_processing, 0);
 
