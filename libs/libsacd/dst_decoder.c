@@ -58,9 +58,8 @@ typedef struct dst_command_t
     uint32_t dst_encoded;
     uint32_t channel_count;
     uint32_t reserved[2];
-
 } 
-dst_command_t;
+__attribute__ ((packed)) dst_command_t;
 
 struct dst_decoder_thread_s
 {
@@ -88,6 +87,7 @@ static int create_dst_decoder_thread(dst_decoder_thread_t decoder, int spu_id, s
     
     decoder->spu_id = spu_id;
 
+    memset(&queue_attr, 0, sizeof(sys_event_queue_attr_t));
     queue_attr.attr_protocol = SYS_EVENT_QUEUE_PRIO;
     queue_attr.type = SYS_EVENT_QUEUE_SPU;
     ret = sysEventQueueCreate(&decoder->send_queue, &queue_attr, SYS_EVENT_QUEUE_KEY_LOCAL, DEFAULT_QUEUE_SIZE);
@@ -111,12 +111,11 @@ static int create_dst_decoder_thread(dst_decoder_thread_t decoder, int spu_id, s
         return ret;
     }
     
-    group_attr.nameSize = 3 + 1;
-    group_attr.nameAddress = (uint64_t)((void*)("DST"));
-    group_attr.memContainer = 0;
-    group_attr.groupType = 0;
+    memset(&group_attr, 0, sizeof(sysSpuThreadGroupAttribute));
+    group_attr.nameSize = 6 + 1;
+    group_attr.nameAddress = (uint64_t)((void*)("DSTGRP"));
     ret = sysSpuThreadGroupCreate(&decoder->spu_group, 
-                                  1,
+                                  1, // 1 SPU per group
                                   PRIORITY, 
                                   &group_attr);
     if (ret != 0) 
@@ -136,10 +135,12 @@ static int create_dst_decoder_thread(dst_decoder_thread_t decoder, int spu_id, s
      * Pass the SPU queue number to the SPU thread as an argument.
      * This is used by the decoder to identify the event queue.
      */
-    thread_args.arg1 = ((uint64_t)(DST_QUEUE_NUMBER)) << 32;
+    memset(&thread_args, 0, sizeof(sysSpuThreadArgument));
+    thread_args.arg0 = ((uint64_t)(DST_QUEUE_NUMBER)) << 32;
 
-    thread_attr.nameSize = 3 + 1;
-    thread_attr.nameAddress = (uint64_t)((void*)("DST"));
+    memset(&thread_attr, 0, sizeof(sysSpuThreadAttribute));
+    thread_attr.nameSize = 6 + 1;
+    thread_attr.nameAddress = (uint64_t)((void*)("DSTTHR"));
     thread_attr.attribute = SPU_THREAD_ATTR_NONE;
 
     ret = sysSpuThreadInitialize(&decoder->spu_thread,
@@ -246,6 +247,8 @@ int create_dst_decoder(dst_decoder_t *dst_decoder)
     sys_event_queue_attr_t queue_attr;
     int ret, i;
 
+    memset(dst_decoder, 0, sizeof(dst_decoder_t));
+
     memset(&queue_attr, 0, sizeof(sys_event_queue_attr_t));
     queue_attr.attr_protocol = SYS_EVENT_QUEUE_PRIO;
     queue_attr.type = SYS_EVENT_QUEUE_PPU;
@@ -256,9 +259,10 @@ int create_dst_decoder(dst_decoder_t *dst_decoder)
         return ret;
     }
 
+    dst_decoder->event_count = 0;
     for (i = 0; i < NUM_DST_DECODERS; i++)
     {
-        dst_decoder->decoder[i] = calloc(sizeof(dst_decoder_thread_t), 1);
+        dst_decoder->decoder[i] = calloc(sizeof(struct dst_decoder_thread_s), 1);
         ret = create_dst_decoder_thread(dst_decoder->decoder[i], i, dst_decoder->recv_queue);
         if (ret != 0)
         {
@@ -266,12 +270,11 @@ int create_dst_decoder(dst_decoder_t *dst_decoder)
             return ret;
         }
 
-        return 0;
-
         // we are expecting a start event
         dst_decoder->event_count++;
     }
 
+    // prefetch all the start events..
     ret = dst_decoder_wait(dst_decoder, 500000);
     if (ret != 0)
     {
@@ -330,7 +333,7 @@ int decode_dst_frame(dst_decoder_t *dst_decoder, uint8_t *src_data, size_t src_s
     decoder->command.dst_encoded = dst_encoded;
     decoder->command.channel_count = channel_count;
 
-    ret = sysEventPortSend(decoder->event_port, EVENT_SEND_DST, (uint64_t) &decoder->command, 2);
+    ret = sysEventPortSend(decoder->event_port, EVENT_SEND_DST, (uint64_t) &decoder->command, sizeof(dst_command_t) / 2);
     if (ret != 0) 
     {
         LOG(lm_main, LOG_ERROR, ("sysEventPortSend failed: %#.8x", ret));
@@ -363,7 +366,6 @@ int dst_decoder_wait(dst_decoder_t *dst_decoder, int timeout)
         } 
         else 
         {
-            LOG(lm_main, LOG_ERROR, ("sysEventQueueReceive ok!: %#.8x", (event.data_2 & 0x00000000FFFFFFFF)));
             switch(event.data_2 & 0x00000000FFFFFFFF)
             {
                 case EVENT_RECEIVE_STARTED:
@@ -390,3 +392,4 @@ int get_dsd_frame(dst_decoder_t *dst_decoder, int idx, uint8_t **dsd_data, size_
 
     return -1;
 }
+

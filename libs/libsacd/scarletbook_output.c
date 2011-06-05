@@ -567,7 +567,7 @@ int initialize_ripping(void)
     allocate_round_robin_frame_buffer();
 
 #ifdef __lv2ppu__
-    //ret = create_dst_decoder(&output.dst_decoder);
+    ret = create_dst_decoder(&output.dst_decoder);
     if (ret != 0)
     {
         LOG(lm_main, LOG_ERROR, ("create_dst_decoder failed: %#.8x", ret));
@@ -635,7 +635,7 @@ int stop_ripping(scarletbook_handle_t *handle)
         free(output.read_buffer);
 
 #ifdef __lv2ppu__
-        //ret = destroy_dst_decoder(&output.dst_decoder);
+        ret = destroy_dst_decoder(&output.dst_decoder);
         if (ret != 0)
         {
             LOG(lm_main, LOG_ERROR, ("destroy_dst_decoder failed: %#.8x", ret));

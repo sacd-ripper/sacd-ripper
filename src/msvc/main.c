@@ -53,7 +53,7 @@ static struct opts_s
     int            output_dsdiff;
     int            output_iso;
     int            convert_dst;
-    int            print_only;
+    int            print;
     char          *input_device; /* Access method driver should use for control */
     char           output_file[512];
 } opts;
@@ -71,9 +71,6 @@ static int parse_options(int argc, char *argv[]) {
         "  -m, --mch-tracks                : Export multi-channel tracks\n"
         "  -p, --output-dsdiff             : output as Philips DSDIFF file (default)\n"
         "  -s, --output-dsf                : output as Sony DSF file\n"
-        "                                    use of the old 'cooked ioctl' kernel\n"
-        "                                    interface. -k cannot be used with -d\n"
-        "                                    or -g.\n" 
         "  -c, --convert-dst               : convert DST to DSD (default)\n"
         "  -i, --input[=FILE]              : set source and determine if \"bin\" image or\n"
         "                                    device\n"
@@ -124,7 +121,7 @@ static int parse_options(int argc, char *argv[]) {
             break;
         case 'c': opts.convert_dst = 1; break;
         case 'i': opts.input_device = strdup(optarg); break;
-        case 'P': opts.print_only = 1; break;
+        case 'P': opts.print = 1; break;
 
         case '?':
             fprintf(stdout, help_text, program_name);
@@ -178,7 +175,7 @@ static void init(void) {
     opts.output_iso    = 0;
     opts.output_dsdiff = 1;
     opts.convert_dst   = 0;
-    opts.print_only    = 0;
+    opts.print    = 0;
     opts.input_device  = "/dev/cdrom";
 
 #ifdef _WIN32
@@ -215,7 +212,7 @@ int main(int argc, char* argv[]) {
             handle = scarletbook_open(sacd_reader, 0);
             if (handle)
             {
-                if (opts.print_only)
+                if (opts.print)
                 {
                     scarletbook_print(handle);
                 }

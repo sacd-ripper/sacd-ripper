@@ -95,11 +95,10 @@ int create_sac_accessor(void)
         return 0;
     }
 #else
-    LOG(lm_main, LOG_DEBUG, ("syscall sys_raw_spu_create..."));
     ret = sysSpuRawCreate(&sa->id, NULL);
     if (ret)
     {
-        LOG(lm_main, LOG_ERROR, ("sys_raw_spu_create failed %d\n", ret));
+        LOG(lm_main, LOG_ERROR, ("sysSpuRawCreate failed %d\n", ret));
         return ret;
     }
     LOG(lm_main, LOG_DEBUG, ("succeeded. raw_spu number is %d\n", sa->id));
@@ -108,11 +107,10 @@ int create_sac_accessor(void)
     sysSpuRawSetIntStat(sa->id, 2, 0xfUL);
     sysSpuRawSetIntStat(sa->id, 0, 0xfUL);
 
-    LOG(lm_main, LOG_DEBUG, ("syscall sys_raw_spu_load: " SAC_MODULE_LOCATION));
     ret = sysSpuRawLoad(sa->id, SAC_MODULE_LOCATION, &entry);
     if (ret)
     {
-        LOG(lm_main, LOG_ERROR, ("raw_spu_load failed %d\n", ret));
+        LOG(lm_main, LOG_ERROR, ("sysSpuRawLoad failed [" SAC_MODULE_LOCATION "]%d\n", ret));
         return ret;
     }
     LOG(lm_main, LOG_DEBUG, ("succeeded. entry %x\n", entry));

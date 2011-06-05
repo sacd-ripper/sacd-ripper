@@ -30,7 +30,7 @@
 
 typedef struct dst_decoder_thread_s *dst_decoder_thread_t;
 
-#define NUM_DST_DECODERS                1 /* The number of DST decoders (SPUs) */ 
+#define NUM_DST_DECODERS                5 /* The number of DST decoders (SPUs) */ 
 
 typedef struct dst_decoder_t
 {
