@@ -72,7 +72,9 @@ struct scarletbook_output_format_t
     char                           *write_cache;
     uint64_t                        write_length;
     uint64_t                        write_offset;
+
     int                             dst_encoded;
+    int                             channel_count;
 
     int                             decode_dst;
 
@@ -98,7 +100,7 @@ typedef struct audio_frame_t
     uint8_t            *data;
     int                 size;
     int                 full;
-
+    int                 dst_encoded;
 } audio_frame_t;
 
 

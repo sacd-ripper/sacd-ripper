@@ -170,17 +170,17 @@ int dsdiff_create_header(scarletbook_output_format_t *ft)
     {
         compression_type_chunk_t *compression_type_chunk = (compression_type_chunk_t *) write_ptr;
         compression_type_chunk->chunk_id         = CMPR_MARKER;
-        if (ft->dst_encoded)
-        {
-            compression_type_chunk->compression_type = DST_MARKER;
-            compression_type_chunk->count = 11;
-            memcpy(compression_type_chunk->compression_name, "DST Encoded", 11);
-        }
-        else
+        if (ft->decode_dst)
         {
             compression_type_chunk->compression_type = DSD_MARKER;
             compression_type_chunk->count = 14;
             memcpy(compression_type_chunk->compression_name, "not compressed", 14);
+        }
+        else
+        {
+            compression_type_chunk->compression_type = DST_MARKER;
+            compression_type_chunk->count = 11;
+            memcpy(compression_type_chunk->compression_name, "DST Encoded", 11);
         }
 
         compression_type_chunk->chunk_data_size = CALC_CHUNK_SIZE(COMPRESSION_TYPE_CHUNK_SIZE - CHUNK_HEADER_SIZE + compression_type_chunk->count);
@@ -246,7 +246,16 @@ int dsdiff_create_header(scarletbook_output_format_t *ft)
 
     // Either the DSD or DST Sound Data chunk is required and may appear
     // only once in the Form DSD Chunk. The chunk must be placed after the Property Chunk.
-    if (ft->dst_encoded)
+    if (ft->decode_dst)
+    {
+        dsd_sound_data_chunk_t * dsd_sound_data_chunk;
+        dsd_sound_data_chunk                  = (dsd_sound_data_chunk_t *) write_ptr;
+        dsd_sound_data_chunk->chunk_id        = DSD_MARKER;
+        dsd_sound_data_chunk->chunk_data_size = CALC_CHUNK_SIZE(handle->audio_data_size);
+
+        write_ptr += CHUNK_HEADER_SIZE;
+    }
+    else
     {
         dst_sound_data_chunk_t *dst_sound_data_chunk;
         dst_frame_information_chunk_t *dst_frame_information_chunk;
@@ -264,15 +273,6 @@ int dsdiff_create_header(scarletbook_output_format_t *ft)
         dst_frame_information_chunk->num_frames = hton32(handle->frame_count);
 
         write_ptr += DST_FRAME_INFORMATION_CHUNK_SIZE;
-    }
-    else
-    {
-        dsd_sound_data_chunk_t * dsd_sound_data_chunk;
-        dsd_sound_data_chunk                  = (dsd_sound_data_chunk_t *) write_ptr;
-        dsd_sound_data_chunk->chunk_id        = DSD_MARKER;
-        dsd_sound_data_chunk->chunk_data_size = CALC_CHUNK_SIZE(handle->audio_data_size);
-
-        write_ptr += CHUNK_HEADER_SIZE;
     }
 
     // start with a new footer
@@ -444,7 +444,14 @@ size_t dsdiff_write_frame(scarletbook_output_format_t *ft, const uint8_t *buf, s
 
     handle->frame_count++;
 
-    if (ft->dst_encoded)
+    if (ft->decode_dst)
+    {
+        size_t nrw;
+        nrw = fwrite(buf, 1, len, ft->fd);
+        handle->audio_data_size += nrw;
+        return nrw;
+    }
+    else
     {
         dst_frame_data_chunk_t dst_frame_data_chunk;
         dst_frame_data_chunk.chunk_id = DSTF_MARKER;
@@ -461,13 +468,6 @@ size_t dsdiff_write_frame(scarletbook_output_format_t *ft, const uint8_t *buf, s
             handle->audio_data_size += nrw;
             return nrw;
         }
-    }
-    else
-    {
-        size_t nrw;
-        nrw = fwrite(buf, 1, len, ft->fd);
-        handle->audio_data_size += nrw;
-        return nrw;
     }
 }
 

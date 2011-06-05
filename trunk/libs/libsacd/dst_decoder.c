@@ -317,6 +317,7 @@ int destroy_dst_decoder(dst_decoder_t *dst_decoder)
 int prepare_dst_decoder(dst_decoder_t *dst_decoder)
 {
     dst_decoder->event_count = 0;
+    dst_decoder->current_event = 0;
 
     return 0;
 }
@@ -333,7 +334,7 @@ int decode_dst_frame(dst_decoder_t *dst_decoder, uint8_t *src_data, size_t src_s
     decoder->command.dst_encoded = dst_encoded;
     decoder->command.channel_count = channel_count;
 
-    ret = sysEventPortSend(decoder->event_port, EVENT_SEND_DST, (uint64_t) &decoder->command, sizeof(dst_command_t) / 2);
+    ret = sysEventPortSend(decoder->event_port, EVENT_SEND_DST, (uint64_t) &decoder->command, 2);
     if (ret != 0) 
     {
         LOG(lm_main, LOG_ERROR, ("sysEventPortSend failed: %#.8x", ret));
@@ -381,15 +382,17 @@ int dst_decoder_wait(dst_decoder_t *dst_decoder, int timeout)
     return errors;
 }
 
-int get_dsd_frame(dst_decoder_t *dst_decoder, int idx, uint8_t **dsd_data, size_t *dsd_size)
+int get_dsd_frame(dst_decoder_t *dst_decoder, uint8_t **dsd_data, size_t *dsd_size)
 {
-    if (idx < dst_decoder->event_count)
+    if (dst_decoder->current_event < dst_decoder->event_count)
     {
-        *dsd_data = (uint8_t *) (uint64_t) dst_decoder->decoder[idx]->command.dst_addr;
-        *dsd_size = dst_decoder->decoder[idx]->command.dst_size;
-        return 0;
+        *dsd_data = (uint8_t *) (uint64_t) dst_decoder->decoder[dst_decoder->current_event]->command.dst_addr;
+        *dsd_size = dst_decoder->decoder[dst_decoder->current_event]->command.dst_size;
+
+        dst_decoder->current_event++;
+
+        return 1;
     }
 
-    return -1;
+    return 0;
 }
-
