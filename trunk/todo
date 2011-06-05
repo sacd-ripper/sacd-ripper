@@ -2,7 +2,6 @@ TODO
 
 version 0.1.0:
 
-    - find out why the DST decoder instantiation is crashing, ARGHHHH...
     - test PS3 ripping pipeline
  
 version 0.1.x
