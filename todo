@@ -3,6 +3,7 @@ TODO
 version 0.1.0:
 
     - test PS3 ripping pipeline
+        - fix incorrect dst converted frames
  
 version 0.1.x
 
