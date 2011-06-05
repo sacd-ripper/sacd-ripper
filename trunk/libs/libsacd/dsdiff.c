@@ -448,11 +448,16 @@ size_t dsdiff_write_frame(scarletbook_output_format_t *ft, const uint8_t *buf, s
     {
         dst_frame_data_chunk_t dst_frame_data_chunk;
         dst_frame_data_chunk.chunk_id = DSTF_MARKER;
-        dst_frame_data_chunk.chunk_data_size = CALC_CHUNK_SIZE(len);
+        dst_frame_data_chunk.chunk_data_size = hton64(len);
         {
             size_t nrw;
             nrw = fwrite(&dst_frame_data_chunk, 1, DST_FRAME_DATA_CHUNK_SIZE, ft->fd);
-            nrw += fwrite(buf, 1, CEIL_ODD_NUMBER(len), ft->fd);
+            nrw += fwrite(buf, 1, len, ft->fd);
+            if (len % 2)
+            {
+                uint8_t dummy = 0;
+                nrw += fwrite(&dummy, 1, 1, ft->fd);
+            }
             handle->audio_data_size += nrw;
             return nrw;
         }
