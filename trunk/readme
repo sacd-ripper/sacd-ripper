@@ -63,15 +63,34 @@ You will have to do a recovery menu mode installation:
  11: Connect the USB device and select "System Update."
  12: Accept Conditions and Follow the instructions
 
-Note
+Installation Instructions
 
-An OtherOS++ requirement is to have a model with vflash in there. afaik the SACD 
-models do not contain the necessary OtherOS++ vflash. But don't worry you can 
-install this firmware without a hitch although you won't be able to install Linux!
+Now you've completed the OtherOS firmware upgrade you are ready to install sacd-ripper.pkg.
 
-Instructions
+In order for the PS3 BluRay player to authenticate SACD disc and to decode DST to DSD
+two SPU isoself modules will be extracted from the system. In order to do so you must 
+give the SACD-Ripper the PS3 keys so it can extract them automatically.
 
-Bla bla bla bla..
+Get the PS3 keys from http://git-hacks.com/ps3free/ps3keys and put these in the root
+of an USB disc. 
+    
+Information
+
+SACD-Ripper supports the following output formats:
+ - 2ch DSDIFF (DSD)
+ - 2ch DSDIFF (DST) (if already DST encoded)
+ - 2ch DSF (DSD)
+ - mch DSDIFF (DSD) 
+ - mch DSDIFF (DST)
+ - mch DSF (DSD)
+ - ISO (due to the 4GB FAT32 size limit on the PS3, files will be splitted when larger)
+
+There seems to be an SACD BluRay read speed limit that sets the maximum read speed to 2.6MB/sec, 
+yes I agree, this is slow! But DST decoding is even slower.. The PS3 GameOS has 6 SPUs available 
+for user operations. SACD-Ripper uses 1 SPU for decryption and the other 5!! for DST decoding.
+Although this process is quite optimal the current decoding speed has been measured to be 0.9MB/sec
+for a 2 channel rip. So for 2ch DST tracks the write speed to disc will be around 2.3MB/sec, for a
+multi-channel the write speed is a bit higher (2.4MB.sec) but decoding is even slower at 0.6MB/sec. 
 
 Big thanks goes to to:
 
