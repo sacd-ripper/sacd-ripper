@@ -3,7 +3,7 @@ TODO
 version 0.1.0:
 
     - test PS3 ripping pipeline
-        - fix incorrect dst converted frames
+        - possible speedup for DST decoding by sending 4 DST frames to one decoder at once..
  
 version 0.1.x
 

@@ -49,6 +49,6 @@ int destroy_dst_decoder(dst_decoder_t *);
 int decode_dst_frame(dst_decoder_t *, uint8_t *, size_t, int, int);
 int prepare_dst_decoder(dst_decoder_t *);
 int dst_decoder_wait(dst_decoder_t *, int);
-int get_dsd_frame(dst_decoder_t *, uint8_t **, size_t *);
+int get_dsd_frame(dst_decoder_t *, uint8_t *, size_t *);
 
 #endif /* __DST_DECODER_H__ */

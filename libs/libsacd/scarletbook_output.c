@@ -325,7 +325,6 @@ static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int
                                 {
 #ifdef __lv2ppu__
                                     size_t dsd_size;
-                                    uint8_t *dsd_data;
 
                                     prepare_dst_decoder(&output.dst_decoder);
                                     while (frame_ptr != output.frame)
@@ -348,9 +347,9 @@ static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int
                                     // wait for all frames to be decoded (decoding takes around 0.03 seconds per frame)
                                     dst_decoder_wait(&output.dst_decoder, 500000);
 
-                                    while (get_dsd_frame(&output.dst_decoder, &dsd_data, &dsd_size))
+                                    while (get_dsd_frame(&output.dst_decoder, output.dsd_data, &dsd_size))
                                     {
-                                        write_block(ft, dsd_data, dsd_size, 0);
+                                        write_block(ft, output.dsd_data, dsd_size, 0);
                                     }
 #endif
                                 }
@@ -610,6 +609,7 @@ int initialize_ripping(void)
     INIT_LIST_HEAD(&output.ripping_queue);
     output.read_buffer = (uint8_t *) malloc(MAX_PROCESSING_BLOCK_SIZE * SACD_LSN_SIZE);
     output.initialized = 1;
+    output.dsd_data = (uint8_t *) malloc((588 * 64 / 8) * 6); // max of 6 channels
 
     allocate_round_robin_frame_buffer();
 
@@ -680,6 +680,7 @@ int stop_ripping(scarletbook_handle_t *handle)
 
         free_round_robin_frame_buffer();
         free(output.read_buffer);
+        free(output.dsd_data);
 
 #ifdef __lv2ppu__
         ret = destroy_dst_decoder(&output.dst_decoder);

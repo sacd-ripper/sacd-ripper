@@ -28,6 +28,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <malloc.h>
 
 #include <logging.h>
 #include "dst_decoder.h"
@@ -49,15 +50,21 @@ enum
 
 #define DEFAULT_QUEUE_SIZE              127
 
+#define FRAME_SIZE_64_44                (588 * 64 / 8) // 4704
+
+#define NUM_DST_COMMANDS                1
+
 typedef struct dst_command_t
 {
-    uint32_t src_addr;
-    uint32_t dst_addr;
-    uint32_t src_size;
-    uint32_t dst_size;
+    uint32_t source_addr;
+    uint32_t dest_addr;
+    uint32_t source_size;
+    uint32_t dest_size;
+
+    // params
     uint32_t dst_encoded;
     uint32_t channel_count;
-    uint32_t reserved[2];
+    uint32_t reserved[10];
 } 
 __attribute__ ((packed)) dst_command_t;
 
@@ -72,9 +79,8 @@ struct dst_decoder_thread_s
     sys_event_port_t        event_port;
     sys_event_queue_t       send_queue;
 
-    uint8_t                 dst_buffer[0x7000]__attribute__ ((aligned(128)));
-
-    dst_command_t           command __attribute__ ((aligned(128)));
+    uint8_t                *dsd_channel_data;
+    dst_command_t          *command;
 };
 
 static int create_dst_decoder_thread(dst_decoder_thread_t decoder, int spu_id, sys_event_queue_t recv_queue)
@@ -178,6 +184,9 @@ static int create_dst_decoder_thread(dst_decoder_thread_t decoder, int spu_id, s
         return ret;
     }
 
+    decoder->dsd_channel_data = (uint8_t *) memalign(128, FRAME_SIZE_64_44 * 6);
+    decoder->command = (dst_command_t *) memalign(128, sizeof(dst_command_t));
+
     return 0;
 }
 
@@ -238,6 +247,12 @@ static int destroy_dst_decoder_thread(dst_decoder_thread_t decoder)
     {
         LOG(lm_main, LOG_ERROR, ("sysSpuImageClose failed: %.8x, %d", ret, spu_id));
     }
+
+    if (decoder->dsd_channel_data)
+        free(decoder->dsd_channel_data);
+
+    if (decoder->command)
+        free(decoder->command);
 
     return 0;
 }   
@@ -322,23 +337,27 @@ int prepare_dst_decoder(dst_decoder_t *dst_decoder)
     return 0;
 }
 
-int decode_dst_frame(dst_decoder_t *dst_decoder, uint8_t *src_data, size_t src_size, int dst_encoded, int channel_count)
+int decode_dst_frame(dst_decoder_t *dst_decoder, uint8_t *src_data, size_t source_size, int dst_encoded, int channel_count)
 {
     int ret;
     dst_decoder_thread_t decoder = dst_decoder->decoder[dst_decoder->event_count];
 
-    decoder->command.src_addr = (uint32_t) (uint64_t) src_data;
-    decoder->command.dst_addr = (uint32_t) (uint64_t) decoder->dst_buffer;
-    decoder->command.src_size = src_size;
-    decoder->command.dst_size = 0;
-    decoder->command.dst_encoded = dst_encoded;
-    decoder->command.channel_count = channel_count;
+    memset(decoder->command, 0, sizeof(dst_command_t));
+    decoder->command->source_addr = (uint32_t) (uint64_t) src_data;
+    decoder->command->dest_addr = (uint32_t) (uint64_t) decoder->dsd_channel_data;
+    decoder->command->source_size = source_size;
+    decoder->command->dest_size = 0;
+    decoder->command->dst_encoded = dst_encoded;
+    decoder->command->channel_count = channel_count;
 
-    ret = sysEventPortSend(decoder->event_port, EVENT_SEND_DST, (uint64_t) &decoder->command, 2);
+    // send the DST conversion command
+    ret = sysEventPortSend(decoder->event_port, EVENT_SEND_DST, (uint64_t) decoder->command, NUM_DST_COMMANDS);
     if (ret != 0) 
     {
         LOG(lm_main, LOG_ERROR, ("sysEventPortSend failed: %#.8x", ret));
     }
+
+    // event count should be smaller or equal to number of decoders
     dst_decoder->event_count++;
     if (dst_decoder->event_count > NUM_DST_DECODERS)
     {
@@ -382,12 +401,24 @@ int dst_decoder_wait(dst_decoder_t *dst_decoder, int timeout)
     return errors;
 }
 
-int get_dsd_frame(dst_decoder_t *dst_decoder, uint8_t **dsd_data, size_t *dsd_size)
+int get_dsd_frame(dst_decoder_t *dst_decoder, uint8_t *dsd_data, size_t *dsd_size)
 {
     if (dst_decoder->current_event < dst_decoder->event_count)
     {
-        *dsd_data = (uint8_t *) (uint64_t) dst_decoder->decoder[dst_decoder->current_event]->command.dst_addr;
-        *dsd_size = dst_decoder->decoder[dst_decoder->current_event]->command.dst_size;
+        int channel, i;
+        dst_decoder_thread_t decoder = dst_decoder->decoder[dst_decoder->current_event];
+        dst_command_t *command = decoder->command;
+        *dsd_size = command->dest_size;
+
+        // DSD data is stored sequential per channel, now we need to interleave it..
+        for (i = 0; i < FRAME_SIZE_64_44; i++)
+        {
+            for (channel = 0; channel < command->channel_count; channel++)
+            {
+                *dsd_data = *(decoder->dsd_channel_data + i + channel * FRAME_SIZE_64_44);
+                ++dsd_data;
+            }
+        }
 
         dst_decoder->current_event++;
 

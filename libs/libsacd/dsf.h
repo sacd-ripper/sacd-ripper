@@ -54,9 +54,6 @@
 
 #define FORMAT_ID_DSD                       0
 
-#define SAMPLE_FREQ_2822400                 2822400
-#define SAMPLE_FREQ_5644800                 5644800
-
 // Audiogate cannot deal with "regular" DSD stored as MSB and 1 byte per channel so we do the  
 // LSB conversion and set the blocksize to 4096, argh..
 

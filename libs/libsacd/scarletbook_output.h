@@ -128,6 +128,8 @@ typedef struct scarletbook_output_t
     audio_frame_t      *frame;
     uint8_t            *current_frame_ptr;
     int                 full_frame_count;
+    uint8_t            *dsd_data;
+
 
     // stats
     int                 stats_total_tracks;

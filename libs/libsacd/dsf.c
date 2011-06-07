@@ -130,7 +130,7 @@ int dsf_create_header(scarletbook_output_format_t *ft)
             fmt_chunk->channel_type         = htole32(CHANNEL_TYPE_STEREO);
         }
         fmt_chunk->channel_count            = htole32(area_toc->channel_count);
-        fmt_chunk->sample_frequency         = htole32(SAMPLE_FREQ_2822400); // SACDs cannot contain anything else..
+        fmt_chunk->sample_frequency         = htole32(SACD_SAMPLING_FREQUENCY);
         fmt_chunk->bits_per_sample          = htole32(SACD_BITS_PER_SAMPLE);
         fmt_chunk->sample_count             = htole64(handle->sample_count / area_toc->channel_count * 8);
         fmt_chunk->block_size_per_channel   = htole32(SACD_BLOCK_SIZE_PER_CHANNEL);
