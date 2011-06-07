@@ -90,8 +90,8 @@ static void destroy_ripping_queue()
 }
 
 int queue_track_to_rip(int area, int track, char *file_path, char *fmt, 
-                       uint32_t start_lsn, uint32_t length_lsn, int dst_encoded,
-                       int decode_dst
+                       uint32_t start_lsn, uint32_t length_lsn, int dst_encoded_import,
+                       int dsd_encoded_export
                        )
 {
     scarletbook_format_handler_t const * handler;
@@ -106,10 +106,10 @@ int queue_track_to_rip(int area, int track, char *file_path, char *fmt,
         output_format_ptr->filename = strdup(file_path);
         output_format_ptr->start_lsn = start_lsn;
         output_format_ptr->length_lsn = length_lsn;
-        output_format_ptr->dst_encoded = dst_encoded;
-        output_format_ptr->decode_dst = decode_dst;
+        output_format_ptr->dst_encoded_import = dst_encoded_import;
+        output_format_ptr->dsd_encoded_export = dsd_encoded_export;
 
-        LOG(lm_main, LOG_NOTICE, ("queuing: %s, area: %d, track %d, start_lsn: %d, length_lsn: %d, dst_encoded: %d, decode_dst: %d", file_path, area, track, start_lsn, length_lsn, dst_encoded, decode_dst));
+        LOG(lm_main, LOG_NOTICE, ("queuing: %s, area: %d, track %d, start_lsn: %d, length_lsn: %d, dst_encoded_import: %d, dsd_encoded_export: %d", file_path, area, track, start_lsn, length_lsn, dst_encoded_import, dsd_encoded_export));
 
         list_add_tail(&output_format_ptr->siblings, &output.ripping_queue);
 
@@ -321,7 +321,8 @@ static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int
                                 // always start with the full first frame
                                 audio_frame_t * frame_ptr = list_entry(output.frame->siblings.next, audio_frame_t, siblings);
 
-                                if (ft->decode_dst)
+                                // do we need to decode to DSD?
+                                if (ft->dsd_encoded_export && ft->dst_encoded_import)
                                 {
 #ifdef __lv2ppu__
                                     size_t dsd_size;
@@ -332,7 +333,7 @@ static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int
                                         if (frame_ptr->full)
                                         {
                                             // TODO: get channel_count from frame
-                                            // decode our frame
+
                                             decode_dst_frame(&output.dst_decoder, frame_ptr->data, frame_ptr->size, 1, ft->channel_count);
 
                                             // mark frame as empty
@@ -343,7 +344,7 @@ static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int
                                         // advance one frame
                                         frame_ptr = list_entry(frame_ptr->siblings.next, audio_frame_t, siblings);
                                     }
-                                    
+
                                     // wait for all frames to be decoded (decoding takes around 0.03 seconds per frame)
                                     dst_decoder_wait(&output.dst_decoder, 500000);
 
@@ -362,12 +363,12 @@ static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int
                                         if (frame_ptr->full)
                                         {
                                             write_block(ft, frame_ptr->data, frame_ptr->size, 0);
-                                            
+
                                             // mark frame as empty
                                             frame_ptr->full = 0;
                                             frame_ptr->size = 0;
                                         }
-                                        
+
                                         // advance one frame
                                         frame_ptr = list_entry(frame_ptr->siblings.next, audio_frame_t, siblings);
                                     }
@@ -400,9 +401,39 @@ static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int
         // are there any leftovers?
         if ((output.full_frame_count > 0 || output.frame->size > 0) && last_frame)
         {
-            if (ft->decode_dst)
+            // do we need to decode to DSD?
+            if (ft->dsd_encoded_export && ft->dst_encoded_import)
             {
-                // TODO
+#ifdef __lv2ppu__
+                size_t dsd_size;
+                audio_frame_t * frame_ptr = output.frame;
+
+                prepare_dst_decoder(&output.dst_decoder);
+
+                // process all frames
+                do
+                {
+                    // always start with the full first frame
+                    frame_ptr = list_entry(frame_ptr->siblings.next, audio_frame_t, siblings);
+
+                    if (frame_ptr->size > 0)
+                    {
+                        decode_dst_frame(&output.dst_decoder, frame_ptr->data, frame_ptr->size, 1, ft->channel_count);
+
+                        frame_ptr->full = 0;
+                        frame_ptr->size = 0;
+                    }
+
+                } while (frame_ptr != output.frame);
+
+                // wait for all frames to be decoded (decoding takes around 0.03 seconds per frame)
+                dst_decoder_wait(&output.dst_decoder, 500000);
+
+                while (get_dsd_frame(&output.dst_decoder, output.dsd_data, &dsd_size))
+                {
+                    write_block(ft, output.dsd_data, dsd_size, 0);
+                }
+#endif
             }
             else
             {
@@ -450,6 +481,7 @@ static void *read_thread(void *arg)
         while (!list_empty(&output.ripping_queue))
         {
             node_ptr = output.ripping_queue.next;
+
             output_format_ptr = list_entry(node_ptr, scarletbook_output_format_t, siblings);
             list_del(node_ptr);
 

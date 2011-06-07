@@ -73,10 +73,9 @@ struct scarletbook_output_format_t
     uint64_t                        write_length;
     uint64_t                        write_offset;
 
-    int                             dst_encoded;
     int                             channel_count;
-
-    int                             decode_dst;
+    int                             dst_encoded_import;
+    int                             dsd_encoded_export;
 
     scarletbook_format_handler_t    handler;
     void                           *priv;
@@ -157,6 +156,6 @@ int is_ripping(void);
 int start_ripping(scarletbook_handle_t *);
 int stop_ripping(scarletbook_handle_t *);
 int queue_track_to_rip(int area, int track, char *file_path, char *fmt, 
-                                uint32_t start_lsn, uint32_t length_lsn, int dst_encoded, int decode_dst);
+                                uint32_t start_lsn, uint32_t length_lsn, int dst_encoded_import, int dsd_encoded_export);
 
 #endif /* SCARLETBOOK_OUTPUT_H_INCLUDED */

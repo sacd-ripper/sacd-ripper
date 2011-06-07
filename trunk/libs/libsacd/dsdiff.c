@@ -170,7 +170,7 @@ int dsdiff_create_header(scarletbook_output_format_t *ft)
     {
         compression_type_chunk_t *compression_type_chunk = (compression_type_chunk_t *) write_ptr;
         compression_type_chunk->chunk_id         = CMPR_MARKER;
-        if (ft->decode_dst)
+        if (ft->dsd_encoded_export)
         {
             compression_type_chunk->compression_type = DSD_MARKER;
             compression_type_chunk->count = 14;
@@ -246,7 +246,7 @@ int dsdiff_create_header(scarletbook_output_format_t *ft)
 
     // Either the DSD or DST Sound Data chunk is required and may appear
     // only once in the Form DSD Chunk. The chunk must be placed after the Property Chunk.
-    if (ft->decode_dst)
+    if (ft->dsd_encoded_export)
     {
         dsd_sound_data_chunk_t * dsd_sound_data_chunk;
         dsd_sound_data_chunk                  = (dsd_sound_data_chunk_t *) write_ptr;
@@ -444,7 +444,7 @@ size_t dsdiff_write_frame(scarletbook_output_format_t *ft, const uint8_t *buf, s
 
     handle->frame_count++;
 
-    if (ft->decode_dst)
+    if (ft->dsd_encoded_export)
     {
         size_t nrw;
         nrw = fwrite(buf, 1, len, ft->fd);
