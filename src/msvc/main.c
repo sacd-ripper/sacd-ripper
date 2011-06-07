@@ -276,7 +276,7 @@ int main(int argc, char* argv[]) {
                                 handle->area[area_idx].area_tracklist_offset->track_start_lsn[i], 
                                 handle->area[area_idx].area_tracklist_offset->track_length_lsn[i], 
                                 handle->area[area_idx].area_toc->frame_format == FRAME_FORMAT_DST,
-                                handle->area[area_idx].area_toc->frame_format != FRAME_FORMAT_DST
+                                1
                                 );
                         }
 
