@@ -83,7 +83,7 @@ struct dst_decoder_thread_s
     dst_command_t          *command;
 };
 
-static int create_dst_decoder_thread(dst_decoder_thread_t decoder, int spu_id, sys_event_queue_t recv_queue)
+static int dst_decoder_thread_create(dst_decoder_thread_t decoder, int spu_id, sys_event_queue_t recv_queue)
 {
     sysSpuThreadGroupAttribute  group_attr;
     sysSpuThreadAttribute       thread_attr;
@@ -190,7 +190,7 @@ static int create_dst_decoder_thread(dst_decoder_thread_t decoder, int spu_id, s
     return 0;
 }
 
-static int destroy_dst_decoder_thread(dst_decoder_thread_t decoder)
+static int dst_decoder_thread_destroy(dst_decoder_thread_t decoder)
 {
     uint32_t cause, status;
     int ret, spu_id;
@@ -257,40 +257,40 @@ static int destroy_dst_decoder_thread(dst_decoder_thread_t decoder)
     return 0;
 }   
 
-int create_dst_decoder(dst_decoder_t *dst_decoder)
+int dst_decoder_create(dst_decoder_t **dst_decoder)
 {
     sys_event_queue_attr_t queue_attr;
     int ret, i;
 
-    memset(dst_decoder, 0, sizeof(dst_decoder_t));
+    *dst_decoder = (dst_decoder_t *) calloc(sizeof(dst_decoder_t), 1);
 
     memset(&queue_attr, 0, sizeof(sys_event_queue_attr_t));
     queue_attr.attr_protocol = SYS_EVENT_QUEUE_PRIO;
     queue_attr.type = SYS_EVENT_QUEUE_PPU;
-    ret = sysEventQueueCreate(&dst_decoder->recv_queue, &queue_attr, SYS_EVENT_QUEUE_KEY_LOCAL, DEFAULT_QUEUE_SIZE);
+    ret = sysEventQueueCreate(&(*dst_decoder)->recv_queue, &queue_attr, SYS_EVENT_QUEUE_KEY_LOCAL, DEFAULT_QUEUE_SIZE);
     if (ret != 0) 
     {
         LOG(lm_main, LOG_ERROR, ("sysEventQueueCreate failed: %#.8x", ret));
         return ret;
     }
 
-    dst_decoder->event_count = 0;
+    (*dst_decoder)->event_count = 0;
     for (i = 0; i < NUM_DST_DECODERS; i++)
     {
-        dst_decoder->decoder[i] = calloc(sizeof(struct dst_decoder_thread_s), 1);
-        ret = create_dst_decoder_thread(dst_decoder->decoder[i], i, dst_decoder->recv_queue);
+        (*dst_decoder)->decoder[i] = calloc(sizeof(struct dst_decoder_thread_s), 1);
+        ret = dst_decoder_thread_create((*dst_decoder)->decoder[i], i, (*dst_decoder)->recv_queue);
         if (ret != 0)
         {
-            LOG(lm_main, LOG_ERROR, ("create_dst_decoder_thread failed: %#.8x", ret));
+            LOG(lm_main, LOG_ERROR, ("dst_decoder_thread_create failed: %#.8x", ret));
             return ret;
         }
 
         // we are expecting a start event
-        dst_decoder->event_count++;
+        (*dst_decoder)->event_count++;
     }
 
     // prefetch all the start events..
-    ret = dst_decoder_wait(dst_decoder, 500000);
+    ret = dst_decoder_wait(*dst_decoder, 500000);
     if (ret != 0)
     {
         LOG(lm_main, LOG_ERROR, ("dst_decoder_wait failed: %#.8x", ret));
@@ -300,9 +300,14 @@ int create_dst_decoder(dst_decoder_t *dst_decoder)
     return 0;
 }
 
-int destroy_dst_decoder(dst_decoder_t *dst_decoder)
+int dst_decoder_destroy(dst_decoder_t *dst_decoder)
 {
     int ret, i;
+
+    if (!dst_decoder)
+    {
+        return -1;
+    }
     
     for (i = 0; i < NUM_DST_DECODERS; i++)
     {
@@ -312,10 +317,10 @@ int destroy_dst_decoder(dst_decoder_t *dst_decoder)
             LOG(lm_main, LOG_ERROR, ("sysEventPortSend failed: %#.8x", ret));
         }
 
-        ret = destroy_dst_decoder_thread(dst_decoder->decoder[i]);
+        ret = dst_decoder_thread_destroy(dst_decoder->decoder[i]);
         if (ret != 0)
         {
-            LOG(lm_main, LOG_ERROR, ("destroy_dst_decoder_thread failed: %#.8x", ret));
+            LOG(lm_main, LOG_ERROR, ("dst_decoder_thread_destroy failed: %#.8x", ret));
         }
         free(dst_decoder->decoder[i]);
     }
@@ -326,10 +331,12 @@ int destroy_dst_decoder(dst_decoder_t *dst_decoder)
         LOG(lm_main, LOG_ERROR, ("sysEventQueueDestroy failed: %#.8x", ret));
     }
 
+    free(dst_decoder);
+
     return 0;
 }   
 
-int prepare_dst_decoder(dst_decoder_t *dst_decoder)
+int dst_decoder_prepare(dst_decoder_t *dst_decoder)
 {
     dst_decoder->event_count = 0;
     dst_decoder->current_event = 0;
@@ -337,7 +344,7 @@ int prepare_dst_decoder(dst_decoder_t *dst_decoder)
     return 0;
 }
 
-int decode_dst_frame(dst_decoder_t *dst_decoder, uint8_t *src_data, size_t source_size, int dst_encoded, int channel_count)
+int dst_decoder_decode(dst_decoder_t *dst_decoder, uint8_t *src_data, size_t source_size, int dst_encoded, int channel_count)
 {
     int ret;
     dst_decoder_thread_t decoder = dst_decoder->decoder[dst_decoder->event_count];
@@ -401,7 +408,7 @@ int dst_decoder_wait(dst_decoder_t *dst_decoder, int timeout)
     return errors;
 }
 
-int get_dsd_frame(dst_decoder_t *dst_decoder, uint8_t *dsd_data, size_t *dsd_size)
+int dst_decoder_get_dsd_frame(dst_decoder_t *dst_decoder, uint8_t *dsd_data, size_t *dsd_size)
 {
     if (dst_decoder->current_event < dst_decoder->event_count)
     {
