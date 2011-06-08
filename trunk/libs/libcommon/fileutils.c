@@ -79,15 +79,21 @@ char * make_filename(const char * path, const char * dir, const char * file, con
     }
     if (dir)
     {
-        strncpy(&ret[pos], dir, strlen(dir));
-        pos     += strlen(dir);
+        char *tmp_dir = strdup(dir);
+        sanitize_filepath(tmp_dir);
+        strncpy(&ret[pos], tmp_dir, strlen(tmp_dir));
+        pos     += strlen(tmp_dir);
         ret[pos] = '/';
         pos++;
+        free(tmp_dir);
     }
     if (file)
     {
-        strncpy(&ret[pos], file, strlen(file));
-        pos += strlen(file);
+        char * tmp_file = strdup(file);
+        sanitize_filename(tmp_file);
+        strncpy(&ret[pos], tmp_file, strlen(tmp_file));
+        pos += strlen(tmp_file);
+        free(tmp_file);
     }
     if (extension)
     {
@@ -97,8 +103,6 @@ char * make_filename(const char * path, const char * dir, const char * file, con
         pos += strlen(extension);
     }
     ret[pos] = '\0';
-
-    sanitize_filename(ret);
 
     return ret;
 }
@@ -290,6 +294,23 @@ int recursive_parent_mkdir(char* path_and_name, mode_t mode)
 
 void sanitize_filename(char *f)
 {
+    const char safe_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+._- ";
+    char *c = f;
+
+    if (!c || strlen(c) == 0)
+        return;
+
+    for (; *c; c++)
+    {
+        if (!strchr(safe_chars, *c))
+            *c = ' ';
+    }
+    trim_whitespace(f);
+    replace_double_space_with_single(f);
+}
+
+void sanitize_filepath(char *f)
+{
     const char safe_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+._-/ ";
     char *c = f;
 
@@ -301,6 +322,6 @@ void sanitize_filename(char *f)
         if (!strchr(safe_chars, *c))
             *c = ' ';
     }
-    replace_double_space_with_single(f);
     trim_whitespace(f);
+    replace_double_space_with_single(f);
 }
