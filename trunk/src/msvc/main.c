@@ -190,7 +190,8 @@ static void init(void) {
     init_logging();
 } 
 
-int main(int argc, char* argv[]) {
+int main(int argc, char* argv[]) 
+{
     char *albumdir, *musicfilename, *file_path;
     int i, area_idx;
     sacd_reader_t *sacd_reader;

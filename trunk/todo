@@ -8,9 +8,11 @@ version 0.1.0:
     - dst decoding
         - test possible speedup for DST decoding by sending 4 DST frames to one decoder at once
         - use audio_frame_info_t.sector_count to complete frames instead of waiting for a frame_start
-            - do we always complete frames? (when reading beyond the tracks ending logical sector)
-    - on splitted ISOs filesize is not displayed correctly in the GUI
+            - check whether we always complete frames? (when reading beyond the tracks ending logical sector)
+    - on splitted ISOs > 4GB filesize is not displayed correctly in the GUI
     - folders should not be created for ISO dumps
+    - dump image to disc displayed instead of empty disc on some ocassions
+    - investigate why philips dst decoder crashes on multichannel DST
  
 version 0.1.x
 
