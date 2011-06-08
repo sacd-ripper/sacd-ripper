@@ -290,7 +290,7 @@ int recursive_parent_mkdir(char* path_and_name, mode_t mode)
 
 void sanitize_filename(char *f)
 {
-    const char safe_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+._- ";
+    const char safe_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+._-/ ";
     char *c = f;
 
     if (!c || strlen(c) == 0)
