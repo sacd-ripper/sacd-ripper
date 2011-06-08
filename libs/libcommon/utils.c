@@ -31,7 +31,7 @@ char *substr(const char *pstr, int start, int numchars)
     return pnew;
 }
 
-void rem_space(char *str)
+void replace_double_space_with_single(char *str)
 {
     int len = strlen(str) - 1;
     int i = 0;
@@ -63,4 +63,60 @@ void rem_space(char *str)
         }
     }
     str[i - spaces] = '\0';
+}
+
+// removes all instances of bad characters from the string
+//
+// str - the string to trim
+// bad - the sting containing all the characters to remove
+void trim_chars(char * str, const char * bad)
+{
+    int      i;
+    int      pos;
+    int      len = strlen(str);
+    unsigned b;
+
+    for (b = 0; b < strlen(bad); b++)
+    {
+        pos = 0;
+        for (i = 0; i < len + 1; i++)
+        {
+            if (str[i] != bad[b])
+            {
+                str[pos] = str[i];
+                pos++;
+            }
+        }
+    }
+}
+
+// removes leading and trailing whitespace as defined by isspace()
+//
+// str - the string to trim
+void trim_whitespace(char * str)
+{
+    int i;
+    int pos = 0;
+    int len = strlen(str);
+
+    // trim leading space
+    for (i = 0; i < len + 1; i++)
+    {
+        if (!isspace((int) str[i]) || (pos > 0))
+        {
+            str[pos] = str[i];
+            pos++;
+        }
+    }
+
+    // trim trailing space
+    len = strlen(str);
+    for (i = len - 1; i >= 0; i--)
+    {
+        if (!isspace((int) str[i]))
+        {
+            break;
+        }
+        str[i] = '\0';
+    }
 }

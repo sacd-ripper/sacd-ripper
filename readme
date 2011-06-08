@@ -68,7 +68,7 @@ Installation Instructions
 
 Now you've completed the OtherOS firmware upgrade you are ready to install sacd-ripper.pkg.
 
-In order for the PS3 BluRay player to authenticate SACD disc and to decode DST to DSD
+In order for the PS3 BluRay player to authenticate the SACD disc and to decode DST to DSD
 two SPU isoself modules will be extracted from the system. In order to do so you must 
 give the SACD-Ripper the PS3 keys so it can extract them automatically.
 
@@ -86,7 +86,7 @@ SACD-Ripper supports the following output formats:
  - mch DSF (DSD)
  - ISO (due to the 4GB FAT32 size limit on the PS3, files will be splitted when larger)
 
-There seems to be an SACD BluRay read speed limit that sets the maximum read speed to 2.6MB/sec, 
+There seems to be a SACD BluRay read speed limit that sets the maximum read speed to 2.6MB/sec, 
 yes I agree, this is slow! But DST decoding is even slower.. The PS3 GameOS has 6 SPUs available 
 for user operations. SACD-Ripper uses 1 SPU for decryption and the other 5!! for DST decoding.
 Although this process is quite optimal the current decoding speed has been measured to be 0.9MB/sec
