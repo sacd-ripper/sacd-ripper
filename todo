@@ -3,7 +3,11 @@ TODO
 version 0.1.0:
 
     - test PS3 ripping pipeline
-        - possible speedup for DST decoding by sending 4 DST frames to one decoder at once..
+        - 
+    - make a ps3 dump analysis tool
+    - add option to embed sac_module & decoder
+    - possible speedup for DST decoding by sending 4 DST frames to one decoder at once..
+    - add windows DST decoder
  
 version 0.1.x
 
