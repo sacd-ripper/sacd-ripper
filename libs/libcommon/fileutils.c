@@ -98,6 +98,8 @@ char * make_filename(const char * path, const char * dir, const char * file, con
     }
     ret[pos] = '\0';
 
+    sanitize_filename(ret);
+
     return ret;
 }
 
