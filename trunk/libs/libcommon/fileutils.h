@@ -60,17 +60,6 @@ int recursive_mkdir(char* pathAndName, mode_t mode);
 
 int recursive_parent_mkdir(char* pathAndName, mode_t mode);
 
-// removes leading and trailing whitespace as defined by isspace()
-//
-// str - the string to trim
-void trim_whitespace(char * str);
-
-// removes all instances of bad characters from the string
-//
-// str - the string to trim
-// bad - the sting containing all the characters to remove
-void trim_chars(char * str, const char * bad);
-
 void sanitize_filename(char *f);
 
 #endif

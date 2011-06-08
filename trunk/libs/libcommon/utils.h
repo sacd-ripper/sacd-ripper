@@ -36,7 +36,22 @@ extern "C" {
     ( ((num) >= (lowerbound)) && ((num) <= (upperbound)) )
 
 char *substr(const char *, int, int);
-void rem_space(char *str);
+
+// replaces doubles spaces with a single space
+//
+// str - the string to process
+void replace_double_space_with_single(char *str);
+
+// removes leading and trailing whitespace as defined by isspace()
+//
+// str - the string to trim
+void trim_whitespace(char * str);
+
+// removes all instances of bad characters from the string
+//
+// str - the string to trim
+// bad - the sting containing all the characters to remove
+void trim_chars(char * str, const char * bad);
 
 #ifdef __cplusplus
 };
