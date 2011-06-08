@@ -19,6 +19,7 @@
  *
  */
 
+#include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 
@@ -32,38 +33,53 @@ char *substr(const char *pstr, int start, int numchars)
     return pnew;
 }
 
-void replace_double_space_with_single(char *str)
+char *str_replace(const char *src, const char *from, const char *to)
 {
-    int len = strlen(str) - 1;
-    int i = 0;
-    int spaces = 0;
-
-    if(!str || len < 0) 
-        return;
-        
-    while (i < len)
+    size_t size    = strlen(src) + 1;
+    size_t fromlen = strlen(from);
+    size_t tolen   = strlen(to);
+    char *value = malloc(size);
+    char *dst = value;
+    if (value != NULL)
     {
-        while(str[i] == ' ') 
+        for ( ;; )
         {
-            spaces++; 
-            i++;
-        }
-        while(str[i] != ' ' && str[i] != '\0') 
-        {
-            str[i - spaces] = str[i]; 
-            i++;
-        }
-        if(str[i + spaces - 1] != '\0') 
-        {
-            str[i - spaces] = ' '; 
-            spaces--; 
-        } 
-        else 
-        {
-            break;
+            const char *match = strstr(src, from);
+            if ( match != NULL )
+            {
+                size_t count = match - src;
+                char *temp;
+                size += tolen - fromlen;
+                temp = realloc(value, size);
+                if ( temp == NULL )
+                {
+                    free(value);
+                    return NULL;
+                }
+                dst = temp + (dst - value);
+                value = temp;
+                memmove(dst, src, count);
+                src += count;
+                dst += count;
+                memmove(dst, to, tolen);
+                src += fromlen;
+                dst += tolen;
+            }
+            else /* No match found. */
+            {
+                strcpy(dst, src);
+                break;
+            }
         }
     }
-    str[i - spaces] = '\0';
+    return value;
+}
+
+void replace_double_space_with_single(char *str)
+{
+    char * ret = str_replace(str, "  ", " ");
+    strcpy(str, ret);
+    free(ret);
 }
 
 // removes all instances of bad characters from the string
@@ -99,8 +115,8 @@ void trim_whitespace(char * s)
     char * p = s;
     int l = strlen(p);
 
-    while(isspace(p[l - 1])) p[--l] = 0;
-    while(* p && isspace(* p)) ++p, --l;
+    while(isspace((int) p[l - 1])) p[--l] = 0;
+    while(* p && isspace((int) *p)) ++p, --l;
 
     memmove(s, p, l + 1);
 }

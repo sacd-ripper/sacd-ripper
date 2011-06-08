@@ -37,6 +37,8 @@ extern "C" {
 
 char *substr(const char *, int, int);
 
+char *str_replace(const char *src, const char *from, const char *to);
+
 // replaces doubles spaces with a single space
 //
 // str - the string to process

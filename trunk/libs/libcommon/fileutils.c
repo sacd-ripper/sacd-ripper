@@ -305,8 +305,8 @@ void sanitize_filename(char *f)
         if (!strchr(safe_chars, *c))
             *c = ' ';
     }
-    trim_whitespace(f);
     replace_double_space_with_single(f);
+    trim_whitespace(f);
 }
 
 void sanitize_filepath(char *f)
@@ -322,6 +322,6 @@ void sanitize_filepath(char *f)
         if (!strchr(safe_chars, *c))
             *c = ' ';
     }
-    trim_whitespace(f);
     replace_double_space_with_single(f);
+    trim_whitespace(f);
 }
