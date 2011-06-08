@@ -20,6 +20,7 @@
  */
 
 #include <string.h>
+#include <ctype.h>
 
 #include "utils.h"
 
