@@ -62,4 +62,6 @@ int recursive_parent_mkdir(char* pathAndName, mode_t mode);
 
 void sanitize_filename(char *f);
 
+void sanitize_filepath(char *f);
+
 #endif

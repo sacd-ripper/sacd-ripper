@@ -94,30 +94,13 @@ void trim_chars(char * str, const char * bad)
 // removes leading and trailing whitespace as defined by isspace()
 //
 // str - the string to trim
-void trim_whitespace(char * str)
+void trim_whitespace(char * s) 
 {
-    int i;
-    int pos = 0;
-    int len = strlen(str);
+    char * p = s;
+    int l = strlen(p);
 
-    // trim leading space
-    for (i = 0; i < len + 1; i++)
-    {
-        if (!isspace((int) str[i]) || (pos > 0))
-        {
-            str[pos] = str[i];
-            pos++;
-        }
-    }
+    while(isspace(p[l - 1])) p[--l] = 0;
+    while(* p && isspace(* p)) ++p, --l;
 
-    // trim trailing space
-    len = strlen(str);
-    for (i = len - 1; i >= 0; i--)
-    {
-        if (!isspace((int) str[i]))
-        {
-            break;
-        }
-        str[i] = '\0';
-    }
+    memmove(s, p, l + 1);
 }
