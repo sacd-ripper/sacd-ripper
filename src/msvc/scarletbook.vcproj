@@ -183,6 +183,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\libs\libsacd\dst_decoder_win.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\libs\libcommon\fileutils.c"
 				>
 			</File>
@@ -258,6 +262,10 @@
 			</File>
 			<File
 				RelativePath="..\..\libs\libsacd\dsf.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\libs\libsacd\dst_decoder_win.h"
 				>
 			</File>
 			<File

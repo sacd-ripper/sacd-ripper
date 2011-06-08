@@ -93,6 +93,11 @@ Although this process is quite optimal the current decoding speed has been measu
 for a 2 channel rip. So for 2ch DST tracks the write speed to disc will be around 2.3MB/sec, for a
 multi-channel the write speed is a bit higher (2.4MB.sec) but decoding is even slower at 0.6MB/sec. 
 
+Compiling
+
+To compile you will need the psl1ght suite. If you want to compile on a windows environment I 
+advice you to follow the CygWin installation as the MingW installation is unstable.
+
 Big thanks goes to to:
 
     Graf Chokolo

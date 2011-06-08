@@ -71,7 +71,7 @@ static int parse_options(int argc, char *argv[]) {
         "  -m, --mch-tracks                : Export multi-channel tracks\n"
         "  -p, --output-dsdiff             : output as Philips DSDIFF file (default)\n"
         "  -s, --output-dsf                : output as Sony DSF file\n"
-        "  -c, --convert-dst               : convert DST to DSD (default)\n"
+        "  -c, --convert-dst               : convert DST to DSD\n"
         "  -i, --input[=FILE]              : set source and determine if \"bin\" image or\n"
         "                                    device\n"
         "  -P, --print                     : display disc and track information\n" 
@@ -276,7 +276,7 @@ int main(int argc, char* argv[]) {
                                 handle->area[area_idx].area_tracklist_offset->track_start_lsn[i], 
                                 handle->area[area_idx].area_tracklist_offset->track_length_lsn[i], 
                                 handle->area[area_idx].area_toc->frame_format == FRAME_FORMAT_DST,
-                                handle->area[area_idx].area_toc->frame_format != FRAME_FORMAT_DST
+                                (opts.convert_dst ? 1 : handle->area[area_idx].area_toc->frame_format != FRAME_FORMAT_DST)
                                 );
                         }
 

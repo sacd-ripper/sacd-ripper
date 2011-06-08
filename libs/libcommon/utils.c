@@ -78,8 +78,11 @@ char *str_replace(const char *src, const char *from, const char *to)
 void replace_double_space_with_single(char *str)
 {
     char * ret = str_replace(str, "  ", " ");
-    strcpy(str, ret);
-    free(ret);
+    if (ret)
+    {
+        strcpy(str, ret);
+        free(ret);
+    }
 }
 
 // removes all instances of bad characters from the string
