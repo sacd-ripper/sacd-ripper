@@ -133,7 +133,7 @@ sacd_input_t sacd_input_open(const char *target)
 
     /* Open the device */
 #if defined(WIN32)
-    dev->fd = open(target, O_RDONLY);
+    dev->fd = open(target, O_RDONLY | O_BINARY);
 #elif defined(__lv2ppu__)
     {
         uint8_t                 buffer[64];
