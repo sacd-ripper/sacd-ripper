@@ -181,7 +181,7 @@ int start_ripping_gui(int ripping_flags)
 
             if (ripping_flags & RIP_ISO)
             {
-                #define FAT32_SECTOR_LIMIT 2097152
+                #define FAT32_SECTOR_LIMIT 2090000
                 uint32_t total_sectors = sacd_get_total_sectors(sacd_reader);
                 uint32_t sector_size = FAT32_SECTOR_LIMIT;
                 uint32_t sector_offset = 0;
