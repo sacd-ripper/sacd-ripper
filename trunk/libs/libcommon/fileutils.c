@@ -66,7 +66,7 @@ char * make_filename(const char * path, const char * dir, const char * file, con
         len += strlen(extension) + 1;
     }
 
-    ret = malloc(sizeof(char) * len);
+    ret = malloc(sizeof(char) * (len + 1));
     if (ret == NULL)
         LOG(lm_main, LOG_ERROR, ("malloc(sizeof(char) * len) failed. Out of memory."));
 
@@ -98,7 +98,7 @@ char * make_filename(const char * path, const char * dir, const char * file, con
     }
     ret[pos] = '\0';
 
-    //sanitize_filename(ret);
+    sanitize_filename(ret);
 
     return ret;
 }
