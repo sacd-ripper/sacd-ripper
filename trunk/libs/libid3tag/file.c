@@ -489,7 +489,9 @@ struct id3_file *id3_file_fdopen(int fd, enum id3_file_mode mode)
 
         fclose(iofile);
 
-        dup2(save_fd, fd);
+        close(fd);
+        fcntl(save_fd, F_DUPFD, fd);
+
         close(save_fd);
     }
 
