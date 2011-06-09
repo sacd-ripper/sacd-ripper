@@ -156,7 +156,7 @@ int dsf_create_header(scarletbook_output_format_t *ft)
     }
 
     dsd_chunk->total_file_size = htole64(handle->header_size + handle->audio_data_size + handle->footer_size);
-    dsd_chunk->metadata_offset = htole64(handle->footer_size ? handle->header_size + handle->audio_data_size + DSD_CHUNK_HEADER_SIZE : 0);
+    dsd_chunk->metadata_offset = htole64(handle->footer_size ? handle->header_size + handle->audio_data_size : 0);
 
     fwrite(handle->header, 1, handle->header_size, ft->fd);
 
