@@ -22,6 +22,10 @@ in order to install the correct firmware you'll have to make sure your firmware
 is lower or equal to 3.55. A downgrade for a firmware higher than 3.55 is NOT
 available.
 
+  ** NOTE as of now bricks have been reported using the OtherOS++ firmware **
+** at this moment we advice you to not upgrade if you haven't already done so **
+            ** we are investigating the use of the Rebug firmware **
+
 The custom firmware that is needed must be 3.55 and should incorporate the ever
 so important LV1 patch to allow access to the System Manager services of GameOS.
 A firmware which incorporates that is the OtherOS++ firmware. More information
