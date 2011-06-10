@@ -29,111 +29,63 @@
 #include "scarletbook.h"
 #include "version.h"
 
-#ifndef NO_ID3
-
-#include "id3tag.h"
-
-static void update_id3_frame(struct id3_tag *tag, const char *frame_name, const char *data)
-{
-    int              res;
-    struct id3_frame *frame;
-    union id3_field  *field;
-    id3_ucs4_t       *ucs4;
-
-    if (data == NULL)
-        return;
-
-    /*
-     * An empty string removes the frame altogether.
-     */
-    if (strlen(data) == 0)
-    {
-        while ((frame = id3_tag_findframe(tag, frame_name, 0)))
-            id3_tag_detachframe(tag, frame);
-        return;
-    }
-
-    frame = id3_tag_findframe(tag, frame_name, 0);
-    if (!frame)
-    {
-        frame = id3_frame_new(frame_name);
-        id3_tag_attachframe(tag, frame);
-    }
-
-    if (strcmp(frame_name, ID3_FRAME_COMMENT) == 0)
-    {
-        field       = id3_frame_field(frame, 3);
-        field->type = ID3_FIELD_TYPE_STRINGFULL;
-    }
-    else
-    {
-        field       = id3_frame_field(frame, 1);
-        field->type = ID3_FIELD_TYPE_STRINGLIST;
-    }
-
-    ucs4 = id3_latin1_ucs4duplicate((const id3_latin1_t *) data);
-
-    if (strcmp(frame_name, ID3_FRAME_COMMENT) == 0)
-    {
-        res = id3_field_setfullstring(field, ucs4);
-    }
-    else
-    {
-        res = id3_field_setstrings(field, 1, &ucs4);
-    }
-
-    if (res != 0)
-    {
-        fprintf(stderr, "error setting id3 field: %s\n", frame_name);
-    }
-}
-#endif
+#include <id3.h>
+#include <genre.dat>
 
 int scarletbook_id3_tag_render(scarletbook_handle_t *handle, uint8_t *buffer, int area, int track)
 {
-#ifndef NO_ID3
     const int      sacd_id3_genres[] = {
         12,  12,  40, 12, 32, 140,  2,  3,
         98,  12,  80, 38,  7,   8, 86, 77,
         10, 103, 104, 13, 15,  16, 17, 14,
         37,  24, 101, 12,  0,  12, 12, 12
     };
-    struct id3_tag *id3tag;
-    char           tmp[200];
-    int            len;
+    struct id3_tag *tag;
+    struct id3_frame *frame;
+    char tmp[200];
+    int len;
 
-    id3tag = id3_tag_new();
-    id3_tag_clearframes(id3tag);
-    id3tag->options |= ID3_TAG_OPTION_COMPRESSION;
+    tag = id3_open_mem(0, ID3_OPENF_CREATE);
 
     memset(tmp, 0, sizeof(tmp));
 
     if (handle->area[area].area_track_text->track_type_title)
-        update_id3_frame(id3tag, ID3_FRAME_TITLE, handle->area[area].area_track_text->track_type_title);
+    {
+        frame = id3_add_frame(tag, ID3_TIT2);
+        id3_set_text(frame, handle->area[area].area_track_text[track].track_type_title);
+    }
     if (handle->area[area].area_track_text->track_type_performer)
-        update_id3_frame(id3tag, ID3_FRAME_ARTIST, handle->area[area].area_track_text->track_type_performer);
+    {
+        frame = id3_add_frame(tag, ID3_TPE1);
+        id3_set_text(frame, handle->area[area].area_track_text[track].track_type_performer);
+    }
     if (handle->master_text[0]->album_title_position)
     {
         snprintf(tmp, 200, "%s", (char *) handle->master_text[0] + handle->master_text[0]->album_title_position);
-        update_id3_frame(id3tag, ID3_FRAME_ALBUM, tmp);
+        frame = id3_add_frame(tag, ID3_TALB);
+        id3_set_text(frame, tmp);
     }
-    update_id3_frame(id3tag, ID3_FRAME_COMMENT, SACD_RIPPER_VERSION);
+
+    frame = id3_add_frame(tag, ID3_TCON);
+    id3_set_text(frame, (char *) genre_table[sacd_id3_genres[handle->area[area].area_isrc_genre->track_genre[track].genre & 0x1f]]);
 
     snprintf(tmp, 200, "%04d", handle->master_toc->disc_date_year);
-    update_id3_frame(id3tag, ID3_FRAME_YEAR, tmp);
+    frame = id3_add_frame(tag, ID3_TYER);
+    id3_set_text(frame, tmp);
+
+    snprintf(tmp, 200, "%02d%02d", handle->master_toc->disc_date_month, handle->master_toc->disc_date_day);
+    frame = id3_add_frame(tag, ID3_TDAT);
+    id3_set_text(frame, tmp);
 
     snprintf(tmp, 200, "%d", track + 1);     // internally tracks start from 0
-    update_id3_frame(id3tag, ID3_FRAME_TRACK, tmp);
+    frame = id3_add_frame(tag, ID3_TRCK);
+    id3_set_text(frame, tmp);
 
-    snprintf(tmp, 200, "%d", sacd_id3_genres[handle->area[area].area_isrc_genre->track_genre[track].genre & 0x1f]);
-    update_id3_frame(id3tag, ID3_FRAME_GENRE, tmp);
+    frame = id3_add_frame(tag, ID3_TSSE);
+    id3_set_text(frame, SACD_RIPPER_VERSION);
 
-    len = id3_tag_render(id3tag, buffer);
-
-    id3_tag_delete(id3tag);
+    len = id3_write_tag(tag, buffer);
+    id3_close(tag);
 
     return len;
-#else
-    return 0;
-#endif
 }

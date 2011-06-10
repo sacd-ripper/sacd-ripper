@@ -40,13 +40,13 @@ LDFLAGS		=	$(MACHDEP) -Wl,-Map,$(notdir $@).map
 #---------------------------------------------------------------------------------
 # any extra libraries we wish to link with the project
 #---------------------------------------------------------------------------------
-LIBS	:=	-lrsx -lgcm_sys -lio -lsysmodule -lsysutil -lrt -llv2 -lm -lunself -lpatchutils -lsacd -lsysfs -lcommon -lid3tag -lz
+LIBS	:=	-lrsx -lgcm_sys -lio -lsysmodule -lsysutil -lrt -llv2 -lm -lunself -lpatchutils -lsacd -lsysfs -lcommon -lid3 -lz
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
 # include and lib
 #---------------------------------------------------------------------------------
-LIBDIRS	:= $(PORTLIBS) ../libs/libunself ../libs/libpatchutils ../libs/libsacd ../libs/libcommon ../libs/libid3tag
+LIBDIRS	:= $(PORTLIBS) ../libs/libunself ../libs/libpatchutils ../libs/libsacd ../libs/libcommon ../libs/libid3
 
 #---------------------------------------------------------------------------------
 # no real need to edit anything past this point unless you need to add additional

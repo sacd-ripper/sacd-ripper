@@ -100,8 +100,9 @@ typedef struct audio_frame_t
     struct list_head    siblings;
     uint8_t            *data;
     int                 size;
-    int                 full;
     int                 dst_encoded;
+    int                 complete;
+    int                 started;
 } audio_frame_t;
 
 
