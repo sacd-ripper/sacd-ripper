@@ -91,6 +91,10 @@ SACD-Ripper supports the following output formats:
  - ISO (due to the 4GB FAT32 size limit on the PS3, files will be splitted when
    larger)
 
+At this time of writing both Saracon and Audiogate do not support DST encoded
+files. Audiogate only support 2ch files and Saracon does not support DSF
+files. Please keep that in mind before selecting your file output.
+
 There seems to be a SACD BluRay read speed limit that sets the maximum read
 speed to 2.6MB/sec, yes I agree, this is slow! But DST decoding is even 
 slower.. The PS3 GameOS has 6 SPUs available for user operations. SACD-Ripper 
