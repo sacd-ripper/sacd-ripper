@@ -1,17 +1,17 @@
 Installation
 
-     DISCLAIMER.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
-     CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
-     BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
-     FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
-     COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-     INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-     BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
-     OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-     ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR
-     TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
-     USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
-     DAMAGE.
+   DISCLAIMER.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+   CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
+   BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+   FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+   COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+   INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+   BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+   OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+   ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR
+   TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
+   USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
+   DAMAGE.
 
 Make sure you have a PS3 model with SACD compatible player. For more information
 on what model specifically go to: http://ps3sacd.com/faq.html#_Toc180147566
@@ -22,9 +22,9 @@ in order to install the correct firmware you'll have to make sure your firmware
 is lower or equal to 3.55. A downgrade for a firmware higher than 3.55 is NOT
 available.
 
-The custom firmware that is needed must be 3.55 and should incorporate the ever 
-so important LV1 patch to allow access to the System Manager services of GameOS. 
-A firmware which incorporates that is the OtherOS++ firmware. More information 
+The custom firmware that is needed must be 3.55 and should incorporate the ever
+so important LV1 patch to allow access to the System Manager services of GameOS.
+A firmware which incorporates that is the OtherOS++ firmware. More information
 and download links can be found here: http://gitbrew.org/otheros/
 
 Custom Firmware installation steps:
@@ -42,7 +42,7 @@ Custom Firmware installation steps:
  10: It will say it found Version 3.55
  11: Choose OK
  12: Accept Conditions and Follow the instructions
-   
+  
 If the steps above did not work for you, then you are probably on 3.55 already.
 You will have to do a recovery menu mode installation:
 
@@ -66,37 +66,49 @@ You will have to do a recovery menu mode installation:
 
 Installation Instructions
 
-Now you've completed the OtherOS firmware upgrade you are ready to install sacd-ripper.pkg.
+Now you've completed the OtherOS firmware upgrade you are ready to install
+sacd-ripper.pkg.
 
-In order for the PS3 BluRay player to authenticate the SACD disc and to decode DST to DSD
-two SPU isoself modules will be extracted from the system. In order to do so you must 
-give the SACD-Ripper the PS3 keys so it can extract them automatically.
+In order for the PS3 BluRay player to authenticate the SACD disc and to decode
+DST to DSD two SPU isoself modules will be extracted from the system. In order 
+to do so you must give the SACD-Ripper the PS3 keys so it can extract them 
+automatically.
 
-Get the PS3 keys from http://git-hacks.com/ps3free/ps3keys and put these in the root
-of an USB disc. 
-    
+Get the PS3 keys from http://git-hacks.com/ps3free/ps3keys and put these in the
+root of an USB disc. They will be asked for during first time installation,
+after that you can remove the keys for your USB disc.
+   
 Information
 
 SACD-Ripper supports the following output formats:
+
  - 2ch DSDIFF (DSD)
  - 2ch DSDIFF (DST) (if already DST encoded)
  - 2ch DSF (DSD)
- - mch DSDIFF (DSD) 
+ - mch DSDIFF (DSD)
  - mch DSDIFF (DST)
  - mch DSF (DSD)
- - ISO (due to the 4GB FAT32 size limit on the PS3, files will be splitted when larger)
+ - ISO (due to the 4GB FAT32 size limit on the PS3, files will be splitted when
+   larger)
 
-There seems to be a SACD BluRay read speed limit that sets the maximum read speed to 2.6MB/sec, 
-yes I agree, this is slow! But DST decoding is even slower.. The PS3 GameOS has 6 SPUs available 
-for user operations. SACD-Ripper uses 1 SPU for decryption and the other 5!! for DST decoding.
-Although this process is quite optimal the current decoding speed has been measured to be 0.9MB/sec
-for a 2 channel rip. So for 2ch DST tracks the write speed to disc will be around 2.3MB/sec, for a
-multi-channel the write speed is a bit higher (2.4MB.sec) but decoding is even slower at 0.6MB/sec. 
+There seems to be a SACD BluRay read speed limit that sets the maximum read
+speed to 2.6MB/sec, yes I agree, this is slow! But DST decoding is even 
+slower.. The PS3 GameOS has 6 SPUs available for user operations. SACD-Ripper 
+uses 1 SPU for decryption and the other 5!! for DST decoding. Although this 
+process is quite optimal the current decoding speed has been measured to 
+be 0.9MB/sec for a 2 channel rip. So for 2ch DST tracks the write speed to disc 
+will be around 2.3MB/sec, for a multi-channel the write speed is a bit higher 
+at 2.4MB.sec but decoding is even slower at 0.6MB/sec.
 
 Compiling
 
-To compile you will need the psl1ght suite. If you want to compile on a windows environment I 
-advice you to follow the CygWin installation as the MingW installation is unstable.
+To compile you will need the psl1ght suite. If you want to compile on a windows
+environment I advice you to follow the CygWin installation as the MingW 
+installation is unstable.
+
+Now before you run "make" you need to run ./config.sh in the libs/libid3tag 
+folder. When that's done you can go back to the root and run "make". It should
+compile without errors.
 
 Big thanks goes to to:
 
