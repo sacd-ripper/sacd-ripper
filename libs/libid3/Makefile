@@ -30,13 +30,13 @@ export DEPSDIR		:=	$(DEPS)
 endif
 #---------------------------------------------------------------------------------
 
-LIBRARY		:= $(LIBDIR)/libsacd
+LIBRARY		:= $(LIBDIR)/libid3
 
 #---------------------------------------------------------------------------------
-DEFINCS		:= -I$(BASEDIR) -I$(PSL1GHT)/ppu/include -I$(BASEDIR)/../libid3 -I$(BASEDIR)/../libcommon
+DEFINCS		:= -I$(BASEDIR) -I$(PSL1GHT)/ppu/include -I$(BASEDIR)/../libcommon
 INCLUDES	:=	$(DEFINCS)
 
-CFLAGS		:= -O2 -mregnames -Wall -mcpu=cell $(MACHDEP) -DLIBSACD_INTERNAL $(INCLUDES) -Wa,-mcell -DWITH_PL3
+CFLAGS		:= -O2 -mregnames -Wall -mcpu=cell $(MACHDEP) -DLIBID3_INTERNAL $(INCLUDES) -Wa,-mcell -DWITH_PL3
 ASFLAGS		:=	$(MACHDEP) -mregnames -mcpu=cell -D__ASSEMBLY__ -Wa,-mcell $(INCLUDES)
 
 #---------------------------------------------------------------------------------
@@ -44,20 +44,15 @@ VPATH :=	$(BASEDIR)
 
 #---------------------------------------------------------------------------------
 OBJS		:= \
-			scarletbook.o \
-			dsdiff.o \
-			dsf.o \
-			dst_decoder.o \
-            sacd_input.o \
-            scarletbook_print.o \
-            scarletbook_id3.o \
-            scarletbook_read.o \
-            scarletbook_output.o \
-            scarletbook_helpers.o \
-            sac_accessor.o \
-            ioctl.o \
-            iso_writer.o \
-            sacd_reader.o 
+               charset.o               \
+               id3.o                   \
+               id3_frame.o             \
+               id3_frame_content.o     \
+               id3_frame_text.o        \
+               id3_frame_url.o         \
+               id3_tag.o               \
+               unicode.o               
+
 all: ppu
 
 #---------------------------------------------------------------------------------

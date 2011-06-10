@@ -297,8 +297,6 @@ static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int
             // store frame type
             output.frame->dst_encoded = output.scarletbook_audio_sector.header.dst_encoded;
 
-            // TODO, extract channel_count from frame
-
             for (i = 0; i < output.scarletbook_audio_sector.header.packet_info_count; i++)
             {
                 audio_packet_info_t *packet = &output.scarletbook_audio_sector.packet[i];
@@ -309,10 +307,12 @@ static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int
                         if (output.frame->size > 0 && packet->frame_start)
                         {
                             output.full_frame_count++;
-                            output.frame->full = 1;
+                            output.frame->complete = 1;
+                            output.frame->started = 0;
 
                             // advance one frame in our cache
                             output.frame = list_entry(output.frame->siblings.next, audio_frame_t, siblings);
+                            output.frame->started = 1;
                             output.current_frame_ptr = output.frame->data;
 
                             // is our cache full?
@@ -330,14 +330,14 @@ static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int
                                     dst_decoder_prepare(output.dst_decoder);
                                     while (frame_ptr != output.frame)
                                     {
-                                        if (frame_ptr->full)
+                                        if (frame_ptr->complete)
                                         {
                                             // TODO: get channel_count from frame
 
                                             dst_decoder_decode(output.dst_decoder, frame_ptr->data, frame_ptr->size, 1, ft->channel_count);
 
                                             // mark frame as empty
-                                            frame_ptr->full = 0;
+                                            frame_ptr->complete = 0;
                                             frame_ptr->size = 0;
                                         }
 
@@ -359,7 +359,7 @@ static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int
                                     while (frame_ptr != output.frame)
                                     {
                                         // when buffer is full we write to disk
-                                        if (frame_ptr->full)
+                                        if (frame_ptr->complete)
                                         {
                                             if (dst_decoder_decode(output.dst_decoder, frame_ptr->data, frame_ptr->size, output.dsd_data, &dsd_size) == 0)
                                             {
@@ -367,7 +367,7 @@ static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int
                                             }
 
                                             // mark frame as empty
-                                            frame_ptr->full = 0;
+                                            frame_ptr->complete = 0;
                                             frame_ptr->size = 0;
                                         }
 
@@ -382,12 +382,12 @@ static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int
                                     while (frame_ptr != output.frame)
                                     {
                                         // when buffer is full we write to disk
-                                        if (frame_ptr->full)
+                                        if (frame_ptr->complete)
                                         {
                                             write_block(ft, frame_ptr->data, frame_ptr->size, 0);
 
                                             // mark frame as empty
-                                            frame_ptr->full = 0;
+                                            frame_ptr->complete = 0;
                                             frame_ptr->size = 0;
                                         }
 
@@ -400,11 +400,18 @@ static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int
                                 output.full_frame_count = 0;
                             }
                         }
+                        else if (packet->frame_start && output.frame->started == 0)
+                        {
+                            output.frame->started = 1;
+                        }
 
-                        memcpy(output.current_frame_ptr, buffer_ptr, packet->packet_length);
-                        output.frame->size += packet->packet_length;
-                        output.current_frame_ptr += packet->packet_length;
-                        buffer_ptr += packet->packet_length;
+                        if (output.frame->started)
+                        {
+                            memcpy(output.current_frame_ptr, buffer_ptr, packet->packet_length);
+                            output.frame->size += packet->packet_length;
+                            output.current_frame_ptr += packet->packet_length;
+                            buffer_ptr += packet->packet_length;
+                        }
                     }
                     break;
                 case DATA_TYPE_SUPPLEMENTARY:
@@ -426,11 +433,13 @@ static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int
             // do we need to decode to DSD?
             if (ft->dsd_encoded_export && ft->dst_encoded_import)
             {
-#ifdef __lv2ppu__
+#if defined(__lv2ppu__) || defined(_WIN32)
                 size_t dsd_size;
                 audio_frame_t * frame_ptr = output.frame;
 
+#if defined(__lv2ppu__)
                 dst_decoder_prepare(output.dst_decoder);
+#endif
 
                 // process all frames
                 do
@@ -438,16 +447,23 @@ static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int
                     // always start with the full first frame
                     frame_ptr = list_entry(frame_ptr->siblings.next, audio_frame_t, siblings);
 
-                    if (frame_ptr->size > 0)
+                    if (frame_ptr->complete == 1)
                     {
+#if defined(__lv2ppu__)
                         dst_decoder_decode(output.dst_decoder, frame_ptr->data, frame_ptr->size, 1, ft->channel_count);
-
-                        frame_ptr->full = 0;
+#else
+                        if (dst_decoder_decode(output.dst_decoder, frame_ptr->data, frame_ptr->size, output.dsd_data, &dsd_size) == 0)
+                        {
+                            write_block(ft, output.dsd_data, dsd_size, 0);
+                        }
+#endif
+                        frame_ptr->complete = 0;
                         frame_ptr->size = 0;
                     }
 
                 } while (frame_ptr != output.frame);
 
+#if defined(__lv2ppu__)
                 // wait for all frames to be decoded (decoding takes around 0.03 seconds per frame)
                 dst_decoder_wait(output.dst_decoder, 500000);
 
@@ -455,28 +471,8 @@ static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int
                 {
                     write_block(ft, output.dsd_data, dsd_size, 0);
                 }
-#elif defined(_WIN32)
-                audio_frame_t * frame_ptr = output.frame;
-                size_t dsd_size;
+#endif
 
-                // process all frames
-                do
-                {
-                    // always start with the full first frame
-                    frame_ptr = list_entry(frame_ptr->siblings.next, audio_frame_t, siblings);
-
-                    if (frame_ptr->size > 0)
-                    {
-                        if (dst_decoder_decode(output.dst_decoder, frame_ptr->data, frame_ptr->size, output.dsd_data, &dsd_size) == 0)
-                        {
-                            write_block(ft, output.dsd_data, dsd_size, 0);
-                        }
-
-                        frame_ptr->full = 0;
-                        frame_ptr->size = 0;
-                    }
-
-                } while (frame_ptr != output.frame);
 #endif
             }
             else
@@ -489,10 +485,10 @@ static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int
                     // always start with the full first frame
                     frame_ptr = list_entry(frame_ptr->siblings.next, audio_frame_t, siblings);
 
-                    if (frame_ptr->size > 0)
+                    if (frame_ptr->complete == 1)
                     {
                         write_block(ft, frame_ptr->data, frame_ptr->size, 0);
-                        frame_ptr->full = 0;
+                        frame_ptr->complete = 0;
                         frame_ptr->size = 0;
                     }
             

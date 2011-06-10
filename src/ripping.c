@@ -254,7 +254,7 @@ int start_ripping_gui(int ripping_flags)
                         substr(albumdir, 0, 100), 
                         file_path, 
                         (ripping_flags & RIP_DSDIFF ? "DSDIFF" : (ripping_flags & RIP_DSF ? "DSF" : "ISO")),
-                        ((double) (tmp_total_ripping_sectors * SACD_LSN_SIZE) / 1073741824.00),
+                        ((double) ((tmp_total_ripping_sectors * SACD_LSN_SIZE) / 1073741824.00)),
                         (ripping_flags & RIP_2CH ? "2ch" : "mch"),
                         (ripping_flags & RIP_2CH_DST || ripping_flags & RIP_MCH_DST ? "DST" : (ripping_flags & RIP_ISO ? "DECRYPTED" : "DSD"))
                         );

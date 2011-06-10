@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories=".\win32;..\..\libs\libsacd;&quot;..\..\libs\libid3tag&quot;;..\..\libs\libcommon"
+				AdditionalIncludeDirectories=".\win32;..\..\libs\libsacd;..\..\libs\libcommon;..\..\libs\libid3"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;HAVE_CONFIG_H;NO_ID3"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -330,10 +330,54 @@
 			</File>
 		</Filter>
 		<Filter
-			Name="Resource Files"
+			Name="id3lib"
 			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav"
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
 			>
+			<File
+				RelativePath="..\..\libs\libid3\charset.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\libs\libid3\charset.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\libs\libid3\id3.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\libs\libid3\id3.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\libs\libid3\id3_frame.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\libs\libid3\id3_frame_content.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\libs\libid3\id3_frame_text.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\libs\libid3\id3_frame_url.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\libs\libid3\id3_header.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\libs\libid3\id3_tag.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\libs\libid3\unicode.c"
+				>
+			</File>
 		</Filter>
 	</Files>
 	<Globals>
