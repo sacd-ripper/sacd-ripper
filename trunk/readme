@@ -114,9 +114,9 @@ To compile you will need the psl1ght suite. If you want to compile on a windows
 environment I advice you to follow the CygWin installation as the MingW 
 installation is unstable.
 
-Now before you run "make" you need to run ./config.sh in the libs/libid3tag 
-folder. When that's done you can go back to the root and run "make". It should
-compile without errors.
+When psl1ght has been properly setup sacd-ripper should be compiled using a
+simple "make" command and it should compile without errors and warnings. Once 
+completed it should have produced sacd-ripper.pkg.
 
 Big thanks goes to to:
 
