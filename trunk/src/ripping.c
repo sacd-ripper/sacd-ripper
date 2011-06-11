@@ -193,7 +193,7 @@ int start_ripping_gui(int ripping_flags)
                     {
                         sector_size = min(total_sectors, FAT32_SECTOR_LIMIT);
                         snprintf(musicfilename, 512, "%s.%03d", file_path, i);
-                        queue_track_to_rip(0, 0, musicfilename, "iso", sector_offset, sector_size, 0, 0);
+                        queue_raw_sectors_to_rip(handle, sector_offset, sector_size, musicfilename, "iso");
                         sector_offset += sector_size;
                         total_sectors -= sector_size;
                     }
@@ -203,7 +203,7 @@ int start_ripping_gui(int ripping_flags)
                 else
                 {
                     file_path = make_filename(output_device, 0, albumdir, "iso");
-                    queue_track_to_rip(0, 0, file_path, "iso", 0, total_sectors, 0, 0);
+                    queue_raw_sectors_to_rip(handle, 0, total_sectors, file_path, "iso");
                     free(file_path);
                 }
                 tmp_total_ripping_sectors = total_sectors;
@@ -216,20 +216,14 @@ int start_ripping_gui(int ripping_flags)
                     musicfilename = get_music_filename(handle, area_idx, i);
                     if (ripping_flags & RIP_DSF)
                     {
-                        file_path     = make_filename(output_device, albumdir, musicfilename, "dsf");
-                        queue_track_to_rip(area_idx, i, file_path, "dsf", 
-                            handle->area[area_idx].area_tracklist_offset->track_start_lsn[i], 
-                            handle->area[area_idx].area_tracklist_offset->track_length_lsn[i], 
-                            handle->area[area_idx].area_toc->frame_format == FRAME_FORMAT_DST,
+                        file_path = make_filename(output_device, albumdir, musicfilename, "dsf");
+                        queue_track_to_rip(handle, area_idx, i, file_path, "dsf", 
                             1 /* always decode to DSD */);
                     }
                     else if (ripping_flags & RIP_DSDIFF)
                     {
-                        file_path     = make_filename(output_device, albumdir, musicfilename, "dff");
-                        queue_track_to_rip(area_idx, i, file_path, "dsdiff", 
-                            handle->area[area_idx].area_tracklist_offset->track_start_lsn[i], 
-                            handle->area[area_idx].area_tracklist_offset->track_length_lsn[i], 
-                            handle->area[area_idx].area_toc->frame_format == FRAME_FORMAT_DST,
+                        file_path = make_filename(output_device, albumdir, musicfilename, "dff");
+                        queue_track_to_rip(handle, area_idx, i, file_path, "dsdiff", 
                             ((ripping_flags & RIP_2CH_DST || ripping_flags & RIP_MCH_DST) ? 0 : 1));
                     }
 

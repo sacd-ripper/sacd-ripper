@@ -61,7 +61,9 @@
 #define MASTER_TOC_LEN                 10
 #define MAX_AREA_TOC_SIZE_LSN          96
 #define MAX_LANGUAGE_COUNT             8
+#define MAX_CHANNEL_COUNT              6
 #define SAMPLES_PER_FRAME              588
+#define FRAME_SIZE_64                 (SAMPLES_PER_FRAME * 64 / 8)
 #define SUPPORTED_VERSION_MAJOR        1
 #define SUPPORTED_VERSION_MINOR        20
 
@@ -489,10 +491,10 @@ typedef struct
 #if defined(__BIG_ENDIAN__)
     uint8_t channel_bit_1 : 1;
     uint8_t sector_count  : 5;
-    uint8_t channel_bit_2 : 1;
-    uint8_t channel_bit_3 : 1;  // (1 = 5 channels, 0 = Stereo)
+    uint8_t channel_bit_2 : 1;  // 1 = 6 channels
+    uint8_t channel_bit_3 : 1;  // 1 = 5 channels, 0 = Stereo
 #else
-    uint8_t channel_bit_3 : 1;  // (1 = 5 channels, 0 = Stereo)
+    uint8_t channel_bit_3 : 1;
     uint8_t channel_bit_2 : 1;
     uint8_t sector_count  : 5;
     uint8_t channel_bit_1 : 1;
@@ -520,9 +522,9 @@ ATTRIBUTE_PACKED audio_frame_header_t;
 
 typedef struct
 {
-    audio_frame_header_t header;
-    audio_packet_info_t   packet[7];
-    audio_frame_info_t    frame[7];
+    audio_frame_header_t    header;
+    audio_packet_info_t     packet[7];
+    audio_frame_info_t      frame[7];
 } 
 ATTRIBUTE_PACKED audio_sector_t;
 

@@ -89,10 +89,7 @@ static void destroy_ripping_queue()
     }
 }
 
-int queue_track_to_rip(int area, int track, char *file_path, char *fmt, 
-                       uint32_t start_lsn, uint32_t length_lsn, int dst_encoded_import,
-                       int dsd_encoded_export
-                       )
+int queue_track_to_rip(scarletbook_handle_t *sb_handle, int area, int track, char *file_path, char *fmt, int dsd_encoded_export)
 {
     scarletbook_format_handler_t const * handler;
     scarletbook_output_format_t * output_format_ptr;
@@ -100,16 +97,41 @@ int queue_track_to_rip(int area, int track, char *file_path, char *fmt,
     if ((handler = find_output_format(fmt)))
     {
         output_format_ptr = calloc(sizeof(scarletbook_output_format_t), 1);
+        output_format_ptr->sb_handle = sb_handle;
         output_format_ptr->area = area;
         output_format_ptr->track = track;
         output_format_ptr->handler = *handler;
         output_format_ptr->filename = strdup(file_path);
-        output_format_ptr->start_lsn = start_lsn;
-        output_format_ptr->length_lsn = length_lsn;
-        output_format_ptr->dst_encoded_import = dst_encoded_import;
+        output_format_ptr->start_lsn = sb_handle->area[area].area_tracklist_offset->track_start_lsn[track];
+        output_format_ptr->length_lsn = sb_handle->area[area].area_tracklist_offset->track_length_lsn[track];
+        output_format_ptr->channel_count = sb_handle->area[area].area_toc->channel_count;
+        output_format_ptr->dst_encoded_import = sb_handle->area[area].area_toc->frame_format == FRAME_FORMAT_DST;
         output_format_ptr->dsd_encoded_export = dsd_encoded_export;
 
-        LOG(lm_main, LOG_NOTICE, ("queuing: %s, area: %d, track %d, start_lsn: %d, length_lsn: %d, dst_encoded_import: %d, dsd_encoded_export: %d", file_path, area, track, start_lsn, length_lsn, dst_encoded_import, dsd_encoded_export));
+        LOG(lm_main, LOG_NOTICE, ("Queuing: %s, area: %d, track %d, start_lsn: %d, length_lsn: %d, dst_encoded_import: %d, dsd_encoded_export: %d", file_path, area, track, output_format_ptr->start_lsn, output_format_ptr->length_lsn, output_format_ptr->dst_encoded_import, output_format_ptr->dsd_encoded_export));
+
+        list_add_tail(&output_format_ptr->siblings, &output.ripping_queue);
+
+        return 0;
+    }
+    return -1;
+}
+
+int queue_raw_sectors_to_rip(scarletbook_handle_t *sb_handle, int start_lsn, int length_lsn, char *file_path, char *fmt)
+{
+    scarletbook_format_handler_t const * handler;
+    scarletbook_output_format_t * output_format_ptr;
+
+    if ((handler = find_output_format(fmt)))
+    {
+        output_format_ptr = calloc(sizeof(scarletbook_output_format_t), 1);
+        output_format_ptr->sb_handle = sb_handle;
+        output_format_ptr->handler = *handler;
+        output_format_ptr->filename = strdup(file_path);
+        output_format_ptr->start_lsn = start_lsn;
+        output_format_ptr->length_lsn = length_lsn;
+
+        LOG(lm_main, LOG_NOTICE, ("Queuing raw: %s, start_lsn: %d, length_lsn: %d", file_path, start_lsn, length_lsn));
 
         list_add_tail(&output_format_ptr->siblings, &output.ripping_queue);
 
@@ -219,8 +241,6 @@ static void allocate_round_robin_frame_buffer(void)
     // HACK, creating a round-robin
     output.frame->siblings.prev = &frame_ptr->siblings;
     frame_ptr->siblings.next = &output.frame->siblings;
-
-    output.current_frame_ptr = output.frame->data;
 }
 
 static void free_round_robin_frame_buffer(void)
@@ -249,12 +269,28 @@ static inline size_t write_block(scarletbook_output_format_t * ft, const uint8_t
     return actual;
 }
 
+static inline int get_channel_count(audio_frame_info_t *frame_info)
+{
+    if (frame_info->channel_bit_2 == 1 && frame_info->channel_bit_3 == 0)
+    {
+        return 6;
+    }
+    else if (frame_info->channel_bit_2 == 0 && frame_info->channel_bit_3 == 1)
+    {
+        return 5;
+    }
+    else
+    {
+        return 2;
+    }
+}
+
 /**
  * this is all overly complicated due to the parallel DST decoding..
  */
 static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int pos, int blocks, int last_frame)
 {
-    int i;
+    int i, frame_info_counter;
 
     if (ft->handler.flags & OUTPUT_FLAG_DSD || ft->handler.flags & OUTPUT_FLAG_DST)
     {
@@ -294,8 +330,8 @@ static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int
                 }
             }
             
-            // store frame type
-            output.frame->dst_encoded = output.scarletbook_audio_sector.header.dst_encoded;
+            // reset frame information counter
+            frame_info_counter = 0;
 
             for (i = 0; i < output.scarletbook_audio_sector.header.packet_info_count; i++)
             {
@@ -304,15 +340,28 @@ static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int
                 {
                 case DATA_TYPE_AUDIO:
                     {
-                        if (output.frame->size > 0 && packet->frame_start)
+                        if ((output.frame->dst_encoded && output.frame->sector_count == 0) ||
+                            (!output.frame->dst_encoded && output.frame->size == ft->channel_count * FRAME_SIZE_64))
                         {
+                            // advance the amount of completed frames
                             output.full_frame_count++;
+
+                            // mark current frame as complete
                             output.frame->complete = 1;
                             output.frame->started = 0;
 
                             // advance one frame in our cache
                             output.frame = list_entry(output.frame->siblings.next, audio_frame_t, siblings);
                             output.frame->started = 1;
+                            output.frame->size = 0;
+
+                            output.frame->dst_encoded = output.scarletbook_audio_sector.header.dst_encoded;
+                            output.frame->sector_count = output.scarletbook_audio_sector.frame[frame_info_counter].sector_count;
+                            output.frame->channel_count = get_channel_count(&output.scarletbook_audio_sector.frame[frame_info_counter]);
+                            
+                            // advance frame_info_counter
+                            frame_info_counter++;
+
                             output.current_frame_ptr = output.frame->data;
 
                             // is our cache full?
@@ -332,14 +381,13 @@ static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int
                                     {
                                         if (frame_ptr->complete)
                                         {
-                                            // TODO: get channel_count from frame
-
-                                            dst_decoder_decode(output.dst_decoder, frame_ptr->data, frame_ptr->size, 1, ft->channel_count);
+                                            dst_decoder_decode(output.dst_decoder, frame_ptr->data, frame_ptr->size, frame_ptr->dst_encoded, frame_ptr->channel_count);
 
                                             // mark frame as empty
                                             frame_ptr->complete = 0;
-                                            frame_ptr->size = 0;
                                         }
+                                        frame_ptr->size = 0;
+                                        frame_ptr->started = 0;
 
                                         // advance one frame
                                         frame_ptr = list_entry(frame_ptr->siblings.next, audio_frame_t, siblings);
@@ -368,8 +416,9 @@ static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int
 
                                             // mark frame as empty
                                             frame_ptr->complete = 0;
-                                            frame_ptr->size = 0;
                                         }
+                                        frame_ptr->size = 0;
+                                        frame_ptr->started = 0;
 
                                         // advance one frame
                                         frame_ptr = list_entry(frame_ptr->siblings.next, audio_frame_t, siblings);
@@ -388,8 +437,9 @@ static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int
 
                                             // mark frame as empty
                                             frame_ptr->complete = 0;
-                                            frame_ptr->size = 0;
                                         }
+                                        frame_ptr->size = 0;
+                                        frame_ptr->started = 0;
 
                                         // advance one frame
                                         frame_ptr = list_entry(frame_ptr->siblings.next, audio_frame_t, siblings);
@@ -403,15 +453,31 @@ static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int
                         else if (packet->frame_start && output.frame->started == 0)
                         {
                             output.frame->started = 1;
+                            output.frame->dst_encoded = output.scarletbook_audio_sector.header.dst_encoded;
+                            output.frame->sector_count = output.scarletbook_audio_sector.frame[frame_info_counter].sector_count;
+                            output.frame->channel_count = get_channel_count(&output.scarletbook_audio_sector.frame[frame_info_counter]);
+                            output.frame->size = 0;
+                            frame_info_counter++;
+
+                            output.current_frame_ptr = output.frame->data;
                         }
 
+                        // we can only copy data if the frame has started
                         if (output.frame->started)
                         {
                             memcpy(output.current_frame_ptr, buffer_ptr, packet->packet_length);
                             output.frame->size += packet->packet_length;
+                            if (output.frame->dst_encoded)
+                            {
+                                output.frame->sector_count--;
+                            }
+
+                            // advance output ptr
                             output.current_frame_ptr += packet->packet_length;
-                            buffer_ptr += packet->packet_length;
                         }
+
+                        // advance the source pointer
+                        buffer_ptr += packet->packet_length;
                     }
                     break;
                 case DATA_TYPE_SUPPLEMENTARY:
@@ -450,7 +516,7 @@ static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int
                     if (frame_ptr->complete == 1)
                     {
 #if defined(__lv2ppu__)
-                        dst_decoder_decode(output.dst_decoder, frame_ptr->data, frame_ptr->size, 1, ft->channel_count);
+                        dst_decoder_decode(output.dst_decoder, frame_ptr->data, frame_ptr->size, frame_ptr->dst_encoded, frame_ptr->channel_count);
 #else
                         if (dst_decoder_decode(output.dst_decoder, frame_ptr->data, frame_ptr->size, output.dsd_data, &dsd_size) == 0)
                         {
@@ -458,8 +524,9 @@ static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int
                         }
 #endif
                         frame_ptr->complete = 0;
-                        frame_ptr->size = 0;
                     }
+                    frame_ptr->size = 0;
+                    frame_ptr->started = 0;
 
                 } while (frame_ptr != output.frame);
 
@@ -489,8 +556,9 @@ static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int
                     {
                         write_block(ft, frame_ptr->data, frame_ptr->size, 0);
                         frame_ptr->complete = 0;
-                        frame_ptr->size = 0;
                     }
+                    frame_ptr->size = 0;
+                    frame_ptr->started = 0;
             
                 } while (frame_ptr != output.frame);
             }
@@ -524,9 +592,6 @@ static void *read_thread(void *arg)
 
             output_format_ptr = list_entry(node_ptr, scarletbook_output_format_t, siblings);
             list_del(node_ptr);
-
-            output_format_ptr->sb_handle = handle;
-            output_format_ptr->channel_count = handle->area[output_format_ptr->area].area_toc->channel_count;
 
 #ifdef _WIN32
             dst_decoder_init(output.dst_decoder, output_format_ptr->channel_count);
@@ -685,7 +750,7 @@ int initialize_ripping(void)
     INIT_LIST_HEAD(&output.ripping_queue);
     output.read_buffer = (uint8_t *) malloc(MAX_PROCESSING_BLOCK_SIZE * SACD_LSN_SIZE);
     output.initialized = 1;
-    output.dsd_data = (uint8_t *) malloc((588 * 64 / 8) * 6); // max of 6 channels
+    output.dsd_data = (uint8_t *) malloc(FRAME_SIZE_64 * MAX_CHANNEL_COUNT);
 
     allocate_round_robin_frame_buffer();
 

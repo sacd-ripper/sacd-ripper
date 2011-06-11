@@ -57,8 +57,8 @@ typedef struct
     int                 channel_count;
     uint64_t            sample_count;
 
-    uint8_t             buffer[6][SACD_BLOCK_SIZE_PER_CHANNEL];
-    uint8_t            *buffer_ptr[6];
+    uint8_t             buffer[MAX_CHANNEL_COUNT][SACD_BLOCK_SIZE_PER_CHANNEL];
+    uint8_t            *buffer_ptr[MAX_CHANNEL_COUNT];
 } 
 dsf_handle_t;
 

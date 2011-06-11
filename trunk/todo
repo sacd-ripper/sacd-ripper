@@ -2,9 +2,6 @@ TODO
 
 version 0.1.0:
 
-    - fix incorrect frames on start and at the end of certain tracks
-        - investigate why philips dst decoder crashes on multichannel DST
-    - test PS3 ripping pipeline
     - dst decoding
         - test possible speedup for DST decoding by sending 4 DST frames to one decoder at once
     - on splitted ISOs > 4GB filesize is not displayed correctly in the GUI
