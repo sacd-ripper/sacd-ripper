@@ -30,6 +30,7 @@
 #include <string.h>
 #include <malloc.h>
 
+#include <scarletbook.h>
 #include <logging.h>
 #include "dst_decoder.h"
 
@@ -49,8 +50,6 @@ enum
 #define DST_QUEUE_NUMBER                10
 
 #define DEFAULT_QUEUE_SIZE              127
-
-#define FRAME_SIZE_64_44                (588 * 64 / 8) // 4704
 
 #define NUM_DST_COMMANDS                1
 
@@ -184,7 +183,7 @@ static int dst_decoder_thread_create(dst_decoder_thread_t decoder, int spu_id, s
         return ret;
     }
 
-    decoder->dsd_channel_data = (uint8_t *) memalign(128, FRAME_SIZE_64_44 * 6);
+    decoder->dsd_channel_data = (uint8_t *) memalign(128, FRAME_SIZE_64 * MAX_CHANNEL_COUNT);
     decoder->command = (dst_command_t *) memalign(128, sizeof(dst_command_t));
 
     return 0;
@@ -418,11 +417,11 @@ int dst_decoder_get_dsd_frame(dst_decoder_t *dst_decoder, uint8_t *dsd_data, siz
         *dsd_size = command->dest_size;
 
         // DSD data is stored sequential per channel, now we need to interleave it..
-        for (i = 0; i < FRAME_SIZE_64_44; i++)
+        for (i = 0; i < FRAME_SIZE_64; i++)
         {
             for (channel = 0; channel < command->channel_count; channel++)
             {
-                *dsd_data = *(decoder->dsd_channel_data + i + channel * FRAME_SIZE_64_44);
+                *dsd_data = *(decoder->dsd_channel_data + i + channel * FRAME_SIZE_64);
                 ++dsd_data;
             }
         }

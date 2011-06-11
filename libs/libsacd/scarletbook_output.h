@@ -70,12 +70,13 @@ struct scarletbook_output_format_t
     uint32_t                        current_lsn;
     char                           *filename;
 
+    int                             channel_count;
+
     FILE                           *fd;
     char                           *write_cache;
     uint64_t                        write_length;
     uint64_t                        write_offset;
 
-    int                             channel_count;
     int                             dst_encoded_import;
     int                             dsd_encoded_export;
 
@@ -100,11 +101,15 @@ typedef struct audio_frame_t
     struct list_head    siblings;
     uint8_t            *data;
     int                 size;
-    int                 dst_encoded;
     int                 complete;
     int                 started;
-} audio_frame_t;
 
+    int                 sector_count;
+    int                 channel_count;
+
+    int                 dst_encoded;
+} 
+audio_frame_t;
 
 typedef struct scarletbook_output_t
 {
@@ -132,7 +137,6 @@ typedef struct scarletbook_output_t
     int                 full_frame_count;
     uint8_t            *dsd_data;
 
-
     // stats
     int                 stats_total_tracks;
     int                 stats_current_track;
@@ -158,7 +162,7 @@ void interrupt_ripping(void);
 int is_ripping(void);
 int start_ripping(scarletbook_handle_t *);
 int stop_ripping(scarletbook_handle_t *);
-int queue_track_to_rip(int area, int track, char *file_path, char *fmt, 
-                                uint32_t start_lsn, uint32_t length_lsn, int dst_encoded_import, int dsd_encoded_export);
+int queue_track_to_rip(scarletbook_handle_t *sb_handle, int area, int track, char *file_path, char *fmt, int dsd_encoded_export);
+int queue_raw_sectors_to_rip(scarletbook_handle_t *sb_handle, int start_lsn, int length_lsn, char *file_path, char *fmt);
 
 #endif /* SCARLETBOOK_OUTPUT_H_INCLUDED */
