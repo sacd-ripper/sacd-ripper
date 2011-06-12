@@ -307,6 +307,33 @@ int dsdiff_create_header(scarletbook_output_format_t *ft)
             char *c;
 
             c = sb_handle->area[ft->area].area_track_text[ft->track].track_type_performer;
+            if (!c)
+            {
+                master_text_t *master_text = sb_handle->master_text[0];
+                int artist_position = 0;
+
+                // preferably we use the title as the artist name, as disc/album artist mostly contains garbage..
+                if (master_text->album_title_position)
+                    artist_position = master_text->album_title_position; 
+                else if (master_text->album_title_phonetic_position)
+                    artist_position = master_text->album_title_phonetic_position;
+                else if (master_text->disc_title_position)
+                    artist_position = master_text->disc_title_position; 
+                else if (master_text->disc_title_phonetic_position)
+                    artist_position = master_text->disc_title_phonetic_position;
+                else if (master_text->album_artist_position)
+                    artist_position = master_text->album_artist_position;
+                else if (master_text->album_artist_phonetic_position)
+                    artist_position = master_text->album_artist_phonetic_position;
+                else if (master_text->disc_artist_position)
+                    artist_position = master_text->disc_artist_position;
+                else if (master_text->disc_artist_phonetic_position)
+                    artist_position = master_text->disc_artist_phonetic_position;
+
+                if (artist_position)
+                    c = (char *) master_text + artist_position;
+            }
+
             if (c)
             {
                 char track_artist[512];
@@ -329,6 +356,25 @@ int dsdiff_create_header(scarletbook_output_format_t *ft)
             char *c;
 
             c = sb_handle->area[ft->area].area_track_text[ft->track].track_type_title;
+
+            if (!c)
+            {
+                master_text_t *master_text = sb_handle->master_text[0];
+                int album_title_position = 0;
+
+                if (master_text->album_title_position)
+                    album_title_position = master_text->album_title_position; 
+                else if (master_text->album_title_phonetic_position)
+                    album_title_position = master_text->album_title_phonetic_position;
+                else if (master_text->disc_title_position)
+                    album_title_position = master_text->disc_title_position; 
+                else if (master_text->disc_title_phonetic_position)
+                    album_title_position = master_text->disc_title_phonetic_position;
+
+                if (album_title_position)
+                    c = (char *) master_text + album_title_position;
+            }
+
             if (c)
             {
                 int len;
@@ -368,11 +414,11 @@ int dsdiff_create_header(scarletbook_output_format_t *ft)
         timeinfo = localtime(&rawtime);
 
         comment                    = (comment_t *) comment_ptr;
-        comment->timestamp_year    = hton16(timeinfo->tm_year + 1900);
-        comment->timestamp_month   = timeinfo->tm_mon;
-        comment->timestamp_day     = timeinfo->tm_mday;
-        comment->timestamp_hour    = timeinfo->tm_hour;
-        comment->timestamp_minutes = timeinfo->tm_min;
+        comment->timestamp_year    = hton16(sb_handle->master_toc->disc_date_year);
+        comment->timestamp_month   = sb_handle->master_toc->disc_date_month;
+        comment->timestamp_day     = sb_handle->master_toc->disc_date_day;
+        comment->timestamp_hour    = 0;
+        comment->timestamp_minutes = 0;
         comment->comment_type      = hton16(COMT_TYPE_FILE_HISTORY);
         comment->comment_reference = hton16(COMT_TYPE_CHANNEL_FILE_HISTORY_GENERAL);
         sprintf(data, "Material ripped from SACD: %s", (char *) get_mtoc_title_text(sb_handle));
@@ -382,11 +428,11 @@ int dsdiff_create_header(scarletbook_output_format_t *ft)
         comment_ptr += CEIL_ODD_NUMBER(COMMENT_SIZE + strlen(data));
 
         comment                    = (comment_t *) comment_ptr;
-        comment->timestamp_year    = hton16(sb_handle->master_toc->disc_date_year);
-        comment->timestamp_month   = sb_handle->master_toc->disc_date_month;
-        comment->timestamp_day     = sb_handle->master_toc->disc_date_day;
-        comment->timestamp_hour    = 0;
-        comment->timestamp_minutes = 0;
+        comment->timestamp_year    = hton16(timeinfo->tm_year + 1900);
+        comment->timestamp_month   = timeinfo->tm_mon;
+        comment->timestamp_day     = timeinfo->tm_mday;
+        comment->timestamp_hour    = timeinfo->tm_hour;
+        comment->timestamp_minutes = timeinfo->tm_min;
         comment->comment_type      = hton16(COMT_TYPE_FILE_HISTORY);
         comment->comment_reference = hton16(COMT_TYPE_CHANNEL_FILE_HISTORY_CREATING_MACHINE);
         sprintf(data, SACD_RIPPER_VERSION);
