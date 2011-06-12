@@ -52,7 +52,7 @@ typedef struct
     uint8_t            *footer;
     size_t              footer_size;
 
-    ssize_t             audio_data_size;
+    uint64_t            audio_data_size;
 
     int                 channel_count;
     uint64_t            sample_count;

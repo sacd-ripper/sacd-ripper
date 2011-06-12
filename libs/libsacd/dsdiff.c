@@ -53,7 +53,7 @@ typedef struct
     size_t              footer_size;
 
     size_t              frame_count;
-    ssize_t             audio_data_size;
+    uint64_t            audio_data_size;
 } 
 dsdiff_handle_t;
 
