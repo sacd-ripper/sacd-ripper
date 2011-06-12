@@ -340,7 +340,7 @@ static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int
                 {
                 case DATA_TYPE_AUDIO:
                     {
-                        if ((output.frame->dst_encoded && output.frame->sector_count == 0) ||
+                        if ((output.frame->dst_encoded && output.frame->sector_count == 0 && output.frame->size > 0) ||
                             (!output.frame->dst_encoded && output.frame->size == ft->channel_count * FRAME_SIZE_64))
                         {
                             // advance the amount of completed frames
