@@ -299,7 +299,8 @@ void main_loop(void)
     scarletbook_handle_t *sb_handle = 0;
     int idx = 0;
 
-    if (output_device_changed && output_device) {
+    if (output_device_changed && output_device) 
+    {
         char file_path[100];
         sprintf(file_path, "%s/sacd_log.txt", output_device);
         set_log_file(file_path);

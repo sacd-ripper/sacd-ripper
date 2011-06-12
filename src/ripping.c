@@ -172,10 +172,6 @@ int start_ripping_gui(int ripping_flags)
             area_idx = (has_multi_channel(handle) && ripping_flags & RIP_MCH) ? handle->mulch_area_idx : handle->twoch_area_idx;
 
             albumdir = get_album_dir(handle);
-            file_path = make_filename(output_device, albumdir, 0, 0);
-            LOG(lm_main, LOG_NOTICE, ("setting output folder to: %s", file_path));
-            recursive_mkdir(file_path, 0777);
-            free(file_path);
 
             initialize_ripping();
 
@@ -206,7 +202,7 @@ int start_ripping_gui(int ripping_flags)
                     queue_raw_sectors_to_rip(handle, 0, total_sectors, file_path, "iso");
                     free(file_path);
                 }
-                tmp_total_ripping_sectors = total_sectors;
+                tmp_total_ripping_sectors = sacd_get_total_sectors(sacd_reader);
             }
             else 
             {
@@ -232,6 +228,11 @@ int start_ripping_gui(int ripping_flags)
                     free(musicfilename);
                     free(file_path);
                 }
+
+                file_path = make_filename(output_device, albumdir, 0, 0);
+                LOG(lm_main, LOG_NOTICE, ("setting output folder to: %s", file_path));
+                recursive_mkdir(file_path, 0777);
+                free(file_path);
             }
 
             init_stats(handle_status_update_track_callback, handle_status_update_progress_callback);

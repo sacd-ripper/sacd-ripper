@@ -51,6 +51,14 @@ enum
 
 #define DEFAULT_QUEUE_SIZE              127
 
+/*
+Potentially we could send multiple DST commands at once, statistics show it doesn't really matter
+it's slow anyway:
+
+command[1]: Ave: 8315.19 usec
+command[2]: Ave: 16555.41 usec, 1 frame = 8277.70
+command[3]: Ave: 24696.88 usec, 1 frame == 8232.29
+*/
 #define NUM_DST_COMMANDS                1
 
 typedef struct dst_command_t
@@ -184,7 +192,7 @@ static int dst_decoder_thread_create(dst_decoder_thread_t decoder, int spu_id, s
     }
 
     decoder->dsd_channel_data = (uint8_t *) memalign(128, FRAME_SIZE_64 * MAX_CHANNEL_COUNT);
-    decoder->command = (dst_command_t *) memalign(128, sizeof(dst_command_t));
+    decoder->command = (dst_command_t *) memalign(128, sizeof(dst_command_t) * NUM_DST_COMMANDS);
 
     return 0;
 }

@@ -71,7 +71,8 @@ static int parse_options(int argc, char *argv[]) {
         "  -m, --mch-tracks                : Export multi-channel tracks\n"
         "  -p, --output-dsdiff             : output as Philips DSDIFF file (default)\n"
         "  -s, --output-dsf                : output as Sony DSF file\n"
-        "  -c, --convert-dst               : convert DST to DSD\n"
+        "  -c, --convert-dst               : convert DST to DSD (DecoderComp.dll\n"
+        "                                    needs to be registered)\n"
         "  -i, --input[=FILE]              : set source and determine if \"bin\" image or\n"
         "                                    device\n"
         "  -P, --print                     : display disc and track information\n" 
@@ -223,8 +224,7 @@ int main(int argc, char* argv[])
                 // select the channel area
                 area_idx = (has_multi_channel(handle) && opts.multi_channel) ? handle->mulch_area_idx : handle->twoch_area_idx;
 
-                albumdir      = get_album_dir(handle);
-                recursive_mkdir(albumdir, 0666);
+                albumdir = get_album_dir(handle);
 
                 if (opts.output_iso)
                 {
@@ -256,6 +256,9 @@ int main(int argc, char* argv[])
                 }
                 else 
                 {
+                    // create the output folder
+                    recursive_mkdir(albumdir, 0666);
+
                     // fill the queue with items to rip
                     for (i = 0; i < handle->area[area_idx].area_toc->track_count; i++) 
                     {
