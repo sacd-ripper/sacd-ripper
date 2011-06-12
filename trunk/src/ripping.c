@@ -130,7 +130,7 @@ static void handle_status_update_progress_callback(uint32_t total_sectors, uint3
 
 int start_ripping_gui(int ripping_flags)
 {
-    char *albumdir, *musicfilename, *file_path;
+    char *albumdir, *musicfilename, *file_path = 0;
     sacd_reader_t   *sacd_reader;
     scarletbook_handle_t *handle;
     msgType          dialog_type;
