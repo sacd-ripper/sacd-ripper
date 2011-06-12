@@ -348,7 +348,7 @@ int dsdiff_create_header(scarletbook_output_format_t *ft)
         }
 
         edited_master_information_chunk->chunk_data_size = CALC_CHUNK_SIZE(em_ptr - handle->footer - handle->footer_size - CHUNK_HEADER_SIZE);
-        handle->footer_size = CEIL_ODD_NUMBER(em_ptr - handle->footer);
+        handle->footer_size += CEIL_ODD_NUMBER(em_ptr - handle->footer - handle->footer_size);
     }
 
     // Now we write the COMT comment chunk to the footer buffer
@@ -395,12 +395,12 @@ int dsdiff_create_header(scarletbook_output_format_t *ft)
 
         comment_ptr += CEIL_ODD_NUMBER(COMMENT_SIZE + strlen(data));
 
-        handle->footer_size            = CEIL_ODD_NUMBER(comment_ptr - handle->footer);
-        comment_chunk->chunk_data_size = CALC_CHUNK_SIZE(comment_ptr - handle->footer - handle->footer_size - COMMENTS_CHUNK_SIZE);
+        comment_chunk->chunk_data_size = CALC_CHUNK_SIZE(comment_ptr - handle->footer - handle->footer_size - CHUNK_HEADER_SIZE);
+        handle->footer_size           += CEIL_ODD_NUMBER(comment_ptr - handle->footer - handle->footer_size);
     }
 
     handle->header_size = CEIL_ODD_NUMBER(write_ptr - handle->header);
-    form_dsd_chunk->chunk_data_size = CALC_CHUNK_SIZE(handle->header_size + handle->footer_size - COMMENTS_CHUNK_SIZE + handle->audio_data_size);
+    form_dsd_chunk->chunk_data_size = CALC_CHUNK_SIZE(handle->header_size + handle->footer_size + handle->audio_data_size - CHUNK_HEADER_SIZE);
 
     fwrite(handle->header, 1, handle->header_size, ft->fd);
 
