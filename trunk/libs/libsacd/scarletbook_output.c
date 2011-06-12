@@ -580,7 +580,7 @@ static void *read_thread(void *arg)
 {
     scarletbook_handle_t *handle = (scarletbook_handle_t *) arg;
     struct list_head * node_ptr;
-    scarletbook_output_format_t * output_format_ptr;
+    scarletbook_output_format_t * ft;
     ssize_t ret;
 
     sysAtomicSet(&output.processing, 1);
@@ -590,25 +590,24 @@ static void *read_thread(void *arg)
         {
             node_ptr = output.ripping_queue.next;
 
-            output_format_ptr = list_entry(node_ptr, scarletbook_output_format_t, siblings);
+            ft = list_entry(node_ptr, scarletbook_output_format_t, siblings);
             list_del(node_ptr);
 
 #ifdef _WIN32
-            dst_decoder_init(output.dst_decoder, output_format_ptr->channel_count);
+            dst_decoder_init(output.dst_decoder, ft->channel_count);
 #endif
 
-            output.stats_current_file_total_sectors = output_format_ptr->length_lsn;
+            output.stats_current_file_total_sectors = ft->length_lsn;
             output.stats_current_file_sectors_processed = 0;
             output.stats_current_track++;
 
             if (output.stats_track_callback)
             {
-                output.stats_track_callback(output_format_ptr->filename, output.stats_current_track, output.stats_total_tracks);
+                output.stats_track_callback(ft->filename, output.stats_current_track, output.stats_total_tracks);
             }
 
-            create_output_file(output_format_ptr);
+            if (create_output_file(ft) == 0)
             {
-                scarletbook_output_format_t *ft = output_format_ptr;
                 uint32_t block_size, end_lsn;
                 uint32_t encrypted_start_1 = 0;
                 uint32_t encrypted_start_2 = 0;
@@ -699,12 +698,12 @@ static void *read_thread(void *arg)
             if (sysAtomicRead(&output.stop_processing) == 1)
             {
                 // make a copy of the filename
-                char *file_to_remove = strdup(output_format_ptr->filename);
+                char *file_to_remove = strdup(ft->filename);
 
                 sysAtomicSet(&output.processing, 0);
 
                 // before removal we close the file
-                close_output_file(output_format_ptr);
+                close_output_file(ft);
 
                 // remove the file being worked on
 #ifdef __lv2ppu__
@@ -725,7 +724,7 @@ static void *read_thread(void *arg)
 #endif
             }
 
-            close_output_file(output_format_ptr);
+            close_output_file(ft);
         } 
         destroy_ripping_queue();
     }
