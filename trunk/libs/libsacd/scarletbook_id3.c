@@ -54,16 +54,81 @@ int scarletbook_id3_tag_render(scarletbook_handle_t *handle, uint8_t *buffer, in
         frame = id3_add_frame(tag, ID3_TIT2);
         id3_set_text(frame, handle->area[area].area_track_text[track].track_type_title);
     }
+    else
+    {
+        master_text_t *master_text = handle->master_text[0];
+        int album_title_position = 0;
+
+        if (master_text->album_title_position)
+            album_title_position = master_text->album_title_position; 
+        else if (master_text->album_title_phonetic_position)
+            album_title_position = master_text->album_title_phonetic_position;
+        else if (master_text->disc_title_position)
+            album_title_position = master_text->disc_title_position; 
+        else if (master_text->disc_title_phonetic_position)
+            album_title_position = master_text->disc_title_phonetic_position;
+
+        if (album_title_position)
+        {
+            frame = id3_add_frame(tag, ID3_TIT2);
+            id3_set_text(frame, (char *) master_text + album_title_position);
+        }
+    }
     if (handle->area[area].area_track_text->track_type_performer)
     {
         frame = id3_add_frame(tag, ID3_TPE1);
         id3_set_text(frame, handle->area[area].area_track_text[track].track_type_performer);
     }
-    if (handle->master_text[0]->album_title_position)
+    else
     {
-        snprintf(tmp, 200, "%s", (char *) handle->master_text[0] + handle->master_text[0]->album_title_position);
-        frame = id3_add_frame(tag, ID3_TALB);
-        id3_set_text(frame, tmp);
+        master_text_t *master_text = handle->master_text[0];
+        int artist_position = 0;
+
+        // preferably we use the title as the artist name, as disc/album artist mostly contains garbage..
+        if (master_text->album_title_position)
+            artist_position = master_text->album_title_position; 
+        else if (master_text->album_title_phonetic_position)
+            artist_position = master_text->album_title_phonetic_position;
+        else if (master_text->disc_title_position)
+            artist_position = master_text->disc_title_position; 
+        else if (master_text->disc_title_phonetic_position)
+            artist_position = master_text->disc_title_phonetic_position;
+        else if (master_text->album_artist_position)
+            artist_position = master_text->album_artist_position;
+        else if (master_text->album_artist_phonetic_position)
+            artist_position = master_text->album_artist_phonetic_position;
+        else if (master_text->disc_artist_position)
+            artist_position = master_text->disc_artist_position;
+        else if (master_text->disc_artist_phonetic_position)
+            artist_position = master_text->disc_artist_phonetic_position;
+
+        if (artist_position)
+        {
+            frame = id3_add_frame(tag, ID3_TPE1);
+            id3_set_text(frame, (char *) master_text + artist_position);
+        }
+    }
+
+    {
+        master_text_t *master_text = handle->master_text[0];
+        int album_title_position = 0;
+
+        if (master_text->album_title_position)
+            album_title_position = master_text->album_title_position; 
+        else if (master_text->album_title_phonetic_position)
+            album_title_position = master_text->album_title_phonetic_position;
+        else if (master_text->disc_title_position)
+            album_title_position = master_text->disc_title_position; 
+        else if (master_text->disc_title_phonetic_position)
+            album_title_position = master_text->disc_title_phonetic_position;
+
+        if (album_title_position)
+        {
+            snprintf(tmp, 200, "%s", (char *) master_text + album_title_position);
+            frame = id3_add_frame(tag, ID3_TALB);
+            id3_set_text(frame, tmp);
+
+        }
     }
 
     frame = id3_add_frame(tag, ID3_TCON);
