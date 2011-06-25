@@ -227,11 +227,14 @@ void scarletbook_print_area_toc(scarletbook_handle_t *handle, int area_idx)
     for (i = 0; i < area_toc->track_count; i++)
     {
         isrc_t *isrc = &area_isrc_genre->isrc[i];
-        fprintf(stdout, "\tISRC Track [%d]:\n\t  ", i);
-        fprintf(stdout, "Country: %s, ", substr(isrc->country_code, 0, 2));
-        fprintf(stdout, "Owner: %s, ", substr(isrc->owner_code, 0, 3));
-        fprintf(stdout, "Year: %s, ", substr(isrc->recording_year, 0, 2));
-        fprintf(stdout, "Designation: %s\n", substr(isrc->designation_code, 0, 5));
+        if (*isrc->country_code)
+        {
+            fprintf(stdout, "\tISRC Track [%d]:\n\t  ", i);
+            fprintf(stdout, "Country: %s, ", substr(isrc->country_code, 0, 2));
+            fprintf(stdout, "Owner: %s, ", substr(isrc->owner_code, 0, 3));
+            fprintf(stdout, "Year: %s, ", substr(isrc->recording_year, 0, 2));
+            fprintf(stdout, "Designation: %s\n", substr(isrc->designation_code, 0, 5));
+        }
     }
 }
 

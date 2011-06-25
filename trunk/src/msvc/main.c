@@ -222,7 +222,7 @@ int main(int argc, char* argv[])
                 initialize_ripping();
 
                 // select the channel area
-                area_idx = (has_multi_channel(handle) && opts.multi_channel) ? handle->mulch_area_idx : handle->twoch_area_idx;
+                area_idx = ((has_multi_channel(handle) && opts.multi_channel) || !has_two_channel(handle)) ? handle->mulch_area_idx : handle->twoch_area_idx;
 
                 albumdir = get_album_dir(handle);
 
