@@ -370,7 +370,7 @@ void main_loop(void)
                         current_ripping_flags |= RIP_2CH_DST;
                     }
                 }
-                if (has_both_channels(sb_handle))
+                if (has_multi_channel(sb_handle))
                 {
                     current_ripping_flags |= RIP_MCH;
                 }
