@@ -169,7 +169,7 @@ int start_ripping_gui(int ripping_flags)
             }
 
             // select the channel area
-            area_idx = (has_multi_channel(handle) && ripping_flags & RIP_MCH) ? handle->mulch_area_idx : handle->twoch_area_idx;
+            area_idx = ((has_multi_channel(handle) && ripping_flags & RIP_MCH) || !has_two_channel(handle)) ? handle->mulch_area_idx : handle->twoch_area_idx;
 
             albumdir = get_album_dir(handle);
 
