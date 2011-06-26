@@ -1,4 +1,6 @@
-= Introduction =
+#summary A list of SACD-R compatible players.
+
+== Introduction ==
 
 Raw ISO images (SACD-R) that are burned to DVD-R can be played on several SACD players. If your SACD player is not in this list please write an ISO to disc and give it a try.
 
