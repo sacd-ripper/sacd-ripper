@@ -1,0 +1,61 @@
+= Introduction =
+
+Raw ISO images (SACD-R) that are burned to DVD-R can be played on several SACD players. If your SACD player is not in this list please write an ISO to disc and give it a try.
+
+==Confirmed to play==
+
+  * Cambridge Audio Azur 650BD
+  * Denon DVD-2910
+  * Denon DVD-3910
+  * Marantz UD5005
+  * NAD M5
+  * NAD T585
+  * OPPO BDP-80
+  * OPPO BDP-83
+  * OPPO BDP-83SE
+  * OPPO BDP-93
+  * OPPO BDP-95
+  * Sony BDP-S370
+  * Sony BDP-S380
+  * Sony BDP-S570
+  * Sony BDP-S870
+  * Sony BDP-S970
+  * Yamaha BD-S1067
+
+==Confirmed to play after firmware update==
+
+  * Samsung HD745/945/950
+  * Samsung HD841/941
+
+==NOT Working==
+
+  * Accuphase DP-100
+  * Denon DVD-1930
+  * Denon DVD-1940
+  * Denon DVD-2930
+  * Denon DVD-3930
+  * Harman/Kardon DVD 47
+  * Integra DPS-6.9
+  * Marantz DV-6001
+  * Marantz SA-15S1
+  * Marantz SA-7001
+  * Onkyo DV-SP504
+  * Oppo DV-980H
+  * Parasound D3
+  * Philips DVP-9000S
+  * Pioneer DV-565A
+  * Pioneer DV-575A
+  * Pioneer DV-600AV
+  * Pioneer DV-610AV
+  * Pioneer DV-656A
+  * Pioneer DV-696AV
+  * Pioneer DV-757Ai
+  * Pioneer DV-989AVi
+  * Pioneer DV-LX50
+  * Pioneer PD-D6-J
+  * Sherwood Newcastle SD-871
+  * Sony DVP-NS900V
+  * Sony PlayStation3
+  * Yamaha CD-S2000
+  * Yamaha DVD-S1800
+  * Yamaha DVD-S2700
