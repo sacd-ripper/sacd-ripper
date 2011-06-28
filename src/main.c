@@ -218,57 +218,6 @@ int patch_syscall_864(void)
     return 0;
 }
 
-void dump_sample_to_output_device(void)
-{
-    msgType  dialog_type;
-    int      fd_in, ret;
-    int      fd_out;
-    uint32_t sectors_read;
-    uint64_t writelen;
-    char     *file_path = (char *) malloc(100);
-    char     *message   = (char *) malloc(512);
-
-    sprintf(file_path, "%s/sacd_analysis.bin", output_device);
-
-    ret = sysFsOpen(file_path, SYS_O_WRONLY | SYS_O_CREAT | SYS_O_TRUNC, &fd_out, NULL, 0);
-    if (fd_out)
-    {
-        uint8_t *buffer = (uint8_t *) malloc(1024 * 2048);
-
-        ret = sys_storage_open(BD_DEVICE, &fd_in);
-        LOG(lm_main, LOG_DEBUG, ("sys storage_open %x %x\n", ret, fd_in));
-        if (ret == 0)
-        {
-            ret = sys_storage_read(fd_in, 0, 1024, buffer, &sectors_read);
-
-            LOG(lm_main, LOG_DEBUG, ("sys storage_read %x %x %x\n", ret, fd_in, sectors_read));
-
-            sysFsWrite(fd_out, buffer, 1024 * 2048, &writelen);
-
-            ret = sys_storage_close(fd_in);
-            LOG(lm_main, LOG_DEBUG, ("sys storage_close %x %x\n", ret, fd_in));
-
-        }
-        free(buffer);
-        sysFsClose(fd_out);
-    }
-
-    snprintf(message, 512, "Dump analysis has been written to: [%s]\nPlease send this sample to the author of this program.", file_path);
-    dialog_type = (MSG_DIALOG_NORMAL | MSG_DIALOG_DISABLE_CANCEL_ON);
-    msgDialogOpen2(dialog_type, message, NULL, NULL, NULL);
-
-    bd_disc_changed = 0;
-    while (!user_requested_exit() && bd_disc_changed == 0)
-    {
-        sysUtilCheckCallback();
-        flip();
-    }
-    msgDialogAbort();
-
-    free(file_path);
-    free(message);
-}
-
 static void bd_eject_disc_callback(void)
 {
     LOG(lm_main, LOG_NOTICE, ("disc ejected.."));
@@ -453,20 +402,8 @@ void main_loop(void)
     }
     else
     {
-        // was the disc changed since startup?
-        if (bd_disc_changed == -1 || !output_device)
-        {
-            snprintf(message, 512, "The current disc is empty or not recognized as an SACD, please re-insert.\n\n%s"
-                     , (output_device ? "" : "(Also make sure you connect an external fat32 formatted harddisk!)"));
-        }
-        else
-        {
-            snprintf(message, 512, "The containing disc is not recognized as an SACD.\n"
-                     "Would you like to RAW dump the first 2Mb to [%s (%.2fGB available)] for analysis?",
-                     output_device, output_device_space);
-
-            dialog_type |= MSG_DIALOG_BTN_TYPE_OK;
-        }
+        snprintf(message, 512, "The current disc is empty or not recognized as an SACD, please re-insert.\n\n%s"
+                 , (output_device ? "" : "(Also make sure you connect an external fat32 formatted harddisk!)"));
     }
 
     // can we start ripping?
@@ -491,16 +428,8 @@ void main_loop(void)
     }
     msgDialogAbort();
 
-    // user wants to dump 2Mb to output device
-    if (dialog_action == 1 && !bd_contains_sacd_disc)
-    {
-        dump_sample_to_output_device();
-
-        // action is handled
-        dialog_action = 0;
-    } 
     // did user request to start the ripping process?
-    else if (dialog_action == 1 && bd_contains_sacd_disc)
+    if (dialog_action == 1 && bd_contains_sacd_disc)
     {
         start_ripping_gui(output_format_options[output_format]);
 
