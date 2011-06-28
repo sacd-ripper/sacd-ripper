@@ -309,6 +309,17 @@ void sanitize_filename(char *f)
     trim_whitespace(f);
 }
 
+static void trim_dots(char * s) 
+{
+    char * p = s;
+    int l = strlen(p);
+
+    while(p[l - 1] == '.') p[--l] = 0;
+    while(*p && *p == '.') ++p, --l;
+
+    memmove(s, p, l + 1);
+}
+
 void sanitize_filepath(char *f)
 {
     const char safe_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+._-/ ";
@@ -323,5 +334,8 @@ void sanitize_filepath(char *f)
             *c = ' ';
     }
     replace_double_space_with_single(f);
+
+    trim_whitespace(f);
+    trim_dots(f);
     trim_whitespace(f);
 }
