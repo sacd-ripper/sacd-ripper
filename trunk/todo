@@ -1,13 +1,11 @@
 TODO
 
-version 0.1.0:
+version 0.2.x
 
-    - dump image to disc displayed instead of empty disc on some ocassions
-        - make a ps3 dump analysis tool
-        - remove dump image to disc option
-
-version 0.1.x
-
+    - add libiconv
+        - character convert all data to UTF-8
+        - add UTF-8 fprintf functions for windows (converting UTF-8 to unicode)
+        - add conversion from UTF-8 to UTF-16/UCS-2 for id3 tags
     - add option to embed sac_module & decoder
     - proper naming on scarletbook_output, it's a mess.. 
     - logging

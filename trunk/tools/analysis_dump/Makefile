@@ -9,8 +9,8 @@ endif
 
 include $(PSL1GHT)/ppu_rules
 
-TITLE		:=	SACD-Ripper
-APPID		:=	SACDRIP01
+TITLE		:=	SACD-Analysis Dumper
+APPID		:=	SACDDMP01
 CONTENTID	:=	UP0001-$(APPID)_00-0000000000000000 
 SFOXML		:=	../bin/sfo.xml
 ICON0		:=	../bin/ICON0.PNG 
@@ -22,11 +22,11 @@ ICON0		:=	../bin/ICON0.PNG
 # INCLUDES is a list of directories containing extra header files
 #---------------------------------------------------------------------------------
 TARGET		:=	$(notdir $(CURDIR))
-TARGETS     :=  libs tools
+TARGETS     :=  
 BUILD		:=	build
 SOURCES		:=	src
 DATA		:=	
-INCLUDES	:=	src libs/libunself libs/libpatchutils libs/libsacd libs/libcommon
+INCLUDES	:=	src ../../libs/libpatchutils ../../libs/libcommon
 
 #---------------------------------------------------------------------------------
 # options for code generation
@@ -40,13 +40,13 @@ LDFLAGS		=	$(MACHDEP) -Wl,-Map,$(notdir $@).map
 #---------------------------------------------------------------------------------
 # any extra libraries we wish to link with the project
 #---------------------------------------------------------------------------------
-LIBS	:=	-lrsx -lgcm_sys -lio -lsysmodule -lsysutil -lrt -llv2 -lm -lunself -lpatchutils -lsacd -lsysfs -lcommon -lid3 -lz
+LIBS	:=	-lrsx -lgcm_sys -lio -lsysmodule -lsysutil -lrt -llv2 -lm -lpatchutils -lsysfs -lcommon
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
 # include and lib
 #---------------------------------------------------------------------------------
-LIBDIRS	:= $(PORTLIBS) ../libs/libunself ../libs/libpatchutils ../libs/libsacd ../libs/libcommon ../libs/libid3
+LIBDIRS	:= $(PORTLIBS) ../../../libs/libpatchutils ../../../libs/libcommon
 
 #---------------------------------------------------------------------------------
 # no real need to edit anything past this point unless you need to add additional
