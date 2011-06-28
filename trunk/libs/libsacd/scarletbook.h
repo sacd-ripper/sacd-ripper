@@ -83,13 +83,13 @@ frame_format_t;
 enum
 {
       CHAR_SET_UNKNOWN       = 0
-    , CHAR_SET_ISO646        = 1
-    , CHAR_SET_ISO8859_1     = 2
-    , CHAR_SET_RIS506        = 3
-    , CHAR_SET_KSC5601       = 4
-    , CHAR_SET_GB2312        = 5
-    , CHAR_SET_BIG5          = 6
-    , CHAR_SET_ISO8859_1_ESC = 7
+    , CHAR_SET_ISO646        = 1    // ISO 646 (IRV), no escape sequences allowed
+    , CHAR_SET_ISO8859_1     = 2    // ISO 8859-1, no escape sequences allowed
+    , CHAR_SET_RIS506        = 3    // MusicShiftJIS, per RIS-506 (RIAJ), Music Shift-JIS Kanji
+    , CHAR_SET_KSC5601       = 4    // Korean KSC 5601-1987
+    , CHAR_SET_GB2312        = 5    // Chinese GB 2312-80
+    , CHAR_SET_BIG5          = 6    // Big5
+    , CHAR_SET_ISO8859_1_ESC = 7    // ISO 8859-1, single byte set escape sequences allowed
 } 
 character_set_t;
 
