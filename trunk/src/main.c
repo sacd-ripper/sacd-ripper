@@ -271,12 +271,14 @@ void dump_sample_to_output_device(void)
 
 static void bd_eject_disc_callback(void)
 {
+    LOG(lm_main, LOG_NOTICE, ("disc ejected.."));
     bd_contains_sacd_disc = -1;
     bd_disc_changed       = -1;
 }
 
 static void bd_insert_disc_callback(uint32_t disc_type, char *title_id)
 {
+    LOG(lm_main, LOG_NOTICE, ("disc inserted.."));
     bd_disc_changed = 1;
 
     if (disc_type == SYS_DISCTYPE_PS3)
@@ -334,16 +336,23 @@ void main_loop(void)
                 }
 
                 if (master_text->disc_title_position || master_text->disc_title_phonetic_position)
+                {
                     idx += snprintf(message_info + idx, 60, "Title: %s\n", substr((char *) master_text + (master_text->disc_title_position ? master_text->disc_title_position : master_text->disc_title_phonetic_position), 0, 50));
+                    LOG(lm_main, LOG_NOTICE, ("Album Title: %s", substr((char *) master_text + (master_text->disc_title_position ? master_text->disc_title_position : master_text->disc_title_phonetic_position), 0, 50)));
+                }
 
                 if (message_info[idx - 1] != '\n') { message_info[idx++] = '\n'; message_info[idx] = '\0'; } 
 
                 if (master_text->disc_artist_position || master_text->disc_artist_phonetic_position)
+                {
                     idx += snprintf(message_info + idx, 60, "Artist: %s\n", substr((char *) master_text + (master_text->disc_artist_position ? master_text->disc_artist_position : master_text->disc_artist_phonetic_position), 0, 50));
+                    LOG(lm_main, LOG_NOTICE, ("Album Artist: %s", substr((char *) master_text + (master_text->disc_artist_position ? master_text->disc_artist_position : master_text->disc_artist_phonetic_position), 0, 50)));
+                }
 
                 if (message_info[idx - 1] != '\n') { message_info[idx++] = '\n'; message_info[idx] = '\0'; } 
 
                 idx += snprintf(message_info + idx, 20, "Version: %02i.%02i\n", mtoc->version.major, mtoc->version.minor);
+                LOG(lm_main, LOG_NOTICE, ("Disc Version: %02i.%02i\n", mtoc->version.major, mtoc->version.minor));
                 idx += snprintf(message_info + idx, 25, "Created: %4i-%02i-%02i\n", mtoc->disc_date_year, mtoc->disc_date_month, mtoc->disc_date_day);
                 
                 idx += snprintf(message_info + idx, 15, "Area 0:\n");
