@@ -42,7 +42,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories=".\win32;..\..\libs\libsacd;..\..\libs\libcommon;..\..\libs\libid3"
-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;HAVE_CONFIG_H;NO_ID3"
+				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;HAVE_CONFIG_H"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
@@ -117,7 +117,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories=".\win32;..\sacdread;&quot;..\libs\libid3tag-0.15.1b&quot;"
+				AdditionalIncludeDirectories=".\win32;..\..\libs\libsacd;..\..\libs\libcommon;..\..\libs\libid3"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;HAVE_CONFIG_H"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
@@ -136,6 +136,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalDependencies="pthreadVC2.lib"
 				LinkIncremental="1"
 				GenerateDebugInformation="true"
 				SubSystem="1"

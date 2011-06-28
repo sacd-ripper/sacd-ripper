@@ -40,6 +40,7 @@
 #include "sacd_reader.h"
 
 #define WRITE_CACHE_SIZE 1 * 1024 * 1024
+#define MAX_DST_SIZE 1024 * 64
 
 // TODO: allocate dynamically
 // TODO: refactor, creation & destruction & cleanup..
@@ -229,9 +230,9 @@ static void allocate_round_robin_frame_buffer(void)
     {
         frame_ptr = calloc(sizeof(audio_frame_t), 1);
 #ifdef __lv2ppu__
-        frame_ptr->data = (uint8_t *) memalign(128, 0x4000);
+        frame_ptr->data = (uint8_t *) memalign(128, MAX_DST_SIZE);
 #else
-        frame_ptr->data = (uint8_t *) malloc(0x4000);
+        frame_ptr->data = (uint8_t *) malloc(MAX_DST_SIZE);
 #endif
         list_add_tail(&frame_ptr->siblings, &output.frames);
     }
@@ -413,7 +414,6 @@ static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int
                                             {
                                                 write_block(ft, output.dsd_data, dsd_size, 0);
                                             }
-
                                             // mark frame as empty
                                             frame_ptr->complete = 0;
                                         }
@@ -465,15 +465,23 @@ static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int
                         // we can only copy data if the frame has started
                         if (output.frame->started)
                         {
-                            memcpy(output.current_frame_ptr, buffer_ptr, packet->packet_length);
-                            output.frame->size += packet->packet_length;
-                            if (output.frame->dst_encoded)
+                            if (output.current_frame_ptr + packet->packet_length < output.frame->data + MAX_DST_SIZE)
                             {
-                                output.frame->sector_count--;
-                            }
+                                memcpy(output.current_frame_ptr, buffer_ptr, packet->packet_length);
 
-                            // advance output ptr
-                            output.current_frame_ptr += packet->packet_length;
+                                output.frame->size += packet->packet_length;
+                                if (output.frame->dst_encoded)
+                                {
+                                    output.frame->sector_count--;
+                                }
+
+                                // advance output ptr
+                                output.current_frame_ptr += packet->packet_length;
+                            }
+                            else
+                            {
+                                // TODO: skip track
+                            }
                         }
 
                         // advance the source pointer
