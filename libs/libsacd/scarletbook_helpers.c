@@ -88,6 +88,8 @@ char *get_album_dir(scarletbook_handle_t *handle)
     else
         albumdir = parse_format("Unknown Album", 0, disc_album_year, disc_artist, disc_album_title, NULL);
 
+    sanitize_filepath(albumdir);
+
     return albumdir;
 }
 

@@ -55,6 +55,11 @@ void trim_whitespace(char * str);
 // bad - the sting containing all the characters to remove
 void trim_chars(char * str, const char * bad);
 
+void print_hex_dump(int level, const char *prefix_str,
+                    int rowsize, int groupsize,
+                    const void *buf, int len, int ascii);
+
+
 #ifdef __cplusplus
 };
 #endif
