@@ -53,9 +53,14 @@ typedef struct _dst_decoder_t
     uint32_t     frame_nr;
 } dst_decoder_t;
 
-int dst_decoder_create(dst_decoder_t **dst_decoder, int thread_count);
+int dst_decoder_create_mt(dst_decoder_t **dst_decoder, int thread_count);
+int dst_decoder_destroy_mt(dst_decoder_t *dst_decoder);
+int dst_decoder_init_mt(dst_decoder_t *dst_decoder, int channel_count);
+int dst_decoder_decode_mt(dst_decoder_t *dst_decoder, uint8_t *dst_data, size_t dst_size, uint8_t **dsd_data, size_t *dsd_size);
+
+int dst_decoder_create(dst_decoder_t **dst_decoder);
 int dst_decoder_destroy(dst_decoder_t *dst_decoder);
 int dst_decoder_init(dst_decoder_t *dst_decoder, int channel_count);
-int dst_decoder_decode(dst_decoder_t *dst_decoder, uint8_t *dst_data, size_t dst_size, uint8_t **dsd_data, size_t *dsd_size);
+int dst_decoder_decode(dst_decoder_t *dst_decoder, uint8_t *dst_data, size_t dst_size, uint8_t *dsd_data, size_t *dsd_size);
 
 #endif // __DST_DECODER_H__

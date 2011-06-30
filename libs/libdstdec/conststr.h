@@ -137,6 +137,11 @@ Changes:
 /* DSTXBITS */
 #define MAX_DSTXBITS_SIZE   256
 
+/*  64FS44 =>  4704 */
+/* 128FS44 =>  9408 */
+/* 256FS44 => 18816 */
+#define MAX_DSDBYTES_INFRAME  18816
+
 #define MAX_CHANNELS 6
 #define MAX_DSDBITS_INFRAME (588 * 64)
 #define MAXNROF_SEGS 8            /* max nr of segments per channel for filters or Ptables */
