@@ -130,7 +130,7 @@ int dst_decoder_decode(dst_decoder_t *dst_decoder, uint8_t *dst_data, size_t dst
     frame_slot->frame_nr = dst_decoder->frame_nr;
     
     /* Release worker (decoding) thread on the loaded slot */
-    if (dst_data != NULL && dst_size > 0)
+    if (dst_size > 0)
     {
         frame_slot->state = SLOT_LOADED;
         pthread_mutex_unlock(&frame_slot->put_mutex);
@@ -145,7 +145,7 @@ int dst_decoder_decode(dst_decoder_t *dst_decoder, uint8_t *dst_data, size_t dst
     frame_slot = &dst_decoder->frame_slots[dst_decoder->slot_nr];
 
     /* Dump decoded frame */
-    if (frame_slot->state == SLOT_READY)
+    if (frame_slot->state != SLOT_EMPTY)
     {
         pthread_mutex_lock(&frame_slot->get_mutex);
         *dsd_data = frame_slot->dsd_data;
@@ -156,6 +156,12 @@ int dst_decoder_decode(dst_decoder_t *dst_decoder, uint8_t *dst_data, size_t dst
         *dsd_data = frame_slot->dsd_data;
         *dsd_size = 0;
     }
+    /*
+    if (frame_slot->state != SLOT_READY)
+    {
+        printf("State = %d\n", frame_slot->state);
+    }
+    */
 
     dst_decoder->frame_nr++;
     return 0;
