@@ -317,6 +317,28 @@ int recursive_parent_mkdir(char* path_and_name, mode_t mode)
     return rc;
 }
 
+void get_unique_dir(char *device, char **dir)
+{
+    struct stat stat_dir;
+    int dir_exists, count = 1;
+    char *dir_org = strdup(*dir);
+    char *device_dir = make_filename(device, *dir, 0, 0);
+    dir_exists = (stat(device ? device_dir : *dir, &stat_dir) == 0);
+    free(device_dir);
+    while (dir_exists)
+    {
+        int len = strlen(dir_org) + 10;
+        char *dir_copy = (char *) malloc(len);
+        snprintf(dir_copy, len, "%s (%d)", dir_org, count++);
+        free(*dir);
+        *dir = dir_copy;
+        device_dir = make_filename(device, dir_copy, 0, 0);
+        dir_exists = (stat(device ? device_dir : dir_copy, &stat_dir) == 0);
+        free(device_dir);
+    }
+    free(dir_org);
+}
+
 void sanitize_filename(char *f)
 {
     const char unsafe_chars[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d,

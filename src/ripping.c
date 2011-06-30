@@ -206,6 +206,9 @@ int start_ripping_gui(int ripping_flags)
             }
             else 
             {
+                // do not overwrite previous dump
+                get_unique_dir(output_device, &albumdir);
+
                 // fill the queue with items to rip
                 for (i = 0; i < handle->area[area_idx].area_toc->track_count; i++) 
                 {

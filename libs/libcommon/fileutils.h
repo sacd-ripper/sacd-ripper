@@ -59,4 +59,6 @@ void sanitize_filename(char *f);
 
 void sanitize_filepath(char *f);
 
+void get_unique_dir(char *device, char **dir);
+
 #endif

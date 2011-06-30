@@ -271,6 +271,7 @@ int main(int argc, char* argv[])
                 else 
                 {
                     // create the output folder
+                    get_unique_dir(0, &albumdir);
                     recursive_mkdir(albumdir, 0666);
 
                     // fill the queue with items to rip
