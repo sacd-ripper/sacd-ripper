@@ -151,19 +151,22 @@ sacd_input_t sacd_input_open(const char *target)
             goto error;
         }
 
+        memset(buffer, 0, 64);
         ioctl_get_configuration(dev->fd, buffer);
+        print_hex_dump(LOG_NOTICE, "config: ", 16, 1, buffer, 64, 0);
         if ((buffer[0] & 1) != 0)
         {
+            LOG(lm_main, LOG_NOTICE, ("executing ioctl_mode_sense."));
             ioctl_mode_sense(dev->fd, buffer);
             if (buffer[11] == 2)
             {
+                LOG(lm_main, LOG_NOTICE, ("executing ioctl_mode_select."));
                 ioctl_mode_select(dev->fd);
             }
         }
         sys_storage_get_device_info(BD_DEVICE, &dev->device_info);
 
         print_hex_dump(LOG_NOTICE, "device_info: ", 16, 1, &dev->device_info, sizeof(device_info_t), 0);
-
         if (dev->device_info.sector_size != SACD_LSN_SIZE)
         {
             LOG(lm_main, LOG_ERROR, ("incorrect LSN size [%x]\n", dev->device_info.sector_size));

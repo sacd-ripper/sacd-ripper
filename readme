@@ -92,7 +92,7 @@ SACD-Ripper supports the following output formats:
    larger)
 
 At this time of writing both Saracon and Audiogate do not support DST encoded
-files. Audiogate only support 2ch files and Saracon does not support DSF
+files. Audiogate only supports 2ch files and Saracon does not support DSF
 files. Please keep that in mind before selecting your file output.
 
 There seems to be a SACD BluRay read speed limit that sets the maximum read
@@ -110,9 +110,9 @@ To compile you will need the psl1ght suite. If you want to compile on a windows
 environment I advice you to follow the CygWin installation as the MingW 
 installation is unstable.
 
-When psl1ght has been properly setup libiconv needs to be configured. So run
-./config.sh within the libs/libiconv folder. When this has completed you can
-simply execute a "make" command within the root folder. SACD-Ripper should compile 
+When psl1ght has been properly setup you need to configure SACD-Ripper. Do this
+by running ./configure. When the configure script has completed you can
+execute a "make" command within same folder. SACD-Ripper should compile 
 without errors and warnings. Once completed it should have produced sacd-ripper.pkg.
 
 To compile the Windows scarletbook tool:
