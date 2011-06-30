@@ -39,7 +39,7 @@ typedef struct _frame_slot_t
     size_t    dst_size;
     ebunch    D;
     pthread_t       thread;
-    int             state;
+    volatile int    state;
     pthread_mutex_t get_mutex;
     pthread_mutex_t put_mutex;
 } frame_slot_t;
