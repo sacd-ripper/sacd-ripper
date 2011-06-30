@@ -30,6 +30,14 @@
 #include "DSTDecoder.h"
 #include "dst_decoder_ref.h"
 
+#define DST_DECODER_THREADS 8
+
+#define DST_BUFFER_SIZE (MAX_DSDBITS_INFRAME / 8 * MAX_CHANNELS)
+#define DSD_BUFFER_SIZE (MAX_DSDBITS_INFRAME / 8 * MAX_CHANNELS)
+
+static uint8_t* g_dstbuf = NULL;
+static uint8_t* g_dsdbuf = NULL;
+
 void *dst_decoder_thread(void *threadarg)
 {
     frame_slot_t *frame_slot = (frame_slot_t *)threadarg;
@@ -44,7 +52,7 @@ void *dst_decoder_thread(void *threadarg)
     pthread_exit(NULL);
 }
 
-int dst_decoder_create(dst_decoder_t **dst_decoder, int thread_count)
+int dst_decoder_create_mt(dst_decoder_t **dst_decoder, int thread_count)
 {
     *dst_decoder = (dst_decoder_t *)calloc(1, sizeof(dst_decoder_t));
     if (*dst_decoder == NULL)
@@ -66,7 +74,7 @@ int dst_decoder_create(dst_decoder_t **dst_decoder, int thread_count)
     return 0;
 }
 
-int dst_decoder_destroy(dst_decoder_t *dst_decoder)
+int dst_decoder_destroy_mt(dst_decoder_t *dst_decoder)
 {
     int i;
 
@@ -89,7 +97,7 @@ int dst_decoder_destroy(dst_decoder_t *dst_decoder)
     return 0;
 }   
 
-int dst_decoder_init(dst_decoder_t *dst_decoder, int channel_count)
+int dst_decoder_init_mt(dst_decoder_t *dst_decoder, int channel_count)
 {
     int i;
 
@@ -116,7 +124,7 @@ int dst_decoder_init(dst_decoder_t *dst_decoder, int channel_count)
     return 0;
 }
 
-int dst_decoder_decode(dst_decoder_t *dst_decoder, uint8_t *dst_data, size_t dst_size, uint8_t **dsd_data, size_t *dsd_size)
+int dst_decoder_decode_mt(dst_decoder_t *dst_decoder, uint8_t *dst_data, size_t dst_size, uint8_t **dsd_data, size_t *dsd_size)
 {
     frame_slot_t *frame_slot;
 
@@ -165,4 +173,49 @@ int dst_decoder_decode(dst_decoder_t *dst_decoder, uint8_t *dst_data, size_t dst
 
     dst_decoder->frame_nr++;
     return 0;
+}
+
+int dst_decoder_create(dst_decoder_t **dst_decoder)
+{
+    g_dstbuf = (uint8_t*)malloc(DST_DECODER_THREADS * DST_BUFFER_SIZE);
+    g_dsdbuf = (uint8_t*)malloc(DST_DECODER_THREADS * DSD_BUFFER_SIZE);
+    if (g_dstbuf == NULL || g_dsdbuf == NULL)
+    {
+        LOG(lm_main, LOG_ERROR, ("Could not allocate memory for buffers"));
+        return -1;
+    }
+    return dst_decoder_create_mt(dst_decoder, DST_DECODER_THREADS);
+}
+
+int dst_decoder_destroy(dst_decoder_t *dst_decoder)
+{
+    if (g_dstbuf)
+    {
+        free(g_dstbuf);
+        g_dstbuf = NULL;
+    }
+    if (g_dsdbuf)
+    {
+        free(g_dsdbuf);
+        g_dsdbuf = NULL;
+    }
+    return dst_decoder_destroy_mt(dst_decoder);
+}
+
+int dst_decoder_init(dst_decoder_t *dst_decoder, int channel_count)
+{
+    return dst_decoder_init_mt(dst_decoder, channel_count);
+}
+
+int dst_decoder_decode(dst_decoder_t *dst_decoder, uint8_t *dst_data, size_t dst_size, uint8_t *dsd_data, size_t *dsd_size)
+{
+    uint8_t *dst_ref, *dsd_ref;
+    int rc;
+
+    dst_ref = g_dstbuf + DST_BUFFER_SIZE * dst_decoder->slot_nr;
+    dsd_ref = g_dsdbuf + DSD_BUFFER_SIZE * dst_decoder->slot_nr;
+    memcpy(dst_ref, dst_data, dst_size);
+    rc = dst_decoder_decode_mt(dst_decoder, dst_ref, dst_size, &dsd_ref, dsd_size); 
+    memcpy(dsd_data, dsd_ref, *dsd_size);
+    return rc;
 }
