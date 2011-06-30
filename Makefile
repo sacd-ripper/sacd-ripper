@@ -40,7 +40,7 @@ LDFLAGS		=	$(MACHDEP) -Wl,-Map,$(notdir $@).map
 #---------------------------------------------------------------------------------
 # any extra libraries we wish to link with the project
 #---------------------------------------------------------------------------------
-LIBS	:=	-lrsx -lgcm_sys -lio -lsysmodule -lsysutil -lrt -llv2 -lm -lunself -lpatchutils -lsacd -lsysfs -lcommon -lid3 -lz
+LIBS	:=	-lrsx -lgcm_sys -lio -lsysmodule -lsysutil -lrt -llv2 -lm -lunself -lpatchutils -lsacd -lsysfs -lcommon -lid3 -lz -liconv
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
@@ -98,6 +98,7 @@ export INCLUDE	:=	$(foreach dir,$(INCLUDES), -I$(CURDIR)/$(dir)) \
 # build a list of library paths
 #---------------------------------------------------------------------------------
 export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib) \
+                    -L../libs/libiconv/lib/.libs/ \
 					$(LIBPSL1GHT_LIB)
 
 export OUTPUT	:=	$(CURDIR)/$(TARGET)

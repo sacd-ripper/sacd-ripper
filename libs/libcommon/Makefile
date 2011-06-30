@@ -33,7 +33,7 @@ endif
 LIBRARY		:= $(LIBDIR)/libcommon
 
 #---------------------------------------------------------------------------------
-DEFINCS		:= -I$(BASEDIR) -I$(PSL1GHT)/ppu/include
+DEFINCS		:= -I$(BASEDIR) -I$(PSL1GHT)/ppu/include -I$(BASEDIR)/../libiconv/include
 INCLUDES	:=	$(DEFINCS)
 
 CFLAGS		:= -O2 -mregnames -Wall -mcpu=cell $(MACHDEP) -DLIBCOMMON_INTERNAL $(INCLUDES) -Wa,-mcell -DWITH_PL3
@@ -44,6 +44,7 @@ VPATH :=	$(BASEDIR)
 
 #---------------------------------------------------------------------------------
 OBJS		:= \
+            charset.o \
             log.o \
             logging.o \
             fileutils.o \

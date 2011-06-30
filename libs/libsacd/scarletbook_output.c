@@ -33,6 +33,7 @@
 #include <io.h>
 #endif
 
+#include <charset.h>
 #include <utils.h>
 #include <logging.h>
 
@@ -145,7 +146,13 @@ static int create_output_file(scarletbook_output_format_t *ft)
 {
     int result;
 
+#ifdef _WIN32
+    wchar_t *wide_filename = (wchar_t *) charset_convert(ft->filename, strlen(ft->filename), "UTF-8", "UCS-2LE");
+    ft->fd = _wfopen(wide_filename, L"wb");
+    free(wide_filename);
+#else
     ft->fd = fopen(ft->filename, "wb");
+#endif
     if (ft->fd == 0)
     {
         LOG(lm_main, LOG_ERROR, ("error creating %s, errno: %d, %s", ft->filename, errno, strerror(errno)));

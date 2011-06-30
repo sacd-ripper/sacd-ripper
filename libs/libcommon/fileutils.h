@@ -28,11 +28,6 @@
 typedef int mode_t;
 #endif
 
-// LNR - It's possible that some files may end up on a MS file system,
-// so it's best to disallow MS invalid chars as well. I also disallow
-// period (dot) because it screws up my file name database software. YMMV
-#define BADCHARS    "./?*|><:\"\\"
-
 // substitute various items into a formatted string (similar to printf)
 //
 // format - the format of the filename

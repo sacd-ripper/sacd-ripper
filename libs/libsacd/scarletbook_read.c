@@ -26,9 +26,12 @@
 #include <inttypes.h>
 #include <string.h>
 
+#include <charset.h>
+
 #include "endianess.h"
 #include "scarletbook.h"
 #include "scarletbook_read.h"
+#include "scarletbook_helpers.h"
 #include "sacd_reader.h"
 #include "sacd_read_internal.h"
 
@@ -126,19 +129,73 @@ scarletbook_handle_t *scarletbook_open(sacd_reader_t *sacd, int title)
     return sb;
 }
 
+static void free_area(scarletbook_area_t *area)
+{
+    int i;
+    
+    for (i = 0; i < area->area_toc->track_count; i++)
+    {
+        free(area->area_track_text[i].track_type_title);
+        free(area->area_track_text[i].track_type_performer);
+        free(area->area_track_text[i].track_type_songwriter);
+        free(area->area_track_text[i].track_type_composer);
+        free(area->area_track_text[i].track_type_arranger);
+        free(area->area_track_text[i].track_type_message);
+        free(area->area_track_text[i].track_type_extra_message);
+        free(area->area_track_text[i].track_type_title_phonetic);
+        free(area->area_track_text[i].track_type_performer_phonetic);
+        free(area->area_track_text[i].track_type_songwriter_phonetic);
+        free(area->area_track_text[i].track_type_composer_phonetic);
+        free(area->area_track_text[i].track_type_arranger_phonetic);
+        free(area->area_track_text[i].track_type_message_phonetic);
+        free(area->area_track_text[i].track_type_extra_message_phonetic);
+    }
+
+    free(area->description);
+    free(area->copyright);
+    free(area->description_phonetic);
+    free(area->copyright_phonetic);
+}
+
 void scarletbook_close(scarletbook_handle_t *handle)
 {
     if (!handle)
         return;
 
+    if (has_two_channel(handle))
+    {
+        free_area(&handle->area[handle->twoch_area_idx]);
+        free(handle->area[handle->twoch_area_idx].area_data);
+    }
+
+    if (has_multi_channel(handle))
+    {
+        free_area(&handle->area[handle->mulch_area_idx]);
+        free(handle->area[handle->mulch_area_idx].area_data);
+    }
+
+    {
+        master_text_t *mt = &handle->master_text;
+        free(mt->album_title);
+        free(mt->album_title_phonetic);
+        free(mt->album_artist);
+        free(mt->album_artist_phonetic);
+        free(mt->album_publisher);
+        free(mt->album_publisher_phonetic);
+        free(mt->album_copyright);
+        free(mt->album_copyright_phonetic);
+        free(mt->disc_title);
+        free(mt->disc_title_phonetic);
+        free(mt->disc_artist);
+        free(mt->disc_artist_phonetic);
+        free(mt->disc_publisher);
+        free(mt->disc_publisher_phonetic);
+        free(mt->disc_copyright);
+        free(mt->disc_copyright_phonetic);
+    } 
+
     if (handle->master_data)
         free((void *) handle->master_data);
-
-    if (handle->area[0].area_data)
-        free(handle->area[0].area_data);
-
-    if (handle->area[1].area_data)
-        free(handle->area[1].area_data);
 
     memset(handle, 0, sizeof(scarletbook_handle_t));
 
@@ -207,8 +264,7 @@ static int scarletbook_read_master_toc(scarletbook_handle_t *handle)
     // set pointers to text content
     for (i = 0; i < MAX_LANGUAGE_COUNT; i++)
     {
-        master_text_t *master_text;
-        handle->master_text[i] = master_text = (master_text_t *) p;
+        master_sacd_text_t *master_text = (master_sacd_text_t *) p;
 
         if (strncmp("SACDText", master_text->id, 8) != 0)
         {
@@ -234,6 +290,46 @@ static int scarletbook_read_master_toc(scarletbook_handle_t *handle)
         SWAP16(master_text->disc_copyright_position);
         SWAP16(master_text->disc_copyright_phonetic_position);
 
+        // we only use the first SACDText entry
+        if (i == 0)
+        {
+            char *current_charset = (char *) character_set[handle->master_toc->locales[i].character_set & 0x07];
+
+            if (master_text->album_title_position)
+                handle->master_text.album_title = charset_convert((char *) master_text + master_text->album_title_position, strlen((char *) master_text + master_text->album_title_position), current_charset, "UTF-8");
+            if (master_text->album_title_phonetic_position)
+                handle->master_text.album_title_phonetic = charset_convert((char *) master_text + master_text->album_title_phonetic_position, strlen((char *) master_text + master_text->album_title_phonetic_position), current_charset, "UTF-8");
+            if (master_text->album_artist_position)
+                handle->master_text.album_artist = charset_convert((char *) master_text + master_text->album_artist_position, strlen((char *) master_text + master_text->album_artist_position), current_charset, "UTF-8");
+            if (master_text->album_artist_phonetic_position)
+                handle->master_text.album_artist_phonetic = charset_convert((char *) master_text + master_text->album_artist_phonetic_position, strlen((char *) master_text + master_text->album_artist_phonetic_position), current_charset, "UTF-8");
+            if (master_text->album_publisher_position)
+                handle->master_text.album_publisher = charset_convert((char *) master_text + master_text->album_publisher_position, strlen((char *) master_text + master_text->album_publisher_position), current_charset, "UTF-8");
+            if (master_text->album_publisher_phonetic_position)
+                handle->master_text.album_publisher_phonetic = charset_convert((char *) master_text + master_text->album_publisher_phonetic_position, strlen((char *) master_text + master_text->album_publisher_phonetic_position), current_charset, "UTF-8");
+            if (master_text->album_copyright_position)
+                handle->master_text.album_copyright = charset_convert((char *) master_text + master_text->album_copyright_position, strlen((char *) master_text + master_text->album_copyright_position), current_charset, "UTF-8");
+            if (master_text->album_copyright_phonetic_position)
+                handle->master_text.album_copyright_phonetic = charset_convert((char *) master_text + master_text->album_copyright_phonetic_position, strlen((char *) master_text + master_text->album_copyright_phonetic_position), current_charset, "UTF-8");
+
+            if (master_text->disc_title_position)
+                handle->master_text.disc_title = charset_convert((char *) master_text + master_text->disc_title_position, strlen((char *) master_text + master_text->disc_title_position), current_charset, "UTF-8");
+            if (master_text->disc_title_phonetic_position)
+                handle->master_text.disc_title_phonetic = charset_convert((char *) master_text + master_text->disc_title_phonetic_position, strlen((char *) master_text + master_text->disc_title_phonetic_position), current_charset, "UTF-8");
+            if (master_text->disc_artist_position)
+                handle->master_text.disc_artist = charset_convert((char *) master_text + master_text->disc_artist_position, strlen((char *) master_text + master_text->disc_artist_position), current_charset, "UTF-8");
+            if (master_text->disc_artist_phonetic_position)
+                handle->master_text.disc_artist_phonetic = charset_convert((char *) master_text + master_text->disc_artist_phonetic_position, strlen((char *) master_text + master_text->disc_artist_phonetic_position), current_charset, "UTF-8");
+            if (master_text->disc_publisher_position)
+                handle->master_text.disc_publisher = charset_convert((char *) master_text + master_text->disc_publisher_position, strlen((char *) master_text + master_text->disc_publisher_position), current_charset, "UTF-8");
+            if (master_text->disc_publisher_phonetic_position)
+                handle->master_text.disc_publisher_phonetic = charset_convert((char *) master_text + master_text->disc_publisher_phonetic_position, strlen((char *) master_text + master_text->disc_publisher_phonetic_position), current_charset, "UTF-8");
+            if (master_text->disc_copyright_position)
+                handle->master_text.disc_copyright = charset_convert((char *) master_text + master_text->disc_copyright_position, strlen((char *) master_text + master_text->disc_copyright_position), current_charset, "UTF-8");
+            if (master_text->disc_copyright_phonetic_position)
+                handle->master_text.disc_copyright_phonetic = charset_convert((char *) master_text + master_text->disc_copyright_phonetic_position, strlen((char *) master_text + master_text->disc_copyright_phonetic_position), current_charset, "UTF-8");
+        }
+
         p += SACD_LSN_SIZE;
     }
 
@@ -252,7 +348,9 @@ static int scarletbook_read_area_toc(scarletbook_handle_t *handle, int area_idx)
     area_toc_t         *area_toc;
     uint8_t            *area_data;
     uint8_t            *p;
+    int                 sacd_text_idx = 0;
     scarletbook_area_t *area = &handle->area[area_idx];
+    char *current_charset;
 
     p = area_data = area->area_data;
     area_toc = area->area_toc = (area_toc_t *) area_data;
@@ -284,6 +382,17 @@ static int scarletbook_read_area_toc(scarletbook_handle_t *handle, int area_idx)
     CHECK_ZERO(area_toc->reserved09);
     CHECK_ZERO(area_toc->reserved10);
 
+    current_charset = (char *) character_set[area->area_toc->languages[sacd_text_idx].character_set & 0x07];
+
+    if (area_toc->copyright_offset)
+        area->description_phonetic = charset_convert((char *) area_toc + area_toc->copyright_offset, strlen((char *) area_toc + area_toc->copyright_offset), current_charset, "UTF-8");
+    if (area_toc->copyright_phonetic_offset)
+        area->description_phonetic = charset_convert((char *) area_toc + area_toc->copyright_phonetic_offset, strlen((char *) area_toc + area_toc->copyright_phonetic_offset), current_charset, "UTF-8");
+    if (area_toc->area_description_offset)
+        area->description_phonetic = charset_convert((char *) area_toc + area_toc->area_description_offset, strlen((char *) area_toc + area_toc->area_description_offset), current_charset, "UTF-8");
+    if (area_toc->area_description_phonetic_offset)
+        area->description_phonetic = charset_convert((char *) area_toc + area_toc->area_description_phonetic_offset, strlen((char *) area_toc + area_toc->area_description_phonetic_offset), current_charset, "UTF-8");
+
     if (area_toc->version.major > SUPPORTED_VERSION_MAJOR || area_toc->version.minor > SUPPORTED_VERSION_MINOR)
     {
         fprintf(stderr, "libsacdread: Unsupported version: %2i.%2i\n", area_toc->version.major, area_toc->version.minor);
@@ -307,82 +416,87 @@ static int scarletbook_read_area_toc(scarletbook_handle_t *handle, int area_idx)
     {
         if (strncmp((char *) p, "SACDTTxt", 8) == 0)
         {
-            for (i = 0; i < area_toc->track_count; i++)
+            // we discard all other SACDTTxt entries
+            if (sacd_text_idx == 0)
             {
-                area_text_t *area_text;
-                uint8_t        track_type, track_amount;
-                char           *track_ptr;
-                area_text = area->area_text = (area_text_t *) p;
-                SWAP16(area_text->track_text_position[i]);
-                if (area_text->track_text_position[i] > 0)
+                for (i = 0; i < area_toc->track_count; i++)
                 {
-                    track_ptr    = (char *) (p + area_text->track_text_position[i]);
-                    track_amount = *track_ptr;
-                    track_ptr   += 4;
-                    for (j = 0; j < track_amount; j++)
+                    area_text_t *area_text;
+                    uint8_t        track_type, track_amount;
+                    char           *track_ptr;
+                    area_text = area->area_text = (area_text_t *) p;
+                    SWAP16(area_text->track_text_position[i]);
+                    if (area_text->track_text_position[i] > 0)
                     {
-                        track_type = *track_ptr;
-                        track_ptr++;
-                        track_ptr++;                         // skip unknown 0x20
-                        if (*track_ptr != 0)
+                        track_ptr = (char *) (p + area_text->track_text_position[i]);
+                        track_amount = *track_ptr;
+                        track_ptr += 4;
+                        for (j = 0; j < track_amount; j++)
                         {
-                            switch (track_type)
+                            track_type = *track_ptr;
+                            track_ptr++;
+                            track_ptr++;                         // skip unknown 0x20
+                            if (*track_ptr != 0)
                             {
-                            case TRACK_TYPE_TITLE:
-                                area->area_track_text[i].track_type_title = track_ptr;
-                                break;
-                            case TRACK_TYPE_PERFORMER:
-                                area->area_track_text[i].track_type_performer = track_ptr;
-                                break;
-                            case TRACK_TYPE_SONGWRITER:
-                                area->area_track_text[i].track_type_songwriter = track_ptr;
-                                break;
-                            case TRACK_TYPE_COMPOSER:
-                                area->area_track_text[i].track_type_composer = track_ptr;
-                                break;
-                            case TRACK_TYPE_ARRANGER:
-                                area->area_track_text[i].track_type_arranger = track_ptr;
-                                break;
-                            case TRACK_TYPE_MESSAGE:
-                                area->area_track_text[i].track_type_message = track_ptr;
-                                break;
-                            case TRACK_TYPE_EXTRA_MESSAGE:
-                                area->area_track_text[i].track_type_extra_message = track_ptr;
-                                break;
-                            case TRACK_TYPE_TITLE_PHONETIC:
-                                area->area_track_text[i].track_type_title_phonetic = track_ptr;
-                                break;
-                            case TRACK_TYPE_PERFORMER_PHONETIC:
-                                area->area_track_text[i].track_type_performer_phonetic = track_ptr;
-                                break;
-                            case TRACK_TYPE_SONGWRITER_PHONETIC:
-                                area->area_track_text[i].track_type_songwriter_phonetic = track_ptr;
-                                break;
-                            case TRACK_TYPE_COMPOSER_PHONETIC:
-                                area->area_track_text[i].track_type_composer_phonetic = track_ptr;
-                                break;
-                            case TRACK_TYPE_ARRANGER_PHONETIC:
-                                area->area_track_text[i].track_type_arranger_phonetic = track_ptr;
-                                break;
-                            case TRACK_TYPE_MESSAGE_PHONETIC:
-                                area->area_track_text[i].track_type_message_phonetic = track_ptr;
-                                break;
-                            case TRACK_TYPE_EXTRA_MESSAGE_PHONETIC:
-                                area->area_track_text[i].track_type_extra_message_phonetic = track_ptr;
-                                break;
+                                switch (track_type)
+                                {
+                                case TRACK_TYPE_TITLE:
+                                    area->area_track_text[i].track_type_title = charset_convert(track_ptr, strlen(track_ptr), current_charset, "UTF-8");
+                                    break;
+                                case TRACK_TYPE_PERFORMER:
+                                    area->area_track_text[i].track_type_performer = charset_convert(track_ptr, strlen(track_ptr), current_charset, "UTF-8");
+                                    break;
+                                case TRACK_TYPE_SONGWRITER:
+                                    area->area_track_text[i].track_type_songwriter = charset_convert(track_ptr, strlen(track_ptr), current_charset, "UTF-8");
+                                    break;
+                                case TRACK_TYPE_COMPOSER:
+                                    area->area_track_text[i].track_type_composer = charset_convert(track_ptr, strlen(track_ptr), current_charset, "UTF-8");
+                                    break;
+                                case TRACK_TYPE_ARRANGER:
+                                    area->area_track_text[i].track_type_arranger = charset_convert(track_ptr, strlen(track_ptr), current_charset, "UTF-8");
+                                    break;
+                                case TRACK_TYPE_MESSAGE:
+                                    area->area_track_text[i].track_type_message = charset_convert(track_ptr, strlen(track_ptr), current_charset, "UTF-8");
+                                    break;
+                                case TRACK_TYPE_EXTRA_MESSAGE:
+                                    area->area_track_text[i].track_type_extra_message = charset_convert(track_ptr, strlen(track_ptr), current_charset, "UTF-8");
+                                    break;
+                                case TRACK_TYPE_TITLE_PHONETIC:
+                                    area->area_track_text[i].track_type_title_phonetic = charset_convert(track_ptr, strlen(track_ptr), current_charset, "UTF-8");
+                                    break;
+                                case TRACK_TYPE_PERFORMER_PHONETIC:
+                                    area->area_track_text[i].track_type_performer_phonetic = charset_convert(track_ptr, strlen(track_ptr), current_charset, "UTF-8");
+                                    break;
+                                case TRACK_TYPE_SONGWRITER_PHONETIC:
+                                    area->area_track_text[i].track_type_songwriter_phonetic = charset_convert(track_ptr, strlen(track_ptr), current_charset, "UTF-8");
+                                    break;
+                                case TRACK_TYPE_COMPOSER_PHONETIC:
+                                    area->area_track_text[i].track_type_composer_phonetic = charset_convert(track_ptr, strlen(track_ptr), current_charset, "UTF-8");
+                                    break;
+                                case TRACK_TYPE_ARRANGER_PHONETIC:
+                                    area->area_track_text[i].track_type_arranger_phonetic = charset_convert(track_ptr, strlen(track_ptr), current_charset, "UTF-8");
+                                    break;
+                                case TRACK_TYPE_MESSAGE_PHONETIC:
+                                    area->area_track_text[i].track_type_message_phonetic = charset_convert(track_ptr, strlen(track_ptr), current_charset, "UTF-8");
+                                    break;
+                                case TRACK_TYPE_EXTRA_MESSAGE_PHONETIC:
+                                    area->area_track_text[i].track_type_extra_message_phonetic = charset_convert(track_ptr, strlen(track_ptr), current_charset, "UTF-8");
+                                    break;
+                                }
                             }
-                        }
-                        if (j < track_amount - 1)
-                        {
-                            while (*track_ptr != 0)
-                                track_ptr++;
+                            if (j < track_amount - 1)
+                            {
+                                while (*track_ptr != 0)
+                                    track_ptr++;
 
-                            while (*track_ptr == 0)
-                                track_ptr++;
+                                while (*track_ptr == 0)
+                                    track_ptr++;
+                            }
                         }
                     }
                 }
             }
+            sacd_text_idx++;
             p += SACD_LSN_SIZE;
         }
         else if (strncmp((char *) p, "SACD_IGL", 8) == 0)

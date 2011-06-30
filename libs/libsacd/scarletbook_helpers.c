@@ -32,46 +32,44 @@ char *get_album_dir(scarletbook_handle_t *handle)
     char disc_album_title[60];
     char disc_album_year[5];
     char *albumdir;
-    master_text_t *master_text = handle->master_text[0];
-    int artist_position = 0;
-    int album_title_position = 0;
+    master_text_t *master_text = &handle->master_text;
+    char *artist = 0;
+    char *album_title = 0;
 
-    if (master_text->album_artist_position)
-        artist_position = master_text->album_artist_position;
-    else if (master_text->album_artist_phonetic_position)
-        artist_position = master_text->album_artist_phonetic_position;
-    else if (master_text->disc_artist_position)
-        artist_position = master_text->disc_artist_position;
-    else if (master_text->disc_artist_phonetic_position)
-        artist_position = master_text->disc_artist_phonetic_position;
+    if (master_text->album_artist)
+        artist = master_text->album_artist;
+    else if (master_text->album_artist_phonetic)
+        artist = master_text->album_artist_phonetic;
+    else if (master_text->disc_artist)
+        artist = master_text->disc_artist;
+    else if (master_text->disc_artist_phonetic)
+        artist = master_text->disc_artist_phonetic;
 
-    if (master_text->album_title_position)
-        album_title_position = master_text->album_title_position; 
-    else if (master_text->album_title_phonetic_position)
-        album_title_position = master_text->album_title_phonetic_position;
-    else if (master_text->disc_title_position)
-        album_title_position = master_text->disc_title_position; 
-    else if (master_text->disc_title_phonetic_position)
-        album_title_position = master_text->disc_title_phonetic_position;
+    if (master_text->album_title)
+        album_title = master_text->album_title; 
+    else if (master_text->album_title_phonetic)
+        album_title = master_text->album_title_phonetic;
+    else if (master_text->disc_title)
+        album_title = master_text->disc_title; 
+    else if (master_text->disc_title_phonetic)
+        album_title = master_text->disc_title_phonetic;
 
     memset(disc_artist, 0, sizeof(disc_artist));
-    if (artist_position)
+    if (artist)
     {
-        char *c = (char *) master_text + artist_position;
-        char *pos = strchr(c, ';');
+        char *pos = strchr(artist, ';');
         if (!pos)
-            pos = c + strlen(c);
-        strncpy(disc_artist, c, min(pos - c, 59));
+            pos = artist + strlen(artist);
+        strncpy(disc_artist, artist, min(pos - artist, 59));
     }
 
     memset(disc_album_title, 0, sizeof(disc_album_title));
-    if (album_title_position)
+    if (album_title)
     {
-        char *c = (char *) master_text + album_title_position;
-        char *pos = strchr(c, ';');
+        char *pos = strchr(album_title, ';');
         if (!pos)
-            pos = c + strlen(c);
-        strncpy(disc_album_title, c, min(pos - c, 59));
+            pos = album_title + strlen(album_title);
+        strncpy(disc_album_title, album_title, min(pos - album_title, 59));
     }
 
     snprintf(disc_album_year, sizeof(disc_album_year), "%04d", handle->master_toc->disc_date_year);
@@ -100,17 +98,17 @@ char *get_music_filename(scarletbook_handle_t *handle, int area, int track)
     char track_title[60];
     char disc_album_title[60];
     char disc_album_year[5];
-    master_text_t *master_text = handle->master_text[0];
-    int album_title_position = 0; 
+    master_text_t *master_text = &handle->master_text;
+    char *album_title = 0; 
     
-    if (master_text->album_title_position)
-        album_title_position = master_text->album_title_position; 
-    else if (master_text->album_title_phonetic_position)
-        album_title_position = master_text->album_title_phonetic_position;
-    else if (master_text->disc_title_position)
-        album_title_position = master_text->disc_title_position; 
-    else if (master_text->disc_title_phonetic_position)
-        album_title_position = master_text->disc_title_phonetic_position;
+    if (master_text->album_title)
+        album_title = master_text->album_title; 
+    else if (master_text->album_title_phonetic)
+        album_title = master_text->album_title_phonetic;
+    else if (master_text->disc_title)
+        album_title = master_text->disc_title; 
+    else if (master_text->disc_title_phonetic)
+        album_title = master_text->disc_title_phonetic;
 
     memset(track_artist, 0, sizeof(track_artist));
     c = handle->area[area].area_track_text[track].track_type_performer;
@@ -127,13 +125,12 @@ char *get_music_filename(scarletbook_handle_t *handle, int area, int track)
     }
 
     memset(disc_album_title, 0, sizeof(disc_album_title));
-    if (album_title_position)
+    if (album_title)
     {
-        char *c = (char *) master_text + album_title_position;
-        char *pos = strchr(c, ';');
+        char *pos = strchr(album_title, ';');
         if (!pos)
-            pos = c + strlen(c);
-        strncpy(disc_album_title, c, min(pos - c, 59));
+            pos = album_title + strlen(album_title);
+        strncpy(disc_album_title, album_title, min(pos - album_title, 59));
     }
 
     snprintf(disc_album_year, sizeof(disc_album_year), "%04d", handle->master_toc->disc_date_year);

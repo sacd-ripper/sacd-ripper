@@ -76,7 +76,7 @@ automatically.
 
 Get the PS3 keys from http://git-hacks.com/ps3free/ps3keys and put these in the
 root of an USB disc. They will be asked for during first time installation,
-after that you can remove the keys for your USB disc.
+after that you can remove the keys from your USB disc.
    
 Information
 
@@ -110,9 +110,16 @@ To compile you will need the psl1ght suite. If you want to compile on a windows
 environment I advice you to follow the CygWin installation as the MingW 
 installation is unstable.
 
-When psl1ght has been properly setup sacd-ripper should be compiled using a
-simple "make" command and it should compile without errors and warnings. Once 
-completed it should have produced sacd-ripper.pkg.
+When psl1ght has been properly setup libiconv needs to be configured. So run
+./config.sh within the libs/libiconv folder. When this has completed you can
+simply execute a "make" command within the root folder. SACD-Ripper should compile 
+without errors and warnings. Once completed it should have produced sacd-ripper.pkg.
+
+To compile the Windows scarletbook tool:
+  1. Open the Visual Studio Command prompt
+  2. Change directory to libs\libiconv
+  3. run: "nmake -f Makefile.msvc NO_NLS=1"
+  4. now you can compile using the MSVC project file
 
 Big thanks goes to to:
 

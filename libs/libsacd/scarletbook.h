@@ -93,6 +93,9 @@ enum
 } 
 character_set_t;
 
+// string representation for character sets
+extern const char *character_set[];
+
 extern const char *album_genre[];
 
 enum
@@ -234,7 +237,7 @@ typedef struct
     uint8_t        reserved05[4];
     uint8_t        text_area_count;
     uint8_t        reserved06[7];
-    locale_table_t locales[8];
+    locale_table_t locales[MAX_LANGUAGE_COUNT];
 }
 ATTRIBUTE_PACKED master_toc_t;
 
@@ -263,7 +266,28 @@ typedef struct
     uint16_t disc_copyright_phonetic_position;
     uint8_t  data[2000];
 }
-ATTRIBUTE_PACKED master_text_t;
+ATTRIBUTE_PACKED master_sacd_text_t;
+
+typedef struct
+{
+    char *album_title;
+    char *album_title_phonetic;
+    char *album_artist;
+    char *album_artist_phonetic;
+    char *album_publisher;
+    char *album_publisher_phonetic;
+    char *album_copyright;
+    char *album_copyright_phonetic;
+    char *disc_title;
+    char *disc_title_phonetic;
+    char *disc_artist;
+    char *disc_artist_phonetic;
+    char *disc_publisher;
+    char *disc_publisher_phonetic;
+    char *disc_copyright;
+    char *disc_copyright_phonetic;
+} 
+master_text_t;
 
 /**
  * Unknown Structure
@@ -537,6 +561,11 @@ typedef struct
     area_text_t              * area_text;
     area_track_text_t          area_track_text[255];                      // max of 255 supported tracks
     area_isrc_genre_t        * area_isrc_genre;
+
+    char                     * description;
+    char                     * copyright;
+    char                     * description_phonetic;
+    char                     * copyright_phonetic;
 }
 scarletbook_area_t;
 
@@ -546,8 +575,8 @@ typedef struct
 
     uint8_t                  * master_data;
     master_toc_t             * master_toc;
-    master_text_t            * master_text[8];
     master_man_t             * master_man;
+    master_text_t              master_text;
 
     int                        twoch_area_idx;
     int                        mulch_area_idx;

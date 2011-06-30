@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories=".\win32;..\..\libs\libsacd;..\..\libs\libcommon;..\..\libs\libid3"
+				AdditionalIncludeDirectories=".\win32;..\..\libs\libsacd;..\..\libs\libcommon;..\..\libs\libid3;..\..\libs\libiconv\include"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;HAVE_CONFIG_H"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -62,7 +62,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				LinkLibraryDependencies="true"
-				AdditionalDependencies="pthreadVC2.lib"
+				AdditionalDependencies="pthreadVC2.lib ..\..\libs\libiconv\lib\iconv.lib"
 				LinkIncremental="2"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -117,7 +117,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories=".\win32;..\..\libs\libsacd;..\..\libs\libcommon;..\..\libs\libid3"
+				AdditionalIncludeDirectories=".\win32;..\..\libs\libsacd;..\..\libs\libcommon;..\..\libs\libid3;..\..\libs\libiconv\include"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;HAVE_CONFIG_H"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
@@ -136,7 +136,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="pthreadVC2.lib"
+				AdditionalDependencies="pthreadVC2.lib  ..\..\libs\libiconv\lib\iconv.lib"
 				LinkIncremental="1"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -175,6 +175,10 @@
 			Filter="cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx"
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
+			<File
+				RelativePath="..\..\libs\libcommon\charset.c"
+				>
+			</File>
 			<File
 				RelativePath="..\..\libs\libsacd\dsdiff.c"
 				>
@@ -258,6 +262,10 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
+				RelativePath="..\..\libs\libcommon\charset.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\libs\libsacd\dsdiff.h"
 				>
 			</File>
@@ -335,14 +343,6 @@
 			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav"
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
 			>
-			<File
-				RelativePath="..\..\libs\libid3\charset.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\libs\libid3\charset.h"
-				>
-			</File>
 			<File
 				RelativePath="..\..\libs\libid3\id3.c"
 				>
