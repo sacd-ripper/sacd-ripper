@@ -104,27 +104,29 @@ Changes:
 /*                                                                         */
 /***************************************************************************/
 
-void DST_ACDecodeBit(unsigned char *b, int p, unsigned char *cb,
+void DST_ACDecodeBit(ACData* AC, unsigned char *b, int p, unsigned char *cb,
                      int fs, int Flush)
 {
+  /*
   static unsigned int  Init = 1;
   static unsigned int  C;
   static unsigned int  A;
   static int           cbptr;
+  */
   unsigned int         ap;
   unsigned int         h;
 
-  if (Init == 1)
+  if (AC->Init == 1)
   {
-    Init = 0;
-    A    = ONE - 1;
-    C    = 0;
-    for (cbptr = 1; cbptr <= ABITS; cbptr++)
+    AC->Init = 0;
+    AC->A    = ONE - 1;
+    AC->C    = 0;
+    for (AC->cbptr = 1; AC->cbptr <= ABITS; AC->cbptr++)
     {
-      C <<= 1;
-      if (cbptr < fs)
+      AC->C <<= 1;
+      if (AC->cbptr < fs)
       {
-        C |= cb[cbptr];
+        AC->C |= cb[AC->cbptr];
       }
     }
   }
@@ -132,51 +134,51 @@ void DST_ACDecodeBit(unsigned char *b, int p, unsigned char *cb,
   if (Flush == 0)
   {
     /* approximate (A * p) with "partial rounding". */
-    ap = ((A >> PBITS) | ((A >> (PBITS - 1)) & 1)) * p;
+    ap = ((AC->A >> PBITS) | ((AC->A >> (PBITS - 1)) & 1)) * p;
     
-    h = A - ap;
-    if (C >= h)
+    h = AC->A - ap;
+    if (AC->C >= h)
     {
       *b = 1;
-      C -= h;
-      A  = ap;
+      AC->C -= h;
+      AC->A  = ap;
     }
     else
     {
       *b = 0;
-      A  = h;
+      AC->A  = h;
     }
-    while (A < HALF)
+    while (AC->A < HALF)
     {
-      A <<= 1;
+      AC->A <<= 1;
       
       /* Use new flushing technique; insert zero in LSB of C if reading past
          the end of the arithmetic code */
-      C <<= 1;
-      if (cbptr < fs)
+      AC->C <<= 1;
+      if (AC->cbptr < fs)
       {
-        C |= cb[cbptr];
+        AC->C |= cb[AC->cbptr];
       }
-      cbptr++;
+      AC->cbptr++;
     }
   }
   else
   {
-    Init = 1;
+    AC->Init = 1;
     *b   = 0;
-    if (cbptr < fs - 7)
+    if (AC->cbptr < fs - 7)
     {
       *b = 1;
     }
     else
     {
-      while ((*b == 0) && (cbptr < fs))
+      while ((*b == 0) && (AC->cbptr < fs))
       {
-        if (cb[cbptr] != 0)
+        if (cb[AC->cbptr] != 0)
         {
           *b = 1;
         }
-        cbptr++;
+        AC->cbptr++;
       }
     }
   }

@@ -227,7 +227,7 @@ int DST_FramDSTDecode(uint8_t *DSTdata, uint8_t *MuxedDSDdata, int FrameSizeInBy
         FillTable4Bit(D->FrameHdr.NrOfChannels, D->FrameHdr.NrOfBitsPerCh, &D->FrameHdr.FSeg, D->FrameHdr.Filter4Bit);
         FillTable4Bit(D->FrameHdr.NrOfChannels, D->FrameHdr.NrOfBitsPerCh, &D->FrameHdr.PSeg, D->FrameHdr.Ptable4Bit);
         D->DstXbits.PBit = Reverse7LSBs(D->FrameHdr.ICoefA[0][0]);
-        DST_ACDecodeBit(&D->DstXbits.Bit, D->DstXbits.PBit, D->AData, D->ADataLen, 0);
+        DST_ACDecodeBit(&D->AC, &D->DstXbits.Bit, D->DstXbits.PBit, D->AData, D->ADataLen, 0);
         /* Initialise the Pnt and Status pointers for each channel */
         for (ChNr = 0; ChNr < D->FrameHdr.NrOfChannels; ChNr++)
         {
@@ -248,12 +248,12 @@ int DST_FramDSTDecode(uint8_t *DSTdata, uint8_t *MuxedDSDdata, int FrameSizeInBy
                 /* Arithmetic decode the incoming bit */
                 if ((D->FrameHdr.HalfProb[ChNr] == 1) && (BitNr < D->FrameHdr.NrOfHalfBits[ChNr]))
                 {
-                    DST_ACDecodeBit(&(D->BitResidual[ChNr][BitNr]), AC_PROBS / 2, D->AData, D->ADataLen, 0);
+                    DST_ACDecodeBit(&D->AC, &(D->BitResidual[ChNr][BitNr]), AC_PROBS / 2, D->AData, D->ADataLen, 0);
                 }
                 else
                 {
                     PtableIndex = DST_ACGetPtableIndex(D->PredicVal[ChNr][BitNr], D->FrameHdr.PtableLen[D->FrameHdr.Ptable4Bit[ChNr][BitNr]]);
-                    DST_ACDecodeBit(&(D->BitResidual[ChNr][BitNr]), D->P_one[D->FrameHdr.Ptable4Bit[ChNr][BitNr]][PtableIndex], D->AData, D->ADataLen, 0);
+                    DST_ACDecodeBit(&D->AC, &(D->BitResidual[ChNr][BitNr]), D->P_one[D->FrameHdr.Ptable4Bit[ChNr][BitNr]][PtableIndex], D->AData, D->ADataLen, 0);
                 }
                 /* Channel bit depends on the predicted bit and BitResidual[][] */
                 if (D->PredicVal[ChNr][BitNr] >= 0)
@@ -283,7 +283,7 @@ int DST_FramDSTDecode(uint8_t *DSTdata, uint8_t *MuxedDSDdata, int FrameSizeInBy
             }
         }
         /* Flush the arithmetic decoder */
-        DST_ACDecodeBit(&ACError, 0, D->AData, D->ADataLen, 1);
+        DST_ACDecodeBit(&D->AC, &ACError, 0, D->AData, D->ADataLen, 1);
         if (ACError != 0)
         {
             fprintf(stderr, "ERROR: Arithmetic decoding error!\n");

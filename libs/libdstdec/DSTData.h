@@ -22,6 +22,10 @@ And edited by:
   Philips Digital Systems Laboratories Eindhoven
   <r.h.m.theelen@philips.com>
 
+* Maxim Anisiutkin
+  ICT Group
+  <maxim.anisiutkin@gmail.com>
+
 in the course of development of the MPEG-4 Audio standard ISO-14496-1, 2 and 3.
 This software module is an implementation of a part of one or more MPEG-4 Audio
 tools as specified by the MPEG-4 Audio standard. ISO/IEC gives users of the
@@ -46,9 +50,11 @@ Required libraries: <none>
 
 Authors:
 RT:  Richard Theelen, PDSL-labs Eindhoven <r.h.m.theelen@philips.com>
+MA:  Maxim Anisiutkin, ICT Group <maxim.anisiutkin@gmail.com>
 
 Changes:
 08-Mar-2004 RT  Initial version
+29-Jun-2011 MA  Modified to run in multithreaded environment
 
 ************************************************************************/
 
@@ -63,39 +69,24 @@ Changes:
 #include "types.h"
 
 /*============================================================================*/
-/*       TYPE DEFINITIONS                                                     */
-/*============================================================================*/
-
-typedef struct
-{
-    uint8_t* pDSTdata;
-    int32_t  TotalBytes;
-    int32_t  ByteCounter;
-    int32_t  BitCounter;
-    int      BitPosition;
-    long     mask[32];
-    uint8_t  DataByte;
-} DSTData_t;
-
-/*============================================================================*/
 /*       FUNCTION PROTOTYPES                                                  */
 /*============================================================================*/
 
-int GetDSTDataPointer      (uint8_t** pBuffer);
-int ResetReadingIndex      (void);
-int ReadNextBitFromBuffer  (uint8_t*  pBit);
-int ReadNextNBitsFromBuffer(int32_t*  pBits, int32_t NrBits);
-int ReadNextByteFromBuffer (uint8_t*  pByte);
+int GetDSTDataPointer      (StrData* SD, uint8_t** pBuffer);
+int ResetReadingIndex      (StrData* SD);
+int ReadNextBitFromBuffer  (StrData* SD, uint8_t* pBit);
+int ReadNextNBitsFromBuffer(StrData* SD, int32_t* pBits, int32_t NrBits);
+int ReadNextByteFromBuffer (StrData* SD, uint8_t* pByte);
 
-int FillBuffer(uint8_t* pBuf, int32_t Size);
+int FillBuffer(StrData* SD, uint8_t* pBuf, int32_t Size);
 
-int FIO_BitGetChrUnsigned(int Len, unsigned char *x);
-int FIO_BitGetIntUnsigned(int Len, int *x);
-int FIO_BitGetIntSigned(int Len, int *x);
-int get_in_bitcount(void);
+int FIO_BitGetChrUnsigned(StrData* SD, int Len, unsigned char *x);
+int FIO_BitGetIntUnsigned(StrData* SD, int Len, int *x);
+int FIO_BitGetIntSigned(StrData* SD, int Len, int *x);
+int get_in_bitcount(StrData* SD);
 
-int CreateBuffer(int32_t Size);
-int DeleteBuffer(void);
+int CreateBuffer(StrData* SD, int32_t Size);
+int DeleteBuffer(StrData* SD);
 
 
 #endif /* !defined(__DSTDATA_H_INCLUDED) */
