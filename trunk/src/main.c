@@ -268,34 +268,21 @@ void main_loop(void)
             sb_handle = scarletbook_open(sacd_reader, 0);
             if (sb_handle)
             {
-                int i;
-                master_text_t *master_text = sb_handle->master_text[0];
+                master_text_t *master_text = &sb_handle->master_text;
                 master_toc_t *mtoc = sb_handle->master_toc;
 
-                for (i = 0; i < mtoc->text_area_count; i++)
+                if (master_text->disc_title || master_text->disc_title_phonetic)
                 {
-                     if (sb_handle->master_text[i]->album_title_position 
-                      || sb_handle->master_text[i]->album_title_phonetic_position
-                      || sb_handle->master_text[i]->album_artist_position
-                      || sb_handle->master_text[i]->album_artist_phonetic_position)
-                     {
-                        master_text = sb_handle->master_text[i];
-                        break;
-                     }
-                }
-
-                if (master_text->disc_title_position || master_text->disc_title_phonetic_position)
-                {
-                    idx += snprintf(message_info + idx, 60, "Title: %s\n", substr((char *) master_text + (master_text->disc_title_position ? master_text->disc_title_position : master_text->disc_title_phonetic_position), 0, 50));
-                    LOG(lm_main, LOG_NOTICE, ("Album Title: %s", substr((char *) master_text + (master_text->disc_title_position ? master_text->disc_title_position : master_text->disc_title_phonetic_position), 0, 50)));
+                    idx += snprintf(message_info + idx, 60, "Title: %s\n", substr((master_text->disc_title ? master_text->disc_title : master_text->disc_title_phonetic), 0, 50));
+                    LOG(lm_main, LOG_NOTICE, ("Album Title: %s", substr((master_text->disc_title ? master_text->disc_title : master_text->disc_title_phonetic), 0, 50)));
                 }
 
                 if (message_info[idx - 1] != '\n') { message_info[idx++] = '\n'; message_info[idx] = '\0'; } 
 
-                if (master_text->disc_artist_position || master_text->disc_artist_phonetic_position)
+                if (master_text->disc_artist || master_text->disc_artist_phonetic)
                 {
-                    idx += snprintf(message_info + idx, 60, "Artist: %s\n", substr((char *) master_text + (master_text->disc_artist_position ? master_text->disc_artist_position : master_text->disc_artist_phonetic_position), 0, 50));
-                    LOG(lm_main, LOG_NOTICE, ("Album Artist: %s", substr((char *) master_text + (master_text->disc_artist_position ? master_text->disc_artist_position : master_text->disc_artist_phonetic_position), 0, 50)));
+                    idx += snprintf(message_info + idx, 60, "Artist: %s\n", substr((master_text->disc_artist ? master_text->disc_artist : master_text->disc_artist_phonetic), 0, 50));
+                    LOG(lm_main, LOG_NOTICE, ("Album Artist: %s", substr((master_text->disc_artist ? master_text->disc_artist : master_text->disc_artist_phonetic), 0, 50)));
                 }
 
                 if (message_info[idx - 1] != '\n') { message_info[idx++] = '\n'; message_info[idx] = '\0'; } 
@@ -457,6 +444,21 @@ void main_loop(void)
     free(message);
 }
 
+void show_version(void)
+{
+    msgType dialog_type = (MSG_DIALOG_NORMAL | MSG_DIALOG_DISABLE_CANCEL_ON);
+    msgDialogOpen2(dialog_type, "SACD-Ripper, Version 0.20", dialog_handler, NULL, NULL);
+    msgDialogClose(5000.0f);
+
+    dialog_action = 0;
+    while (!dialog_action && !user_requested_exit())
+    {
+        sysUtilCheckCallback();
+        flip();
+    }
+    msgDialogAbort();
+}
+
 int main(int argc, char *argv[])
 {
     int     ret;
@@ -483,12 +485,17 @@ int main(int argc, char *argv[])
     if (ret != 0)
         goto quit;
 
+    show_version();
+
+    if (user_requested_exit())
+        goto quit;
+
     // patch syscall 864 to allow drive re-init
     ret = patch_syscall_864();
     if (ret < 0)
     {
         dialog_type = (MSG_DIALOG_NORMAL | MSG_DIALOG_BTN_TYPE_OK | MSG_DIALOG_DISABLE_CANCEL_ON);
-        msgDialogOpen2(dialog_type, "ERROR: Couldn't patch syscall 864, returning to the XMB.", dialog_handler, NULL, NULL);
+        msgDialogOpen2(dialog_type, "ERROR: Couldn't patch syscall 864, returning to the XMB.\nMake sure you are running the OtherOS++ firmware.", dialog_handler, NULL, NULL);
 
         dialog_action = 0;
         while (!dialog_action && !user_requested_exit())
@@ -530,7 +537,7 @@ int main(int argc, char *argv[])
 
     // poll for an output_device
     poll_output_devices();
-    
+
     while (1)
     {
         // main loop

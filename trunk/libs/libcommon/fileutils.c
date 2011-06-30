@@ -32,6 +32,7 @@
 
 #include "logging.h"
 #include "fileutils.h"
+#include "charset.h"
 #include "utils.h"
 
 // construct a filename from various parts
@@ -248,7 +249,15 @@ int recursive_mkdir(char* path_and_name, mode_t mode)
             charReplaced             = path_and_name[count + 1];
             path_and_name[count + 1] = '\0';
 
+#ifdef _WIN32
+            {
+                wchar_t *wide_path_and_name = (wchar_t *) charset_convert(path_and_name, strlen(path_and_name), "UTF-8", "UCS-2LE");
+                rc = _wmkdir(wide_path_and_name);
+                free(wide_path_and_name);
+            }
+#else
             rc = mkdir(path_and_name, mode);
+#endif
 #ifdef __lv2ppu__
             sysFsChmod(path_and_name, S_IFMT | 0777); 
 #endif
@@ -260,7 +269,15 @@ int recursive_mkdir(char* path_and_name, mode_t mode)
     }
 
     // in case the path doesn't have a trailing slash:
+#ifdef _WIN32
+    {
+        wchar_t *wide_path_and_name = (wchar_t *) charset_convert(path_and_name, strlen(path_and_name), "UTF-8", "UCS-2LE");
+        rc = _wmkdir(wide_path_and_name);
+        free(wide_path_and_name);
+    }
+#else
     rc = mkdir(path_and_name, mode);
+#endif
 #ifdef __lv2ppu__
     sysFsChmod(path_and_name, S_IFMT | 0777);
 #endif
@@ -284,7 +301,15 @@ int recursive_parent_mkdir(char* path_and_name, mode_t mode)
         if (path_and_name[count] == '/' && have_component)
         {
             path_and_name[count] = 0;
-            rc                   = mkdir(path_and_name, mode);
+#ifdef _WIN32
+            {
+                wchar_t *wide_path_and_name = (wchar_t *) charset_convert(path_and_name, strlen(path_and_name), "UTF-8", "UCS-2LE");
+                rc = _wmkdir(wide_path_and_name);
+                free(wide_path_and_name);
+            }
+#else
+            rc = mkdir(path_and_name, mode);
+#endif
             path_and_name[count] = '/';
         }
     }
@@ -294,7 +319,11 @@ int recursive_parent_mkdir(char* path_and_name, mode_t mode)
 
 void sanitize_filename(char *f)
 {
-    const char safe_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+._- ";
+    const char unsafe_chars[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d,
+                                 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a,
+                                 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x22, 0x2a, 0x2f, 0x3a, 0x3c, 0x3e, 0x3f, 0x5c,
+                                 0x7c, 0x7f, 0x00};
+
     char *c = f;
 
     if (!c || strlen(c) == 0)
@@ -302,7 +331,7 @@ void sanitize_filename(char *f)
 
     for (; *c; c++)
     {
-        if (!strchr(safe_chars, *c))
+        if (strchr(unsafe_chars, *c))
             *c = ' ';
     }
     replace_double_space_with_single(f);
@@ -322,7 +351,11 @@ static void trim_dots(char * s)
 
 void sanitize_filepath(char *f)
 {
-    const char safe_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+._-/ ";
+    const char unsafe_chars[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d,
+                                 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a,
+                                 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x22, 0x2a, 0x3a, 0x3c, 0x3e, 0x3f, 0x5c, 0x7c, 
+                                 0x7f, 0x00};
+
     char *c = f;
 
     if (!c || strlen(c) == 0)
@@ -330,7 +363,7 @@ void sanitize_filepath(char *f)
 
     for (; *c; c++)
     {
-        if (!strchr(safe_chars, *c))
+        if (strchr(unsafe_chars, *c))
             *c = ' ';
     }
     replace_double_space_with_single(f);

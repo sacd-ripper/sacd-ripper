@@ -25,6 +25,8 @@
 #include <inttypes.h>
 #include <string.h>
 
+#include <charset.h>
+
 #include "config.h"
 #include "scarletbook.h"
 #include "version.h"
@@ -34,7 +36,7 @@
 
 int scarletbook_id3_tag_render(scarletbook_handle_t *handle, uint8_t *buffer, int area, int track)
 {
-    const int      sacd_id3_genres[] = {
+    const int sacd_id3_genres[] = {
         12,  12,  40, 12, 32, 140,  2,  3,
         98,  12,  80, 38,  7,   8, 86, 77,
         10, 103, 104, 13, 15,  16, 17, 14,
@@ -51,83 +53,92 @@ int scarletbook_id3_tag_render(scarletbook_handle_t *handle, uint8_t *buffer, in
 
     if (handle->area[area].area_track_text->track_type_title)
     {
+        char *track_type_title = charset_convert(handle->area[area].area_track_text[track].track_type_title, strlen(handle->area[area].area_track_text[track].track_type_title), "UTF-8", "ISO-8859-1");
         frame = id3_add_frame(tag, ID3_TIT2);
-        id3_set_text(frame, handle->area[area].area_track_text[track].track_type_title);
+        id3_set_text(frame, track_type_title);
+        free(track_type_title);
     }
     else
     {
-        master_text_t *master_text = handle->master_text[0];
-        int album_title_position = 0;
+        master_text_t *master_text = &handle->master_text;
+        char *album_title = 0;
 
-        if (master_text->album_title_position)
-            album_title_position = master_text->album_title_position; 
-        else if (master_text->album_title_phonetic_position)
-            album_title_position = master_text->album_title_phonetic_position;
-        else if (master_text->disc_title_position)
-            album_title_position = master_text->disc_title_position; 
-        else if (master_text->disc_title_phonetic_position)
-            album_title_position = master_text->disc_title_phonetic_position;
+        if (master_text->album_title)
+            album_title = master_text->album_title; 
+        else if (master_text->album_title_phonetic)
+            album_title = master_text->album_title_phonetic;
+        else if (master_text->disc_title)
+            album_title = master_text->disc_title; 
+        else if (master_text->disc_title_phonetic)
+            album_title = master_text->disc_title_phonetic;
 
-        if (album_title_position)
+        if (album_title)
         {
             frame = id3_add_frame(tag, ID3_TIT2);
-            id3_set_text(frame, (char *) master_text + album_title_position);
+            album_title = charset_convert(album_title, strlen(album_title), "UTF-8", "ISO-8859-1");
+            id3_set_text(frame, album_title);
+            free(album_title);
         }
     }
     if (handle->area[area].area_track_text->track_type_performer)
     {
+        char *performer = handle->area[area].area_track_text[track].track_type_performer; 
         frame = id3_add_frame(tag, ID3_TPE1);
-        id3_set_text(frame, handle->area[area].area_track_text[track].track_type_performer);
+        performer = charset_convert(performer, strlen(performer), "UTF-8", "ISO-8859-1");
+        id3_set_text(frame, performer);
+        free(performer);
     }
     else
     {
-        master_text_t *master_text = handle->master_text[0];
-        int artist_position = 0;
+        master_text_t *master_text = &handle->master_text;
+        char *artist = 0;
 
         // preferably we use the title as the artist name, as disc/album artist mostly contains garbage..
-        if (master_text->album_title_position)
-            artist_position = master_text->album_title_position; 
-        else if (master_text->album_title_phonetic_position)
-            artist_position = master_text->album_title_phonetic_position;
-        else if (master_text->disc_title_position)
-            artist_position = master_text->disc_title_position; 
-        else if (master_text->disc_title_phonetic_position)
-            artist_position = master_text->disc_title_phonetic_position;
-        else if (master_text->album_artist_position)
-            artist_position = master_text->album_artist_position;
-        else if (master_text->album_artist_phonetic_position)
-            artist_position = master_text->album_artist_phonetic_position;
-        else if (master_text->disc_artist_position)
-            artist_position = master_text->disc_artist_position;
-        else if (master_text->disc_artist_phonetic_position)
-            artist_position = master_text->disc_artist_phonetic_position;
+        if (master_text->album_title)
+            artist = master_text->album_title; 
+        else if (master_text->album_title_phonetic)
+            artist = master_text->album_title_phonetic;
+        else if (master_text->disc_title)
+            artist = master_text->disc_title; 
+        else if (master_text->disc_title_phonetic)
+            artist = master_text->disc_title_phonetic;
+        else if (master_text->album_artist)
+            artist = master_text->album_artist;
+        else if (master_text->album_artist_phonetic)
+            artist = master_text->album_artist_phonetic;
+        else if (master_text->disc_artist)
+            artist = master_text->disc_artist;
+        else if (master_text->disc_artist_phonetic)
+            artist = master_text->disc_artist_phonetic;
 
-        if (artist_position)
+        if (artist)
         {
             frame = id3_add_frame(tag, ID3_TPE1);
-            id3_set_text(frame, (char *) master_text + artist_position);
+            artist = charset_convert(artist, strlen(artist), "UTF-8", "ISO-8859-1");
+            id3_set_text(frame, artist);
+            free(artist);
         }
     }
 
     {
-        master_text_t *master_text = handle->master_text[0];
-        int album_title_position = 0;
+        master_text_t *master_text = &handle->master_text;
+        char *album_title = 0;
 
-        if (master_text->album_title_position)
-            album_title_position = master_text->album_title_position; 
-        else if (master_text->album_title_phonetic_position)
-            album_title_position = master_text->album_title_phonetic_position;
-        else if (master_text->disc_title_position)
-            album_title_position = master_text->disc_title_position; 
-        else if (master_text->disc_title_phonetic_position)
-            album_title_position = master_text->disc_title_phonetic_position;
+        if (master_text->album_title)
+            album_title = master_text->album_title; 
+        else if (master_text->album_title_phonetic)
+            album_title = master_text->album_title_phonetic;
+        else if (master_text->disc_title)
+            album_title = master_text->disc_title; 
+        else if (master_text->disc_title_phonetic)
+            album_title = master_text->disc_title_phonetic;
 
-        if (album_title_position)
+        if (album_title)
         {
-            snprintf(tmp, 200, "%s", (char *) master_text + album_title_position);
             frame = id3_add_frame(tag, ID3_TALB);
-            id3_set_text(frame, tmp);
-
+            album_title = charset_convert(album_title, strlen(album_title), "UTF-8", "ISO-8859-1");
+            id3_set_text(frame, album_title);
+            free(album_title);
         }
     }
 

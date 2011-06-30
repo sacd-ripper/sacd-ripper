@@ -26,10 +26,13 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <wchar.h>
+#include <locale.h>
 #ifdef _WIN32
 #include <io.h>
 #endif
 
+#include <charset.h>
 #include <logging.h>
 
 #include "getopt.h"
@@ -148,20 +151,26 @@ static int parse_options(int argc, char *argv[]) {
 
 void handle_sigint(int sig_no)
 {
-    printf("\rUser interrupted..                                \n");
+    fwprintf(stdout, L"\rUser interrupted..                                \n");
     interrupt_ripping();
 }
 
 static void handle_status_update_track_callback(char *filename, int current_track, int total_tracks)
 {
-    printf("\rProcessing [%s] (%d/%d)..\n", filename, current_track, total_tracks);
+#ifdef _WIN32
+    wchar_t *wide_filename = (wchar_t *) charset_convert(filename, strlen(filename), "UTF-8", "UCS-2LE");
+#else
+    wchar_t *wide_filename = (wchar_t *) charset_convert(filename, strlen(filename), "UTF-8", "WCHAR_T");
+#endif
+    fwprintf(stdout, L"\rProcessing [%ls] (%d/%d)..\n", wide_filename, current_track, total_tracks);
     fflush(stdout);
+    free(wide_filename);
 }
 
 static void handle_status_update_progress_callback(uint32_t stats_total_sectors, uint32_t stats_total_sectors_processed,
                                  uint32_t stats_current_file_total_sectors, uint32_t stats_current_file_sectors_processed)
 {
-    printf("\rCompleted: %d%%, Total: %d%%", (stats_current_file_sectors_processed*100/stats_current_file_total_sectors), 
+    fwprintf(stdout, L"\rCompleted: %d%%, Total: %d%%", (stats_current_file_sectors_processed*100/stats_current_file_total_sectors), 
                                              (stats_total_sectors_processed*100/stats_total_sectors));
     fflush(stdout);
 }
@@ -200,6 +209,11 @@ int main(int argc, char* argv[])
     init();
     if (parse_options(argc, argv)) 
     {
+        setlocale(LC_ALL, "");
+        if (fwide(stdout, 1) < 0)
+        {
+            fprintf(stderr, "ERROR: Output not set to wide.\n");
+        }    
 
         // default to 2 channel
         if (opts.two_channel == 0 && opts.multi_channel == 0) 
@@ -290,11 +304,19 @@ int main(int argc, char* argv[])
 
                 free(albumdir);
 
-                printf("\rWe are done..                                     \n");
+                fprintf(stdout, "\rWe are done..                                     \n");
             }
         }
 
         sacd_close(sacd_reader);
+
+#ifndef _WIN32
+        freopen(0, "w", stdout);
+#endif
+        if (fwide(stdout, -1) >= 0)
+        {
+            fprintf(stderr, "ERROR: Output not set to byte oriented.\n");
+        }
     }
 
     destroy_logging();

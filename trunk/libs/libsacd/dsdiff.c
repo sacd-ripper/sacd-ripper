@@ -35,6 +35,8 @@
 #include <io.h>
 #endif
 
+#include <charset.h>
+
 #include "sacd_reader.h"
 #include "scarletbook_id3.h"
 #include "scarletbook_output.h"
@@ -59,18 +61,13 @@ dsdiff_handle_t;
 
 static char *get_mtoc_title_text(scarletbook_handle_t *handle)
 {
-    int          i;
-    master_toc_t *master_toc = handle->master_toc;
+    master_text_t *master_text = &handle->master_text;
 
-    for (i = 0; i < master_toc->text_area_count; i++)
-    {
-        master_text_t *master_text = handle->master_text[i];
+    if (master_text->album_title)
+        return master_text->album_title;
+    if (master_text->disc_title)
+        return master_text->disc_title;
 
-        if (master_text->album_title_position)
-            return (char *) master_text + master_text->album_title_position;
-        if (master_text->disc_title_position)
-            return (char *) master_text + master_text->disc_title_position;
-    }
     return 0;
 }
 
@@ -309,37 +306,33 @@ int dsdiff_create_header(scarletbook_output_format_t *ft)
             c = sb_handle->area[ft->area].area_track_text[ft->track].track_type_performer;
             if (!c)
             {
-                master_text_t *master_text = sb_handle->master_text[0];
-                int artist_position = 0;
+                master_text_t *master_text = &sb_handle->master_text;
 
                 // preferably we use the title as the artist name, as disc/album artist mostly contains garbage..
-                if (master_text->album_title_position)
-                    artist_position = master_text->album_title_position; 
-                else if (master_text->album_title_phonetic_position)
-                    artist_position = master_text->album_title_phonetic_position;
-                else if (master_text->disc_title_position)
-                    artist_position = master_text->disc_title_position; 
-                else if (master_text->disc_title_phonetic_position)
-                    artist_position = master_text->disc_title_phonetic_position;
-                else if (master_text->album_artist_position)
-                    artist_position = master_text->album_artist_position;
-                else if (master_text->album_artist_phonetic_position)
-                    artist_position = master_text->album_artist_phonetic_position;
-                else if (master_text->disc_artist_position)
-                    artist_position = master_text->disc_artist_position;
-                else if (master_text->disc_artist_phonetic_position)
-                    artist_position = master_text->disc_artist_phonetic_position;
-
-                if (artist_position)
-                    c = (char *) master_text + artist_position;
+                if (master_text->album_title)
+                    c = master_text->album_title; 
+                else if (master_text->album_title_phonetic)
+                    c = master_text->album_title_phonetic;
+                else if (master_text->disc_title)
+                    c = master_text->disc_title; 
+                else if (master_text->disc_title_phonetic)
+                    c = master_text->disc_title_phonetic;
+                else if (master_text->album_artist)
+                    c = master_text->album_artist;
+                else if (master_text->album_artist_phonetic)
+                    c = master_text->album_artist_phonetic;
+                else if (master_text->disc_artist)
+                    c = master_text->disc_artist;
+                else if (master_text->disc_artist_phonetic)
+                    c = master_text->disc_artist_phonetic;
             }
 
             if (c)
             {
-                char track_artist[512];
+                char *track_artist;
                 int len;
-                memset(track_artist, 0, sizeof(track_artist));
-                strncpy(track_artist, c, 511);
+
+                track_artist = charset_convert(c, strlen(c), "UTF-8", "ISO-8859-1");
 
                 len = strlen(track_artist);
                 artist_chunk->chunk_id = DIAR_MARKER;
@@ -348,6 +341,7 @@ int dsdiff_create_header(scarletbook_output_format_t *ft)
                 em_ptr += EDITED_MASTER_ARTIST_CHUNK_SIZE;
                 memcpy(em_ptr, track_artist, len);
                 em_ptr += CEIL_ODD_NUMBER(len);
+                free(track_artist);
             }
         }
 
@@ -359,29 +353,24 @@ int dsdiff_create_header(scarletbook_output_format_t *ft)
 
             if (!c)
             {
-                master_text_t *master_text = sb_handle->master_text[0];
-                int album_title_position = 0;
+                master_text_t *master_text = &sb_handle->master_text;
 
-                if (master_text->album_title_position)
-                    album_title_position = master_text->album_title_position; 
-                else if (master_text->album_title_phonetic_position)
-                    album_title_position = master_text->album_title_phonetic_position;
-                else if (master_text->disc_title_position)
-                    album_title_position = master_text->disc_title_position; 
-                else if (master_text->disc_title_phonetic_position)
-                    album_title_position = master_text->disc_title_phonetic_position;
-
-                if (album_title_position)
-                    c = (char *) master_text + album_title_position;
+                if (master_text->album_title)
+                    c = master_text->album_title; 
+                else if (master_text->album_title_phonetic)
+                    c = master_text->album_title_phonetic;
+                else if (master_text->disc_title)
+                    c = master_text->disc_title; 
+                else if (master_text->disc_title_phonetic)
+                    c = master_text->disc_title_phonetic;
             }
 
             if (c)
             {
                 int len;
-                char track_title[512];
-                memset(track_title, 0, sizeof(track_title));
-                strncpy(track_title, c, 511);
+                char *track_title;
 
+                track_title = charset_convert(c, strlen(c), "UTF-8", "ISO-8859-1");
                 len = strlen(track_title);
 
                 title_chunk->chunk_id = DITI_MARKER;
@@ -390,6 +379,7 @@ int dsdiff_create_header(scarletbook_output_format_t *ft)
                 em_ptr += EDITED_MASTER_TITLE_CHUNK_SIZE;
                 memcpy(em_ptr, track_title, len);
                 em_ptr += CEIL_ODD_NUMBER(len);
+                free(track_title);
             }
         }
 
@@ -403,6 +393,7 @@ int dsdiff_create_header(scarletbook_output_format_t *ft)
         struct tm        * timeinfo;
         comment_t        * comment;
         char             data[512];
+        char            *title;
         uint8_t          * comment_ptr  = handle->footer + handle->footer_size;
         comments_chunk_t *comment_chunk = (comments_chunk_t *) comment_ptr;
         comment_chunk->chunk_id    = COMT_MARKER;
@@ -421,7 +412,10 @@ int dsdiff_create_header(scarletbook_output_format_t *ft)
         comment->timestamp_minutes = 0;
         comment->comment_type      = hton16(COMT_TYPE_FILE_HISTORY);
         comment->comment_reference = hton16(COMT_TYPE_CHANNEL_FILE_HISTORY_GENERAL);
-        sprintf(data, "Material ripped from SACD: %s", (char *) get_mtoc_title_text(sb_handle));
+        title = (char *) get_mtoc_title_text(sb_handle);
+        title = charset_convert(title, strlen(title), "UTF-8", "ISO-8859-1");
+        sprintf(data, "Material ripped from SACD: %s", title);
+        free(title);
         comment->count = hton32(strlen(data));
         memcpy(comment->comment_text, data, strlen(data));
 
