@@ -155,6 +155,24 @@ typedef struct
     int8_t Status[MAX_CHANNELS][MAX_DSDBITS_INFRAME + (1 << SIZE_CODEDPREDORDER)];
 } FirPtr;
 
+typedef struct
+{
+    uint8_t*   pDSTdata;
+    int32_t    TotalBytes;
+    int32_t    ByteCounter;
+    int32_t    BitCounter;
+    int        BitPosition;
+    long       mask[32];
+    uint8_t    DataByte;
+} StrData;
+
+typedef struct
+{
+    unsigned int Init;
+    unsigned int C;
+    unsigned int A;
+    int          cbptr;
+} ACData;
 
 typedef struct
 {
@@ -175,6 +193,8 @@ typedef struct
     uint8_t      *AData;                                         /* Contains the arithmetic coded bit stream    */
                                                                  /* of a complete frame                         */
     int          ADataLen;                                       /* Number of code bits contained in AData[]    */
+    StrData      S;                                              /* DST data stream */
+    ACData       AC;
 } ebunch;
 
 #endif  /* __TYPES_H_INCLUDED */

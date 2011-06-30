@@ -22,6 +22,10 @@ And edited by:
   Philips Digital Systems Laboratories Eindhoven
   <r.h.m.theelen@philips.com>
 
+* Maxim Anisiutkin
+  ICT Group
+  <maxim.anisiutkin@gmail.com>
+
 in the course of development of the MPEG-4 Audio standard ISO-14496-1, 2 and 3.
 This software module is an implementation of a part of one or more MPEG-4 Audio
 tools as specified by the MPEG-4 Audio standard. ISO/IEC gives users of the
@@ -46,9 +50,11 @@ Required libraries: <none>
 
 Authors:
 RT:  Richard Theelen, PDSL-labs Eindhoven <r.h.m.theelen@philips.com>
+MA:  Maxim Anisiutkin, ICT Group <maxim.anisiutkin@gmail.com>
 
 Changes:
 08-Mar-2004 RT  Initial version
+29-Jun-2011 MA  Modified to run in multithreaded environment
 
 ************************************************************************/
 
@@ -65,33 +71,21 @@ Changes:
 
 
 /***********************************************************************
- * Static Members
- ***********************************************************************/
-
-static  uint8_t*   m_pDSTdata    = NULL;
-static  int32_t    m_TotalBytes  = 0;
-static  int32_t    m_ByteCounter = 0;
-static  int32_t    m_BitCounter  = 0;
-static  int     m_BitPosition = 0;
-static  long    m_mask[32];
-static  uint8_t    m_DataByte    = 0;
-
-/***********************************************************************
  * Forward declaration function prototype
  ***********************************************************************/
 
-int getbits(long *outword, int out_bitptr);
+int getbits(StrData* S, long *outword, int out_bitptr);
 
 
 /***********************************************************************
  * GetDSTDataPointer
  ***********************************************************************/
 
-int GetDSTDataPointer (uint8_t** pBuffer)
+int GetDSTDataPointer (StrData* SD, uint8_t** pBuffer)
 {
   int hr = 0;
 
-  *pBuffer = m_pDSTdata;
+  *pBuffer = SD->pDSTdata;
 
   return (hr);
 }
@@ -101,14 +95,14 @@ int GetDSTDataPointer (uint8_t** pBuffer)
  * ResetReadingIndex
  ***********************************************************************/
 
-int ResetReadingIndex(void)
+int ResetReadingIndex(StrData* SD)
 {
   int hr = 0;
 
-  m_BitCounter  = 0;
-  m_BitPosition = -1;
-  m_ByteCounter = 0;
-  m_DataByte    = 0;
+  SD->BitCounter  = 0;
+  SD->BitPosition = -1;
+  SD->ByteCounter = 0;
+  SD->DataByte    = 0;
 
   return (hr);
 }
@@ -118,29 +112,29 @@ int ResetReadingIndex(void)
  * CreateBuffer
  ***********************************************************************/
 
-int CreateBuffer(int32_t Size)
+int CreateBuffer(StrData* SD, int32_t Size)
 {
   int hr = 0;
 
-  m_TotalBytes = Size;
+  SD->TotalBytes = Size;
 
   /* delete buffer if exist */
-  if (m_pDSTdata != NULL)
+  if (SD->pDSTdata != NULL)
   {
-    free( m_pDSTdata );
-    m_pDSTdata = NULL;
+    free( SD->pDSTdata );
+    SD->pDSTdata = NULL;
   }
 
   /* create new buffer for data */
-  m_pDSTdata = (uint8_t*) malloc (Size);
+  SD->pDSTdata = (uint8_t*) malloc (Size);
 
-  if (m_pDSTdata == NULL)
+  if (SD->pDSTdata == NULL)
   {
-    m_TotalBytes = 0;
+    SD->TotalBytes = 0;
     hr = -1;
   }
 
-  ResetReadingIndex();
+  ResetReadingIndex(SD);
 
   return (hr);
 }
@@ -150,18 +144,18 @@ int CreateBuffer(int32_t Size)
  * DeleteBuffer
  ***********************************************************************/
 
-int DeleteBuffer(void)
+int DeleteBuffer(StrData* SD)
 {
   int hr = 0;
 
-  m_TotalBytes = 0;
+  SD->TotalBytes = 0;
 
-  if (m_pDSTdata != NULL)
+  if (SD->pDSTdata != NULL)
   {
     hr = -1;
   }
 
-  ResetReadingIndex();
+  ResetReadingIndex(SD);
 
   return (hr);
 }
@@ -171,27 +165,27 @@ int DeleteBuffer(void)
  * FillBuffer
  ***********************************************************************/
 
-int FillBuffer(uint8_t* pBuf, int32_t Size)
+int FillBuffer(StrData* SD, uint8_t* pBuf, int32_t Size)
 {
   int hr = 0;
   int32_t    cnt;
 
-  m_pDSTdata = NULL;
+  SD->pDSTdata = NULL;
 
   /* fill mask */
   for (cnt = 0; cnt < 32; cnt++)
   {
-    m_mask[cnt] = 1 << cnt;
+    SD->mask[cnt] = 1 << cnt;
   }
 
-  CreateBuffer(Size);
+  CreateBuffer(SD, Size);
 
   for (cnt = 0; cnt < Size; cnt++)
   {
-    m_pDSTdata[cnt] = pBuf[cnt];
+    SD->pDSTdata[cnt] = pBuf[cnt];
   }
 
-  ResetReadingIndex();
+  ResetReadingIndex(SD);
 
   return (hr);
 }
@@ -213,7 +207,7 @@ int FillBuffer(uint8_t* pBuf, int32_t Size)
 /*                                                                         */
 /***************************************************************************/
 
-int FIO_BitGetChrUnsigned(int Len, unsigned char *x)
+int FIO_BitGetChrUnsigned(StrData* SD, int Len, unsigned char *x)
 {
   int   return_value;
   long  tmp;
@@ -221,7 +215,7 @@ int FIO_BitGetChrUnsigned(int Len, unsigned char *x)
   return_value = -1;
   if (Len > 0)
   {
-    return_value = getbits(&tmp, Len);
+    return_value = getbits(SD, &tmp, Len);
     *x = (unsigned char)tmp;
   }
   else if (Len == 0)
@@ -232,7 +226,6 @@ int FIO_BitGetChrUnsigned(int Len, unsigned char *x)
   else
   {
     printf("\nERROR: a negative number of bits allocated\n");
-    exit(1);
   }
   return return_value;
 }
@@ -254,7 +247,7 @@ int FIO_BitGetChrUnsigned(int Len, unsigned char *x)
 /*                                                                         */
 /***************************************************************************/
 
-int FIO_BitGetIntUnsigned(int Len, int *x)
+int FIO_BitGetIntUnsigned(StrData* SD, int Len, int *x)
 {
   int   return_value;
   long  tmp;
@@ -262,7 +255,7 @@ int FIO_BitGetIntUnsigned(int Len, int *x)
   return_value = -1;
   if (Len > 0)
   {
-    return_value = getbits(&tmp, Len);
+    return_value = getbits(SD, &tmp, Len);
     *x = (int)tmp;
   }
   else if (Len == 0)
@@ -273,7 +266,6 @@ int FIO_BitGetIntUnsigned(int Len, int *x)
   else
   {
     fprintf(stderr, "\nERROR: a negative number of bits allocated\n");
-    exit(1);
   }
   return return_value;
 }
@@ -294,7 +286,7 @@ int FIO_BitGetIntUnsigned(int Len, int *x)
 /*                                                                         */
 /***************************************************************************/
 
-int FIO_BitGetIntSigned(int Len, int *x)
+int FIO_BitGetIntSigned(StrData* SD, int Len, int *x)
 {
   int   return_value;
   long  tmp;
@@ -302,7 +294,7 @@ int FIO_BitGetIntSigned(int Len, int *x)
   return_value = -1;
   if (Len > 0)
   {
-    return_value = getbits(&tmp, Len);
+    return_value = getbits(SD, &tmp, Len);
     *x = (int)tmp;
     
     if (*x >= (1 << (Len - 1)))
@@ -318,7 +310,6 @@ int FIO_BitGetIntSigned(int Len, int *x)
   else
   {
     fprintf(stderr, "\nERROR: a negative number of bits allocated\n");
-    exit(1);
   }
   return return_value;
 }
@@ -338,26 +329,26 @@ int FIO_BitGetIntSigned(int Len, int *x)
 /*                                                                         */
 /***************************************************************************/
 
-int getbits(long *outword, int out_bitptr)
+int getbits(StrData* SD, long *outword, int out_bitptr)
 {
-  m_BitCounter += out_bitptr;
+  SD->BitCounter += out_bitptr;
   *outword = 0;
   while(--out_bitptr >= 0)
   {
-    if (m_BitPosition < 0)
+    if (SD->BitPosition < 0)
     {
-      m_DataByte = m_pDSTdata[m_ByteCounter++];
-      if (m_ByteCounter > m_TotalBytes)
+      SD->DataByte = SD->pDSTdata[SD->ByteCounter++];
+      if (SD->ByteCounter > SD->TotalBytes)
       {
         return (-1); /* EOF */
       }
-      m_BitPosition = 7;
+      SD->BitPosition = 7;
     }
-    if ((m_DataByte & m_mask[m_BitPosition]) != 0)
+    if ((SD->DataByte & SD->mask[SD->BitPosition]) != 0)
     {
-      *outword |= m_mask[out_bitptr];
+      *outword |= SD->mask[out_bitptr];
     }
-    m_BitPosition--;
+    SD->BitPosition--;
   }
 
   return 0;
@@ -377,9 +368,9 @@ int getbits(long *outword, int out_bitptr)
 /*                                                                         */
 /***************************************************************************/
 
-int get_in_bitcount(void)
+int get_in_bitcount(StrData* SD)
 {
-  return m_BitCounter;
+  return SD->BitCounter;
 }
 
 

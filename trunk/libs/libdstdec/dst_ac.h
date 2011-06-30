@@ -60,12 +60,13 @@ Changes:
 /*       INCLUDES                                                             */
 /*============================================================================*/
 
+#include "types.h"
 
 /*============================================================================*/
 /*       FUNCTION PROTOTYPES                                                  */
 /*============================================================================*/
 
-void DST_ACDecodeBit(unsigned char *b, int p, unsigned char *cb, int fs, int flush);
+void DST_ACDecodeBit(ACData* AC, unsigned char *b, int p, unsigned char *cb, int fs, int flush);
 
 int DST_ACGetPtableIndex(long PredicVal, int PtableLen);
 

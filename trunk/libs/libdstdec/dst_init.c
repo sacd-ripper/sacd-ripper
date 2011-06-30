@@ -78,7 +78,6 @@ static void *MemoryAllocate (int NrOfElements, int SizeOfElement)
   if ((Array = malloc(NrOfElements * SizeOfElement)) == NULL) 
   {
     fprintf(stderr,"ERROR: not enough memory available!\n\n");
-    exit(1);
   }
   return Array;
 }
@@ -147,13 +146,11 @@ static signed char **AllocateSChar2D(int Rows, int Cols)
   if ((Array = malloc(Rows * sizeof(*Array))) == NULL)
   {
     fprintf(stderr,"ERROR: not enough memory available!\n\n");
-    exit(1);
   }
 
   if ((Array[0] = malloc(Rows * Cols * sizeof(**Array))) == NULL)
   {
     fprintf(stderr,"ERROR: not enough memory available!\n\n");
-    exit(1);
   }
   
   for (r = 1; r < Rows; r++)
@@ -174,11 +171,9 @@ static unsigned char **AllocateUChar2D (int Rows, int Cols)
   if ((Array = malloc(Rows * sizeof(*Array))) == NULL) 
   {
     fprintf(stderr,"ERROR: not enough memory available!\n\n");
-    exit(1);
   }
   if ((Array[0] = malloc(Rows * Cols * sizeof(**Array))) == NULL) {
     fprintf(stderr,"ERROR: not enough memory available!\n\n");
-    exit(1);
   }
   for (r = 1; r < Rows; r++) 
   {

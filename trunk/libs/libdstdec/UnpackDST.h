@@ -69,9 +69,9 @@ Changes:
 /*       FUNCTION PROTOTYPES                                                  */
 /*============================================================================*/
 
-int UnpackDSTframe(ebunch*    D, 
-                   uint8_t*      DSTdataframe, 
-                   uint8_t*      DSDdataframe);
+int UnpackDSTframe(ebunch*  D, 
+                   uint8_t* DSTdataframe, 
+                   uint8_t* DSDdataframe);
 
 
 #endif /* __UNPACKDST_H */

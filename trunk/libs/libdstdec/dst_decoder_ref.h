@@ -26,20 +26,36 @@
 #ifndef __DST_DECODER_H__
 #define __DST_DECODER_H__
 
+#include <pthread.h> 
 #include "types.h"
+
+enum slot_state_t {SLOT_EMPTY, SLOT_LOADED, SLOT_RUNNING, SLOT_READY};
+
+typedef struct _frame_slot_t
+{
+    int       frame_nr;
+    uint8_t*  dsd_data;
+    uint8_t*  dst_data;
+    size_t    dst_size;
+    ebunch    D;
+    pthread_t       thread;
+    int             state;
+    pthread_mutex_t get_mutex;
+    pthread_mutex_t put_mutex;
+} frame_slot_t;
 
 typedef struct _dst_decoder_t
 {
-    uint32_t  frame_nr;
-    int       channel_count;
-    ebunch    D;
-    //DSTData_t DSTData;
-}
-dst_decoder_t;
+    frame_slot_t *frame_slots;
+    int          slot_nr;       
+    int          channel_count;
+    int          thread_count;
+    uint32_t     frame_nr;
+} dst_decoder_t;
 
-int dst_decoder_create(dst_decoder_t **dst_decoder);
+int dst_decoder_create(dst_decoder_t **dst_decoder, int thread_count);
 int dst_decoder_destroy(dst_decoder_t *dst_decoder);
 int dst_decoder_init(dst_decoder_t *dst_decoder, int channel_count);
-int dst_decoder_decode(dst_decoder_t *dst_decoder, uint8_t *source_data, size_t source_size, uint8_t *dest_data, size_t *dsd_size);
+int dst_decoder_decode(dst_decoder_t *dst_decoder, uint8_t *dst_data, size_t dst_size, uint8_t **dsd_data, size_t *dsd_size);
 
 #endif // __DST_DECODER_H__
