@@ -90,7 +90,7 @@ following commands:
 
   1. svn checkout http://sacd-ripper.googlecode.com/svn/trunk/ sacd-ripper
   2. cd sacd-ripper
-  3. ./configure
+  3. sh configure
   4. make
 
 SACD-Ripper should compile without errors and warnings. Once completed you 
