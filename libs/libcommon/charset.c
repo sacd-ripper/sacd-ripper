@@ -54,10 +54,10 @@ char* charset_convert(const char *string, size_t insize, char *from, char *to)
 	}
 
 	/* Due to a GLIBC bug, round outbuf_size up to a multiple of 4 */
-	/* + 1 for nul in case len == 1 */
-	outsize = ((insize + 3) & ~3) + 100;
+	/* + 4 for nul in case len == 1 */
+	outsize = ((insize + 3) & ~3) + 4;
 	out = malloc(outsize);
-	outleft = outsize - 1;
+	outleft = outsize - 4;
 	outptr = out;
 
  retry:
@@ -68,10 +68,10 @@ char* charset_convert(const char *string, size_t insize, char *from, char *to)
 		{
 			case E2BIG:
 				used = outptr - out;
-				outsize = ((outsize - 1) * 2) + 100;
+				outsize = ((outsize - 4) * 2) + 4;
 				out = realloc(out, outsize);
 				outptr = out + used;
-				outleft = outsize - 1 - used;
+				outleft = outsize - 4 - used;
 				goto retry;
 			case EINVAL:
 				break;
