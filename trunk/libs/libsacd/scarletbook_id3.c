@@ -51,7 +51,7 @@ int scarletbook_id3_tag_render(scarletbook_handle_t *handle, uint8_t *buffer, in
 
     memset(tmp, 0, sizeof(tmp));
 
-    if (handle->area[area].area_track_text->track_type_title)
+    if (handle->area[area].area_track_text[track].track_type_title)
     {
         char *track_type_title = charset_convert(handle->area[area].area_track_text[track].track_type_title, strlen(handle->area[area].area_track_text[track].track_type_title), "UTF-8", "ISO-8859-1");
         frame = id3_add_frame(tag, ID3_TIT2);
@@ -80,7 +80,7 @@ int scarletbook_id3_tag_render(scarletbook_handle_t *handle, uint8_t *buffer, in
             free(album_title);
         }
     }
-    if (handle->area[area].area_track_text->track_type_performer)
+    if (handle->area[area].area_track_text[track].track_type_performer)
     {
         char *performer = handle->area[area].area_track_text[track].track_type_performer; 
         frame = id3_add_frame(tag, ID3_TPE1);
