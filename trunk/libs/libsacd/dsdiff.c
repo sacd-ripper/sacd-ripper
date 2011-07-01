@@ -68,7 +68,7 @@ static char *get_mtoc_title_text(scarletbook_handle_t *handle)
     if (master_text->disc_title)
         return master_text->disc_title;
 
-    return 0;
+    return "Unknown";
 }
 
 int dsdiff_create_header(scarletbook_output_format_t *ft)
