@@ -32,6 +32,7 @@ Raw ISO images (SACD-R) that are burned to DVD-R can be played on several SACD p
 ==NOT Working==
 
   * Accuphase DP-100
+  * BBK DV727S
   * Denon DVD-1930
   * Denon DVD-1940
   * Denon DVD-2930
@@ -39,8 +40,10 @@ Raw ISO images (SACD-R) that are burned to DVD-R can be played on several SACD p
   * Harman/Kardon DVD 47
   * Integra DPS-6.9
   * Marantz DV-6001
+  * Marantz DV-9600
   * Marantz SA-15S1
   * Marantz SA-7001
+  * Marantz SA-7003
   * Onkyo DV-SP504
   * Oppo DV-980H
   * Parasound D3
@@ -52,6 +55,7 @@ Raw ISO images (SACD-R) that are burned to DVD-R can be played on several SACD p
   * Pioneer DV-656A
   * Pioneer DV-696AV
   * Pioneer DV-757Ai
+  * Pioneer DV-868AVi
   * Pioneer DV-989AVi
   * Pioneer DV-LX50
   * Pioneer PD-D6-J
