@@ -33,6 +33,7 @@ Raw ISO images (SACD-R) that are burned to DVD-R can be played on several SACD p
 
   * Accuphase DP-100
   * BBK DV727S
+  * EMM Labs CDSD
   * Denon DVD-1930
   * Denon DVD-1940
   * Denon DVD-2930
@@ -61,6 +62,7 @@ Raw ISO images (SACD-R) that are burned to DVD-R can be played on several SACD p
   * Pioneer PD-D6-J
   * Sherwood Newcastle SD-871
   * Sony DVP-NS900V
+  * Sony SCD-CE595
   * Sony PlayStation3
   * Yamaha CD-S2000
   * Yamaha DVD-S1800
