@@ -150,26 +150,61 @@ static void dialog_handler(msgButton button, void *usrData)
     }
 }
 
+int patch_lv1_ss_services(void)
+{
+	install_new_poke();
+
+	// Try to map lv1
+	if (!map_lv1()) 
+	{
+		remove_new_poke();
+		return -1;
+	}
+
+    lv1poke(0x0016f3b8, 0x7f83e37860000000ULL); // 0x7f83e378f8010098ULL
+    lv1poke(0x0016f3dc, 0x7f85e37838600001ULL); // 0x7f85e3784bfff0e5ULL
+    lv1poke(0x0016f454, 0x7f84e3783be00001ULL); // 0x7f84e37838a10070ULL
+    lv1poke(0x0016f45c, 0x9be1007038600000ULL); // 0x9be1007048005fa5ULL
+
+	remove_new_poke();
+
+	// unmap lv1
+	unmap_lv1(); 
+
+    return 0;
+}
+
+int unpatch_lv1_ss_services(void)
+{
+	install_new_poke();
+
+	// Try to map lv1
+	if (!map_lv1()) 
+	{
+		remove_new_poke();
+		return -1;
+	}
+
+    lv1poke(0x0016f3b8, 0x7f83e378f8010098ULL);
+    lv1poke(0x0016f3dc, 0x7f85e3784bfff0e5ULL);
+    lv1poke(0x0016f454, 0x7f84e37838a10070ULL);
+    lv1poke(0x0016f45c, 0x9be1007048005fa5ULL);
+
+	remove_new_poke();
+
+	// unmap lv1
+	unmap_lv1(); 
+
+    return 0;
+}
+
 int patch_syscall_864(void)
 {
     const uint64_t addr          = 0x80000000002D7820ULL; // 3.55 addr location
-    uint8_t        access_rights = peekq(addr) >> 56;
+    uint8_t        access_rights = lv2peek(addr) >> 56;
     if (access_rights == 0x20)
     {
-        install_new_poke();
-
-        if (!map_lv1())
-        {
-            remove_new_poke();
-            exit(0);
-        }
-
-        patch_lv2_protection();
-        remove_new_poke();
-
-        unmap_lv1();
-
-        pokeq(addr, (uint64_t) 0x40 << 56);
+        lv2poke(addr, (uint64_t) 0x40 << 56);
     }
     else if (access_rights != 0x40)
     {
@@ -345,12 +380,32 @@ int main(int argc, char *argv[])
     if (ret != 0)
         goto quit;
 
+    // remove patch protection
+    remove_protection();
+
+    ret = patch_lv1_ss_services();
+    if (ret < 0)
+    {
+        dialog_type = (MSG_DIALOG_NORMAL | MSG_DIALOG_BTN_TYPE_OK | MSG_DIALOG_DISABLE_CANCEL_ON);
+        msgDialogOpen2(dialog_type, "ERROR: Couldn't patch lv1 services, returning to the XMB.\nMake sure you are running a firmware like 'kmeaw' which allows patching!", dialog_handler, NULL, NULL);
+
+        dialog_action = 0;
+        while (!dialog_action && !user_requested_exit())
+        {
+            sysUtilCheckCallback();
+            flip();
+        }
+        msgDialogAbort();
+
+        goto quit;
+    }
+
     // patch syscall 864 to allow drive re-init
     ret = patch_syscall_864();
     if (ret < 0)
     {
         dialog_type = (MSG_DIALOG_NORMAL | MSG_DIALOG_BTN_TYPE_OK | MSG_DIALOG_DISABLE_CANCEL_ON);
-        msgDialogOpen2(dialog_type, "ERROR: Couldn't patch syscall 864, returning to the XMB.", dialog_handler, NULL, NULL);
+        msgDialogOpen2(dialog_type, "ERROR: Couldn't patch syscall 864, returning to the XMB.\nMake sure you are running a firmware like 'kmeaw' which allows patching!", dialog_handler, NULL, NULL);
 
         dialog_action = 0;
         while (!dialog_action && !user_requested_exit())
@@ -399,6 +454,8 @@ int main(int argc, char *argv[])
     ret = sysDiscUnregisterDiscChangeCallback();
 
  quit:
+
+    unpatch_lv1_ss_services();
 
     destroy_logging();
     unload_modules();
