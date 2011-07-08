@@ -41,6 +41,7 @@ Raw ISO images (SACD-R) that are burned to DVD-R can be played on several SACD p
   * Harman/Kardon DVD 47
   * Integra DPS-6.9
   * Marantz DV-6001
+  * Marantz DV-9500
   * Marantz DV-9600
   * Marantz SA-15S1
   * Marantz SA-7001
@@ -63,6 +64,7 @@ Raw ISO images (SACD-R) that are burned to DVD-R can be played on several SACD p
   * Sherwood Newcastle SD-871
   * Sony DVP-NS900V
   * Sony SCD-CE595
+  * Sony SCD XB940 QS
   * Sony PlayStation3
   * Yamaha CD-S2000
   * Yamaha DVD-S1800
