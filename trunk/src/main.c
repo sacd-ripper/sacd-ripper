@@ -192,48 +192,48 @@ static void dialog_handler(msgButton button, void *usrData)
 
 int patch_lv1_ss_services(void)
 {
-	install_new_poke();
+    install_new_poke();
 
-	// Try to map lv1
-	if (!map_lv1()) 
-	{
-		remove_new_poke();
-		return -1;
-	}
+    // Try to map lv1
+    if (!map_lv1()) 
+    {
+        remove_new_poke();
+        return -1;
+    }
 
     lv1poke(0x0016f3b8, 0x7f83e37860000000ULL); // 0x7f83e378f8010098ULL
     lv1poke(0x0016f3dc, 0x7f85e37838600001ULL); // 0x7f85e3784bfff0e5ULL
     lv1poke(0x0016f454, 0x7f84e3783be00001ULL); // 0x7f84e37838a10070ULL
     lv1poke(0x0016f45c, 0x9be1007038600000ULL); // 0x9be1007048005fa5ULL
 
-	remove_new_poke();
+    remove_new_poke();
 
-	// unmap lv1
-	unmap_lv1(); 
+    // unmap lv1
+    unmap_lv1(); 
 
     return 0;
 }
 
 int unpatch_lv1_ss_services(void)
 {
-	install_new_poke();
+    install_new_poke();
 
-	// Try to map lv1
-	if (!map_lv1()) 
-	{
-		remove_new_poke();
-		return -1;
-	}
+    // Try to map lv1
+    if (!map_lv1()) 
+    {
+        remove_new_poke();
+        return -1;
+    }
 
     lv1poke(0x0016f3b8, 0x7f83e378f8010098ULL);
     lv1poke(0x0016f3dc, 0x7f85e3784bfff0e5ULL);
     lv1poke(0x0016f454, 0x7f84e37838a10070ULL);
     lv1poke(0x0016f45c, 0x9be1007048005fa5ULL);
 
-	remove_new_poke();
+    remove_new_poke();
 
-	// unmap lv1
-	unmap_lv1(); 
+    // unmap lv1
+    unmap_lv1(); 
 
     return 0;
 }
@@ -482,7 +482,7 @@ void main_loop(void)
 void show_version(void)
 {
     msgType dialog_type = (MSG_DIALOG_NORMAL | MSG_DIALOG_DISABLE_CANCEL_ON);
-    msgDialogOpen2(dialog_type, "SACD-Ripper, Version 0.20", dialog_handler, NULL, NULL);
+    msgDialogOpen2(dialog_type, "SACD-Ripper, Version 0.21", dialog_handler, NULL, NULL);
     msgDialogClose(5000.0f);
 
     dialog_action = 0;

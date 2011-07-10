@@ -251,7 +251,7 @@ int recursive_mkdir(char* path_and_name, mode_t mode)
 
 #ifdef _WIN32
             {
-                wchar_t *wide_path_and_name = (wchar_t *) charset_convert(path_and_name, strlen(path_and_name), "UTF-8", "UCS-2LE");
+                wchar_t *wide_path_and_name = (wchar_t *) charset_convert(path_and_name, strlen(path_and_name), "UTF-8", "UCS-2-INTERNAL");
                 rc = _wmkdir(wide_path_and_name);
                 free(wide_path_and_name);
             }
@@ -271,7 +271,7 @@ int recursive_mkdir(char* path_and_name, mode_t mode)
     // in case the path doesn't have a trailing slash:
 #ifdef _WIN32
     {
-        wchar_t *wide_path_and_name = (wchar_t *) charset_convert(path_and_name, strlen(path_and_name), "UTF-8", "UCS-2LE");
+        wchar_t *wide_path_and_name = (wchar_t *) charset_convert(path_and_name, strlen(path_and_name), "UTF-8", "UCS-2-INTERNAL");
         rc = _wmkdir(wide_path_and_name);
         free(wide_path_and_name);
     }
@@ -303,7 +303,7 @@ int recursive_parent_mkdir(char* path_and_name, mode_t mode)
             path_and_name[count] = 0;
 #ifdef _WIN32
             {
-                wchar_t *wide_path_and_name = (wchar_t *) charset_convert(path_and_name, strlen(path_and_name), "UTF-8", "UCS-2LE");
+                wchar_t *wide_path_and_name = (wchar_t *) charset_convert(path_and_name, strlen(path_and_name), "UTF-8", "UCS-2-INTERNAL");
                 rc = _wmkdir(wide_path_and_name);
                 free(wide_path_and_name);
             }
