@@ -147,7 +147,7 @@ static int create_output_file(scarletbook_output_format_t *ft)
     int result;
 
 #ifdef _WIN32
-    wchar_t *wide_filename = (wchar_t *) charset_convert(ft->filename, strlen(ft->filename), "UTF-8", "UCS-2LE");
+    wchar_t *wide_filename = (wchar_t *) charset_convert(ft->filename, strlen(ft->filename), "UTF-8", "UCS-2-INTERNAL");
     ft->fd = _wfopen(wide_filename, L"wb");
     free(wide_filename);
 #else
@@ -596,6 +596,8 @@ static void *read_thread(void *arg)
     scarletbook_handle_t *handle = (scarletbook_handle_t *) arg;
     struct list_head * node_ptr;
     scarletbook_output_format_t * ft;
+    int non_encrypted_disc = 0;
+    int checked_for_non_encrypted_disc = 0;
     ssize_t ret;
 
     sysAtomicSet(&output.processing, 1);
@@ -687,8 +689,24 @@ static void *read_thread(void *arg)
                         output.stats_total_sectors_processed += block_size;
                         output.stats_current_file_sectors_processed += block_size;
 
+                        // the ATAPI call which returns the flag if the disc is encrypted or not is unknown at this point. 
+                        // user reports tell me that the only non-encrypted discs out there are DSD 3 14/16 discs. 
+                        // this is a quick hack/fix for these discs.
+                        if (encrypted && checked_for_non_encrypted_disc == 0)
+                        {
+                            switch (handle->area[ft->area].area_toc->frame_format)
+                            {
+                            case FRAME_FORMAT_DSD_3_IN_14:
+                            case FRAME_FORMAT_DSD_3_IN_16:
+                                non_encrypted_disc = *(uint64_t *)(output.read_buffer + 16) == 0;
+                                break;
+                            }
+
+                            checked_for_non_encrypted_disc = 1;
+                        }
+
                         // encrypted blocks need to be decrypted first
-                        if (encrypted)
+                        if (encrypted && non_encrypted_disc == 0)
                         {
                             sacd_decrypt(ft->sb_handle->sacd, output.read_buffer, block_size);
                         }

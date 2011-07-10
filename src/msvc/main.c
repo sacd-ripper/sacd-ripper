@@ -157,11 +157,7 @@ void handle_sigint(int sig_no)
 
 static void handle_status_update_track_callback(char *filename, int current_track, int total_tracks)
 {
-#ifdef _WIN32
-    wchar_t *wide_filename = (wchar_t *) charset_convert(filename, strlen(filename), "UTF-8", "UCS-2LE");
-#else
-    wchar_t *wide_filename = (wchar_t *) charset_convert(filename, strlen(filename), "UTF-8", "WCHAR_T");
-#endif
+    wchar_t *wide_filename = (wchar_t *) charset_convert(filename, strlen(filename), "UTF-8", sizeof(wchar_t) == 2 ? "UCS-2-INTERNAL" : "UCS-4-INTERNAL");
     fwprintf(stdout, L"\rProcessing [%ls] (%d/%d)..\n", wide_filename, current_track, total_tracks);
     fflush(stdout);
     free(wide_filename);

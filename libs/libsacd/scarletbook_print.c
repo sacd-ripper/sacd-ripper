@@ -38,11 +38,8 @@
 static const wchar_t *ucs(const char* str) 
 {
     static wchar_t buf[2048];
-#ifdef _WIN32
-    wchar_t *wc = (wchar_t *) charset_convert(str, strlen(str), "UTF-8", "UCS-2LE");
-#else
-    wchar_t *wc = (wchar_t *) charset_convert(str, strlen(str), "UTF-8", "WCHAR_T");
-#endif
+    char *wchar_type = (sizeof(wchar_t) == 2) ? "UCS-2-INTERNAL" : "UCS-4-INTERNAL";
+    wchar_t *wc = (wchar_t *) charset_convert(str, strlen(str), "UTF-8", wchar_type);
     wcscpy(buf, wc);
     free(wc);
     return buf;

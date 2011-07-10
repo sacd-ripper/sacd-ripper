@@ -16,6 +16,7 @@
 #endif
 
 #include "charset.h"
+#include "logging.h"
 
 char* charset_get_current(void)
 {
@@ -48,8 +49,8 @@ char* charset_convert(const char *string, size_t insize, char *from, char *to)
 
 	if ((cd = iconv_open(to, from)) == (iconv_t)-1)
 	{
-		fprintf(stderr, "convert_string(): Conversion not supported. "
-			  "Charsets: %s -> %s", from, to);
+		LOG(lm_main, LOG_ERROR, ("convert_string(): Conversion not supported. "
+			  "Charsets: %s -> %s", from, to));
 		return strdup(string);
 	}
 
@@ -82,9 +83,9 @@ char* charset_convert(const char *string, size_t insize, char *from, char *to)
 				insize--;
 				goto retry;
 			default:
-				fprintf(stderr, "convert_string(): Conversion failed. "
+				LOG(lm_main, LOG_ERROR, ("convert_string(): Conversion failed. "
 					  "Inputstring: %s; Error: %s",
-					  string, strerror(errno));
+					  string, strerror(errno)));
 				break;
 		}
 	}

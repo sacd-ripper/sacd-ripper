@@ -25,15 +25,26 @@
 #include <unistd.h> 
 #include <stdint.h>
 #include <ctype.h>
+#include <wchar.h>
 
 #include "utils.h"
+#include "charset.h"
 #include "logging.h"
 
 char *substr(const char *pstr, int start, int numchars)
 {
     static char pnew[512];
-    strncpy(pnew, pstr + start, numchars);
-    pnew[numchars] = '\0';
+    memset(pnew, 0, sizeof(pnew));
+    if (numchars < sizeof(pnew))
+    {
+        char *wchar_type = (sizeof(wchar_t) == 2) ? "UCS-2-INTERNAL" : "UCS-4-INTERNAL";
+        wchar_t *wc = (wchar_t *) charset_convert(pstr + start, numchars, "UTF-8", wchar_type);
+        char *c = charset_convert((char *) wc, wcslen(wc) * sizeof(wchar_t), wchar_type, "UTF-8");
+        strcpy(pnew, c);
+        free(wc);
+        free(c);
+        return pnew;
+    }
     return pnew;
 }
 
