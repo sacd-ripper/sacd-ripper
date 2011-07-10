@@ -158,7 +158,7 @@ int scarletbook_id3_tag_render(scarletbook_handle_t *handle, uint8_t *buffer, in
     id3_set_text(frame, tmp);
 
     frame = id3_add_frame(tag, ID3_TSSE);
-    id3_set_text(frame, SACD_RIPPER_VERSION);
+    id3_set_text(frame, SACD_RIPPER_VERSION_INFO);
 
     len = id3_write_tag(tag, buffer);
     id3_close(tag);

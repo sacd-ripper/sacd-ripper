@@ -8,7 +8,6 @@ version 0.2.x
         - write INFO,NOTICE,etc..
         - the log should contain more information:
           - date/time
-          - sacd-ripper version
           - output format (ISO, mch DSDIFF (DSD), etc.)
     - proper naming on scarletbook_output, it's a mess.. 
     - remove DST frame buffering from scarletbook_output and move to dst_decoder
