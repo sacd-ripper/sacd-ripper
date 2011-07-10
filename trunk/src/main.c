@@ -46,6 +46,7 @@
 #include <scarletbook_read.h>
 #include <scarletbook_helpers.h>
 #include <sacd_reader.h>
+#include <version.h>
 
 #include "rsxutil.h"
 #include "exit_handler.h"
@@ -290,6 +291,7 @@ void main_loop(void)
         char file_path[100];
         sprintf(file_path, "%s/sacd_log.txt", output_device);
         set_log_file(file_path);
+        LOG(lm_main, LOG_NOTICE, ("SACD-Ripper Version " SACD_RIPPER_VERSION_STRING));
     }
 
     // did the disc change?
@@ -482,7 +484,7 @@ void main_loop(void)
 void show_version(void)
 {
     msgType dialog_type = (MSG_DIALOG_NORMAL | MSG_DIALOG_DISABLE_CANCEL_ON);
-    msgDialogOpen2(dialog_type, "SACD-Ripper, Version 0.21", dialog_handler, NULL, NULL);
+    msgDialogOpen2(dialog_type, "SACD-Ripper, Version " SACD_RIPPER_VERSION_STRING, dialog_handler, NULL, NULL);
     msgDialogClose(5000.0f);
 
     dialog_action = 0;
