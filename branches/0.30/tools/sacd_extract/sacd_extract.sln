@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 10.00
 # Visual Studio 2008
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "scarletbook", "scarletbook.vcproj", "{0BDC531E-E930-4B53-BC83-FC38C2AAD4DB}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sacd_extract", "sacd_extract.vcproj", "{0BDC531E-E930-4B53-BC83-FC38C2AAD4DB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
