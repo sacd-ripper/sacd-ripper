@@ -137,7 +137,7 @@ void trim_chars(char * str, const char * bad)
 // str - the string to trim
 void trim_whitespace(char * s) 
 {
-    char * p = s;
+    uint8_t * p = (uint8_t *) s;
     int l = strlen(p);
 
     while(isspace((int) p[l - 1])) p[--l] = 0;
