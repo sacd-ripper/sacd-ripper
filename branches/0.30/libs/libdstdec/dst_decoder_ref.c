@@ -80,16 +80,27 @@ int dst_decoder_destroy_mt(dst_decoder_t *dst_decoder)
 
     for (i = 0; i < dst_decoder->thread_count; i++)
     {
+        uint8_t *dsd_data;
+        size_t dsd_size;
+
+        dst_decoder_decode_mt(dst_decoder, NULL, 0, &dsd_data, &dsd_size);
+    }
+    for (i = 0; i < dst_decoder->thread_count; i++)
+    {
         frame_slot_t *frame_slot = &dst_decoder->frame_slots[i];
-        pthread_cancel(frame_slot->thread);
-        pthread_mutex_destroy(&frame_slot->get_mutex);
-        pthread_mutex_destroy(&frame_slot->put_mutex);
-        if (Close(&frame_slot->D) == 0)
+        if (frame_slot->initialized)
         {
-        }
-        else
-        {
-            LOG(lm_main, LOG_ERROR, ("Could not close decoder slot"));
+            pthread_cancel(frame_slot->thread);
+            pthread_mutex_destroy(&frame_slot->get_mutex);
+            pthread_mutex_destroy(&frame_slot->put_mutex);
+            if (Close(&frame_slot->D) == 0)
+            {
+            }
+            else
+            {
+                LOG(lm_main, LOG_ERROR, ("Could not close decoder slot"));
+            }
+            frame_slot->initialized = 0;
         }
     }
     free(dst_decoder->frame_slots);
@@ -118,6 +129,7 @@ int dst_decoder_init_mt(dst_decoder_t *dst_decoder, int channel_count)
             LOG(lm_main, LOG_ERROR, ("Could not initialize decoder slot"));
             return -1;
         }
+        frame_slot->initialized = 1;
     }
     dst_decoder->channel_count = channel_count;
     dst_decoder->frame_nr      = 0;
@@ -164,12 +176,6 @@ int dst_decoder_decode_mt(dst_decoder_t *dst_decoder, uint8_t *dst_data, size_t 
         *dsd_data = frame_slot->dsd_data;
         *dsd_size = 0;
     }
-    /*
-    if (frame_slot->state != SLOT_READY)
-    {
-        printf("State = %d\n", frame_slot->state);
-    }
-    */
 
     dst_decoder->frame_nr++;
     return 0;
