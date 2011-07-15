@@ -33,11 +33,12 @@ enum slot_state_t {SLOT_EMPTY, SLOT_LOADED, SLOT_RUNNING, SLOT_READY};
 
 typedef struct _frame_slot_t
 {
-    int       frame_nr;
-    uint8_t*  dsd_data;
-    uint8_t*  dst_data;
-    size_t    dst_size;
-    ebunch    D;
+    int             initialized;
+    int             frame_nr;
+    uint8_t*        dsd_data;
+    uint8_t*        dst_data;
+    size_t          dst_size;
+    ebunch          D;
     pthread_t       thread;
     volatile int    state;
     pthread_mutex_t get_mutex;
