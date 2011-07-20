@@ -60,7 +60,7 @@ char *get_album_dir(scarletbook_handle_t *handle)
         char *pos = strchr(artist, ';');
         if (!pos)
             pos = artist + strlen(artist);
-        strncpy(disc_artist, artist, min(pos - artist, 59));
+        strcpy(disc_artist, substr(artist, 0, min(pos - artist, 59)));
     }
 
     memset(disc_album_title, 0, sizeof(disc_album_title));
@@ -69,7 +69,7 @@ char *get_album_dir(scarletbook_handle_t *handle)
         char *pos = strchr(album_title, ';');
         if (!pos)
             pos = album_title + strlen(album_title);
-        strncpy(disc_album_title, album_title, min(pos - album_title, 59));
+        strcpy(disc_album_title, substr(album_title, 0, min(pos - album_title, 59)));
     }
 
     snprintf(disc_album_year, sizeof(disc_album_year), "%04d", handle->master_toc->disc_date_year);
@@ -114,14 +114,14 @@ char *get_music_filename(scarletbook_handle_t *handle, int area, int track)
     c = handle->area[area].area_track_text[track].track_type_performer;
     if (c)
     {
-        strncpy(track_artist, c, 59);
+        strcpy(track_artist, substr(c, 0, 59));
     }
 
     memset(track_title, 0, sizeof(track_title));
     c = handle->area[area].area_track_text[track].track_type_title;
     if (c)
     {
-        strncpy(track_title, c, 59);
+        strcpy(track_title, substr(c, 0, 59));
     }
 
     memset(disc_album_title, 0, sizeof(disc_album_title));
@@ -130,7 +130,7 @@ char *get_music_filename(scarletbook_handle_t *handle, int area, int track)
         char *pos = strchr(album_title, ';');
         if (!pos)
             pos = album_title + strlen(album_title);
-        strncpy(disc_album_title, album_title, min(pos - album_title, 59));
+        strcpy(disc_album_title, substr(album_title, 0, min(pos - album_title, 59)));
     }
 
     snprintf(disc_album_year, sizeof(disc_album_year), "%04d", handle->master_toc->disc_date_year);
