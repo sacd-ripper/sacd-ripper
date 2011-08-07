@@ -62,19 +62,21 @@ Changes:
 /*       INCLUDES                                                             */
 /*============================================================================*/
 
-#include <malloc.h>
-#include <memory.h>
-#include <stdio.h>
-#include <emmintrin.h>
-#include "dst_ac.h"
-#include "types.h"
-#include "dst_fram.h"
-#include "UnpackDST.h"
-
 /* Without this, SSE2 intrinsics will be compiled in.
  * Even something as simple as detecting SSE2 capability within DST_InitDecoder()
  * then using that to determine which code path to use, impacts peformance significantly */
 //#define NO_SSE2
+
+#include <malloc.h>
+#include <memory.h>
+#include <stdio.h>
+#if !defined(NO_SSE2) && (defined(_M_IX86) || defined(_M_X64) || defined(__i386__) || defined(__x86_64__))
+#include <emmintrin.h>
+#endif
+#include "dst_ac.h"
+#include "types.h"
+#include "dst_fram.h"
+#include "UnpackDST.h"
 
 /***************************************************************************/
 /*                                                                         */
