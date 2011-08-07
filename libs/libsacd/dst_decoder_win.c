@@ -117,19 +117,26 @@ int dst_decoder_decode(dst_decoder_t *dst_decoder, uint8_t *source_data, size_t 
 
     if (dst_decoder)
     {
-        hr = dst_decoder->lpVtbl->Decode(dst_decoder, source_data, dest_data, 0, &frame_size);
-        if (hr != 0)
+        if (source_size > 0)
         {
-            return -1;
-        }
+            hr = dst_decoder->lpVtbl->Decode(dst_decoder, source_data, dest_data, 0, &frame_size);
+            if (hr != 0)
+            {
+                return -1;
+            }
 
-        hr = dst_decoder->lpVtbl->GetBufferSize(dst_decoder, &dest_size);
-        if (hr != 0)
+            hr = dst_decoder->lpVtbl->GetBufferSize(dst_decoder, &dest_size);
+            if (hr != 0)
+            {
+                return -1;
+            }
+
+            *dsd_size = dest_size;
+        }
+        else
         {
-            return -1;
+            *dsd_size = 0;
         }
-
-        *dsd_size = dest_size;
         return 0;
     }
 
