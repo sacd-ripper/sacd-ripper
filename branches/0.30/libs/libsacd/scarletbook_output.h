@@ -147,8 +147,10 @@ typedef struct scarletbook_output_t
     stats_progress_callback_t stats_progress_callback;
     stats_track_callback_t stats_track_callback;
 
-#if defined(__lv2ppu__) || defined(_WIN32)
+#if defined(__lv2ppu__) || defined(_WIN32) || defined(__DST_DECODER_H__)
     dst_decoder_t      *dst_decoder;
+    int                 num_slots;
+    int                 current_slot;
 #endif
 }
 scarletbook_output_t;
