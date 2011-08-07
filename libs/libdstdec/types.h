@@ -92,7 +92,7 @@ typedef struct
     int     PredOrder[2 * MAX_CHANNELS];                        /* Prediction order used for this frame       */
     int     PtableLen[2 * MAX_CHANNELS];                        /* Nr of Ptable entries used for this frame   */
     float   **FCoefA;                                           /* Floating point FIR coefficients            */
-    int     ICoefA[2 * MAX_CHANNELS][1 << SIZE_CODEDPREDORDER]; /* Integer coefs for actual coding            */
+    int16_t **ICoefA;                                           /* Integer coefs for actual coding            */
     int     DSTCoded;                                           /* 1=DST coded is put in DST stream,          */
                                                                 /* 0=DSD is put in DST stream                 */
     long    CalcNrOfBytes;                                      /* Contains number of bytes of the complete   */
@@ -107,9 +107,9 @@ typedef struct
                                                                 /* start of each frame are optionally coded   */
                                                                 /* with p=0.5                                 */
     Segment FSeg;                                               /* Contains segmentation data for filters     */
-    int     Filter4Bit[MAX_CHANNELS][MAX_DSDBITS_INFRAME];      /* Filter4Bit[ChNr][BitNr]                    */
+    char    Filter4Bit[MAX_CHANNELS][MAX_DSDBITS_INFRAME];      /* Filter4Bit[ChNr][BitNr]                    */
     Segment PSeg;                                               /* Contains segmentation data for Ptables     */
-    int     Ptable4Bit[MAX_CHANNELS][MAX_DSDBITS_INFRAME];      /* Ptable4Bit[ChNr][BitNr]                    */
+    char    Ptable4Bit[MAX_CHANNELS][MAX_DSDBITS_INFRAME];      /* Ptable4Bit[ChNr][BitNr]                    */
     int     PSameSegAsF;                                        /* 1 if segmentation is equal for F and P     */
     int     PSameMapAsF;                                        /* 1 if mapping is equal for F and P          */
     int     FSameSegAllCh;                                      /* 1 if all channels have same Filtersegm.    */
@@ -127,42 +127,24 @@ typedef struct
 
 typedef struct
 {
-    int ***C;        /* Coded_Coef[Fir/PtabNr][Method][CoefNr]     */
     int *CPredOrder; /* Code_PredOrder[Method]                     */
     int **CPredCoef; /* Code_PredCoef[Method][CoefNr]              */
     int *Coded;      /* DST encode coefs/entries of Fir/PtabNr     */
     int *BestMethod; /* BestMethod[Fir/PtabNr]                     */
     int **m;         /* m[Fir/PtabNr][Method]                      */
-    int **L1;        /* L1_Norm[Fir/PtabNr][Method]                */
     int **Data;      /* Fir/PtabData[Fir/PtabNr][Index]            */
     int *DataLen;    /* Fir/PtabDataLength[Fir/PtabNr]             */
     int StreamBits;  /* nr of bits all filters use in the stream   */
     int TableType;   /* FILTER or PTABLE: indicates contents       */
 } CodedTable;
 
-typedef struct
-{
-    int     PBit;
-    uint8_t Bit;
-    uint8_t Data[MAX_DSTXBITS_SIZE];
-    int     DataLen;
-} DSTXBITS_STR;
-
-
-typedef struct
-{
-    int    Pnt[MAX_CHANNELS];
-    int8_t Status[MAX_CHANNELS][MAX_DSDBITS_INFRAME + (1 << SIZE_CODEDPREDORDER)];
-} FirPtr;
 
 typedef struct
 {
     uint8_t*   pDSTdata;
     int32_t    TotalBytes;
     int32_t    ByteCounter;
-    int32_t    BitCounter;
     int        BitPosition;
-    long       mask[32];
     uint8_t    DataByte;
 } StrData;
 
@@ -176,25 +158,19 @@ typedef struct
 
 typedef struct
 {
-    FirPtr       FirPtrs;                                        /* Contains pointers to the two arrays used    */
+    FrameHeader  FrameHdr;                                       /* Contains frame based header information     */
+
     CodedTable   StrFilter;                                      /* Contains FIR-coef. compression data         */
     CodedTable   StrPtable;                                      /* Contains Ptable-entry compression data      */
-    FrameHeader  FrameHdr;                                       /* Contains frame based header information     */
-    DSTXBITS_STR DstXbits;                                       /* Contains DST_X_Bits                         */
                                                                  /* input stream.                               */
-    int8_t       BitStream11[MAX_CHANNELS][MAX_DSDBITS_INFRAME]; /* Contains the bitstream of a complete        */
-                                                                 /* frame. This array contains "bits" with      */
-                                                                 /* value -1 or 1                               */
-    uint8_t      BitResidual[MAX_CHANNELS][MAX_DSDBITS_INFRAME]; /* Contains the residual signal to be          */
-                                                                 /* applied to the arithmetic encoder           */
-    long         PredicVal[MAX_CHANNELS][MAX_DSDBITS_INFRAME];   /* Contains the output value of the FIR        */
-                                                                 /* filter for each bit of a complete frame     */
     int          **P_one;                                        /* Probability table for arithmetic coder      */
     uint8_t      *AData;                                         /* Contains the arithmetic coded bit stream    */
                                                                  /* of a complete frame                         */
     int          ADataLen;                                       /* Number of code bits contained in AData[]    */
     StrData      S;                                              /* DST data stream */
     ACData       AC;
+
+    int          SSE2;
 } ebunch;
 
 #endif  /* __TYPES_H_INCLUDED */
