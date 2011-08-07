@@ -19,12 +19,10 @@
  *
  */
 
-#ifndef _WIN32
-#error you need a compiler with a windows target to use this
-#endif
-
 #ifndef __DST_DECODER_H__
 #define __DST_DECODER_H__
+
+#define __DST_DECODER_REF_H__   /* Can be used to detect which decoder is being used */
 
 #include <pthread.h> 
 #include "types.h"
@@ -48,7 +46,8 @@ typedef struct _frame_slot_t
 typedef struct _dst_decoder_t
 {
     frame_slot_t *frame_slots;
-    int          slot_nr;       
+    int          slot_nr;
+    int          buf_nr;
     int          channel_count;
     int          thread_count;
     uint32_t     frame_nr;
