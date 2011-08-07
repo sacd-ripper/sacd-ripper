@@ -83,6 +83,7 @@ int FillBuffer(StrData* SD, uint8_t* pBuf, int32_t Size);
 int FIO_BitGetChrUnsigned(StrData* SD, int Len, unsigned char *x);
 int FIO_BitGetIntUnsigned(StrData* SD, int Len, int *x);
 int FIO_BitGetIntSigned(StrData* SD, int Len, int *x);
+int FIO_BitGetShortSigned(StrData* SD, int Len, short *x);
 int get_in_bitcount(StrData* SD);
 
 int CreateBuffer(StrData* SD, int32_t Size);

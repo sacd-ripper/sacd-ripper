@@ -104,7 +104,7 @@ Changes:
 /*                                                                         */
 /***************************************************************************/
 
-void DST_ACDecodeBit(ACData* AC, unsigned char *b, int p, unsigned char *cb,
+void DST_ACDecodeBit(ACData *AC, unsigned char *b, int p, unsigned char *cb,
                      int fs, int Flush)
 {
   /*
@@ -139,13 +139,13 @@ void DST_ACDecodeBit(ACData* AC, unsigned char *b, int p, unsigned char *cb,
     h = AC->A - ap;
     if (AC->C >= h)
     {
-      *b = 1;
+      *b = 0;
       AC->C -= h;
       AC->A  = ap;
     }
     else
     {
-      *b = 0;
+      *b = 1;
       AC->A  = h;
     }
     while (AC->A < HALF)
@@ -165,14 +165,14 @@ void DST_ACDecodeBit(ACData* AC, unsigned char *b, int p, unsigned char *cb,
   else
   {
     AC->Init = 1;
-    *b   = 0;
     if (AC->cbptr < fs - 7)
     {
-      *b = 1;
+      *b = 0;
     }
     else
     {
-      while ((*b == 0) && (AC->cbptr < fs))
+      *b = 1;
+      while ((AC->cbptr < fs) && (*b == 1))
       {
         if (cb[AC->cbptr] != 0)
         {

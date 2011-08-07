@@ -99,8 +99,7 @@ int ResetReadingIndex(StrData* SD)
 {
   int hr = 0;
 
-  SD->BitCounter  = 0;
-  SD->BitPosition = -1;
+  SD->BitPosition = 0;
   SD->ByteCounter = 0;
   SD->DataByte    = 0;
 
@@ -172,12 +171,6 @@ int FillBuffer(StrData* SD, uint8_t* pBuf, int32_t Size)
 
   SD->pDSTdata = NULL;
 
-  /* fill mask */
-  for (cnt = 0; cnt < 32; cnt++)
-  {
-    SD->mask[cnt] = 1 << cnt;
-  }
-
   CreateBuffer(SD, Size);
 
   for (cnt = 0; cnt < Size; cnt++)
@@ -225,7 +218,7 @@ int FIO_BitGetChrUnsigned(StrData* SD, int Len, unsigned char *x)
   }
   else
   {
-    printf("\nERROR: a negative number of bits allocated\n");
+    fprintf(stderr, "\nERROR: a negative number of bits allocated\n");
   }
   return return_value;
 }
@@ -317,41 +310,115 @@ int FIO_BitGetIntSigned(StrData* SD, int Len, int *x)
 
 /***************************************************************************/
 /*                                                                         */
+/* name     : FIO_BitGetShortSigned                                        */
+/*                                                                         */
+/* function : Read a short integer as a signed number from file with a     */
+/*            given number of bits.                                        */
+/*                                                                         */
+/* pre      : Len, x, output file must be open by having used getbits_init */
+/*                                                                         */
+/* post     : The second variable in function call is filled with the      */
+/*            signed short integer read                                    */
+/*                                                                         */
+/* uses     : stdio.h, stdlib.h                                            */
+/*                                                                         */
+/***************************************************************************/
+
+int FIO_BitGetShortSigned(StrData* SD, int Len, short *x)
+{
+  int   return_value;
+  long  tmp;
+
+  return_value = -1;
+  if (Len > 0)
+  {
+    return_value = getbits(SD, &tmp, Len);
+    *x = (short)tmp;
+    
+    if (*x >= (1 << (Len - 1)))
+    {
+      *x -= (1 << Len);
+    }
+  }
+  else if (Len == 0)
+  {
+    *x = 0;
+    return_value = 0;
+  }
+  else
+  {
+    fprintf(stderr, "\nERROR: a negative number of bits allocated\n");
+  }
+  return return_value;
+}
+
+
+/***************************************************************************/
+/*                                                                         */
 /* name     : getbits                                                      */
 /*                                                                         */
 /* function : Read bits from the bitstream and decrement the counter.      */
 /*                                                                         */
 /* pre      : out_bitptr                                                   */
 /*                                                                         */
-/* post     : m_BitCounter, outword, returns EOF on EOF or 0 otherwise.    */
+/* post     : m_ByteCounter, outword, returns EOF on EOF or 0 otherwise.   */
 /*                                                                         */
 /* uses     : stdio.h                                                      */
 /*                                                                         */
 /***************************************************************************/
 
+static int masks[] = { 0, 1, 3, 7, 0xf, 0x1f, 0x3f, 0x7f, 0xff };
+
 int getbits(StrData* SD, long *outword, int out_bitptr)
 {
-  SD->BitCounter += out_bitptr;
-  *outword = 0;
-  while(--out_bitptr >= 0)
-  {
-    if (SD->BitPosition < 0)
+    if (out_bitptr == 1)
     {
-      SD->DataByte = SD->pDSTdata[SD->ByteCounter++];
-      if (SD->ByteCounter > SD->TotalBytes)
-      {
-        return (-1); /* EOF */
-      }
-      SD->BitPosition = 7;
-    }
-    if ((SD->DataByte & SD->mask[SD->BitPosition]) != 0)
-    {
-      *outword |= SD->mask[out_bitptr];
-    }
-    SD->BitPosition--;
-  }
+        if (SD->BitPosition == 0)
+        {
+            SD->DataByte = SD->pDSTdata[SD->ByteCounter++];
+            if (SD->ByteCounter > SD->TotalBytes)
+            {
+                return (-1); /* EOF */
+            }
+            SD->BitPosition = 8;
+        }
 
-  return 0;
+        SD->BitPosition--;
+        *outword = (SD->DataByte >> SD->BitPosition) & 1;
+
+        return 0;
+    }
+
+    *outword = 0;
+    while(out_bitptr > 0)
+    {
+        int thisbits, mask, shift;
+
+        if (!SD->BitPosition)
+        {
+            SD->DataByte = SD->pDSTdata[SD->ByteCounter++];
+            if (SD->ByteCounter > SD->TotalBytes)
+            {
+                return (-1); /* EOF */
+            }
+            SD->BitPosition = 8;
+        }
+
+        thisbits = min(SD->BitPosition, out_bitptr);
+        shift = (SD->BitPosition - thisbits);
+        mask = masks[thisbits] << shift;
+
+        shift = (out_bitptr - thisbits) - shift;
+        if (shift <= 0)
+            *outword |= ((SD->DataByte & mask) >> -shift);
+        else
+            *outword |= ((SD->DataByte & mask) << shift);
+
+        out_bitptr -= thisbits;
+        SD->BitPosition -= thisbits;
+    }
+
+    return 0;
 }
 
 /***************************************************************************/
@@ -370,7 +437,7 @@ int getbits(StrData* SD, long *outword, int out_bitptr)
 
 int get_in_bitcount(StrData* SD)
 {
-  return SD->BitCounter;
+  return SD->ByteCounter * 8 - SD->BitPosition;
 }
 
 
