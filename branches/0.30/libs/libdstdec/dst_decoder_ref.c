@@ -28,7 +28,7 @@
 #include <malloc.h>
 #include <memory.h>
 #include <logging.h>
-#include "DSTDecoder.h"
+#include "dst_decoder.h"
 #include "dst_decoder_ref.h"
 
 #define DST_BUFFER_SIZE (MAX_DSDBITS_INFRAME / 8 * MAX_CHANNELS)

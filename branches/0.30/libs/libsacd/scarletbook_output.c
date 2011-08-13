@@ -43,8 +43,9 @@
 #define WRITE_CACHE_SIZE 1 * 1024 * 1024
 #define MAX_DST_SIZE 1024 * 64
 
-// TODO: allocate dynamically
-// TODO: refactor, creation & destruction & cleanup..
+// TODO: - allocate dynamically
+//       - refactor, creation & destruction & cleanup..
+//       - remove buffering
 static scarletbook_output_t output;
 
 extern scarletbook_format_handler_t const * dsdiff_format_fn(void);
@@ -419,12 +420,8 @@ static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int
                                         if (frame_ptr->complete)
                                         {
                                             dsd_data = output.dsd_data + (FRAME_SIZE_64 * MAX_CHANNEL_COUNT) * output.current_slot;
-#if defined(__DST_DECODER_REF_H__)
                                             output.current_slot = (++output.current_slot) % (output.num_slots + 1);
                                             if (dst_decoder_decode_mt(output.dst_decoder, frame_ptr->data, frame_ptr->size, &dsd_data, &dsd_size) == 0 && dsd_size != 0)
-#elif defined(_WIN32)
-                                            if (dst_decoder_decode(output.dst_decoder, frame_ptr->data, frame_ptr->size, dsd_data, &dsd_size) == 0 && dsd_size != 0)
-#endif
                                             {
                                                 write_block(ft, dsd_data, dsd_size, 0);
                                             }
@@ -521,7 +518,6 @@ static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int
             // do we need to decode to DSD?
             if (ft->dsd_encoded_export && ft->dst_encoded_import)
             {
-#if defined(__lv2ppu__) || defined(__DST_DECODER_REF_H__) || defined(_WIN32)
                 size_t dsd_size;
                 uint8_t *dsd_data;
                 audio_frame_t * frame_ptr = output.frame;
@@ -542,12 +538,8 @@ static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int
                         dst_decoder_decode(output.dst_decoder, frame_ptr->data, frame_ptr->size, frame_ptr->dst_encoded, frame_ptr->channel_count);
 #else
                         dsd_data = output.dsd_data + (FRAME_SIZE_64 * MAX_CHANNEL_COUNT) * output.current_slot;
-#if defined(__DST_DECODER_REF_H__)
                         output.current_slot = (++output.current_slot) % (output.num_slots + 1);
                         if (dst_decoder_decode_mt(output.dst_decoder, frame_ptr->data, frame_ptr->size, &dsd_data, &dsd_size) == 0 && dsd_size != 0)
-#elif defined(_WIN32)
-                        if (dst_decoder_decode(output.dst_decoder, frame_ptr->data, frame_ptr->size, dsd_data, &dsd_size) == 0 && dsd_size != 0)
-#endif
                         {
                             write_block(ft, dsd_data, dsd_size, 0);
                         }
@@ -569,17 +561,11 @@ static void process_blocks(scarletbook_output_format_t *ft, uint8_t *buffer, int
                 }
 #else
                 dsd_data = output.dsd_data + (FRAME_SIZE_64 * MAX_CHANNEL_COUNT) * output.current_slot;
-#if defined(__DST_DECODER_REF_H__)
                 output.current_slot = (++output.current_slot) % (output.num_slots + 1);
                 while (dst_decoder_decode_mt(output.dst_decoder, NULL, 0, &dsd_data, &dsd_size) == 0 && dsd_size != 0)
-#elif defined(_WIN32)
-                while (dst_decoder_decode(output.dst_decoder, NULL, 0, dsd_data, &dsd_size) == 0 && dsd_size != 0)
-#endif
                 {
                     write_block(ft, dsd_data, dsd_size, 0);
                 }
-#endif
-
 #endif
             }
             else
@@ -635,11 +621,7 @@ static void *read_thread(void *arg)
             ft = list_entry(node_ptr, scarletbook_output_format_t, siblings);
             list_del(node_ptr);
 
-#if defined(__DST_DECODER_REF_H__)
             dst_decoder_init_mt(output.dst_decoder, ft->channel_count);
-#elif defined(_WIN32)
-            dst_decoder_init(output.dst_decoder, ft->channel_count);
-#endif
 
             output.stats_current_file_total_sectors = ft->length_lsn;
             output.stats_current_file_sectors_processed = 0;
@@ -819,10 +801,10 @@ int initialize_ripping(void)
 
     allocate_round_robin_frame_buffer();
 
-#if defined(__DST_DECODER_REF_H__)
-    ret = dst_decoder_create_mt(&output.dst_decoder, output.num_slots);
-#elif defined(__lv2ppu__) || defined(_WIN32)
+#if defined(__lv2ppu__)
     ret = dst_decoder_create(&output.dst_decoder);
+#else
+    ret = dst_decoder_create_mt(&output.dst_decoder, output.num_slots);
 #endif
     if (ret != 0)
     {
@@ -886,10 +868,10 @@ int stop_ripping(scarletbook_handle_t *handle)
             LOG(lm_main, LOG_ERROR, ("processing thread didn't close properly... %x", thr_exit_code));
         }
 
-#if defined(__DST_DECODER_REF_H__)
-        ret = dst_decoder_destroy_mt(output.dst_decoder);
-#elif defined(__lv2ppu__) || defined(_WIN32)
+#if defined(__lv2ppu__)
         ret = dst_decoder_destroy(output.dst_decoder);
+#else
+        ret = dst_decoder_destroy_mt(output.dst_decoder);
 #endif
         if (ret != 0)
         {

@@ -22,6 +22,10 @@ And edited by:
   Philips Digital Systems Laboratories Eindhoven
   <r.h.m.theelen@philips.com>
 
+* Maxim Anisiutkin
+  ICT Group
+  <maxim.anisiutkin@gmail.com>
+
 in the course of development of the MPEG-4 Audio standard ISO-14496-1, 2 and 3.
 This software module is an implementation of a part of one or more MPEG-4 Audio
 tools as specified by the MPEG-4 Audio standard. ISO/IEC gives users of the
@@ -38,40 +42,39 @@ assign or donate the code to a third party and to inhibit third party from
 using the code for non MPEG-4 Audio conforming products. This copyright notice
 must be included in all copies of derivative works.
 
-Copyright  2004.
+Copyright  2004, 2011
 
-Source file: UnpackDST.h (Unpacking DST Frame Data)
+Source file: DSTDecoder.h (Initialize decoder environment)
 
 Required libraries: <none>
 
 Authors:
 RT:  Richard Theelen, PDSL-labs Eindhoven <r.h.m.theelen@philips.com>
+MA:  Maxim Anisiutkin, ICT Group <maxim.anisiutkin@gmail.com>
 
 Changes:
 08-Mar-2004 RT  Initial version
+26-Jun-2011 MA  Possibility to instantinate more than one decoder
 
 ************************************************************************/
 
-
-#if !defined(__UNPACKDST_H)
-#define __UNPACKDST_H
-
+#ifndef __DSTDECODER_H_INCLUDED
+#define __DSTDECODER_H_INCLUDED
 
 /*============================================================================*/
 /*       INCLUDES                                                             */
 /*============================================================================*/
 
+#include <stdint.h>
 #include "types.h"
-#include "DSTData.h"
-
+#include "unpack_dst.h"
 
 /*============================================================================*/
 /*       FUNCTION PROTOTYPES                                                  */
 /*============================================================================*/
 
-int UnpackDSTframe(ebunch*  D, 
-                   uint8_t* DSTdataframe, 
-                   uint8_t* DSDdataframe);
+int Init(ebunch *D, int NrChannels, int Fs44);
+int Close(ebunch *D);
+int Decode(ebunch *D, uint8_t *DSTFrame, uint8_t *DSDMuxedChannelData, int FrameCnt, uint32_t *FrameSize);
 
-
-#endif /* __UNPACKDST_H */
+#endif /* __DSTDECODER_H_INCLUDED  */
