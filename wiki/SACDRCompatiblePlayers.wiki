@@ -9,6 +9,7 @@ Raw ISO images (SACD-R) that are burned to DVD-R can be played on several SACD p
   * Cambridge Audio Azur 650BD
   * Denon DVD-2910
   * Denon DVD-3910
+  * Marantz DV7600
   * Marantz UD5005
   * NAD M5
   * NAD T585
@@ -19,6 +20,7 @@ Raw ISO images (SACD-R) that are burned to DVD-R can be played on several SACD p
   * OPPO BDP-95
   * Sony BDP-S370
   * Sony BDP-S380
+  * Sony BDP-S470
   * Sony BDP-S570
   * Sony BDP-S870
   * Sony BDP-S970
@@ -28,19 +30,25 @@ Raw ISO images (SACD-R) that are burned to DVD-R can be played on several SACD p
 
   * Samsung HD745/945/950
   * Samsung HD841/941
+  * Yamaha DVD-S1800
+  * Yamaha DVD-S2700
 
 ==NOT Working==
 
   * Accuphase DP-100
+  * Arcam DV137
   * BBK DV727S
-  * EMM Labs CDSD
+  * Cambridge Audio DVD89
+  * Cary DVD8
   * Denon DVD-1930
   * Denon DVD-1940
   * Denon DVD-2930
   * Denon DVD-3930
+  * EMM Labs CDSD
   * Harman/Kardon DVD 47
   * Integra DPS-6.9
   * Marantz DV-6001
+  * Marantz DV-6500
   * Marantz DV-9500
   * Marantz DV-9600
   * Marantz SA-15S1
@@ -62,10 +70,14 @@ Raw ISO images (SACD-R) that are burned to DVD-R can be played on several SACD p
   * Pioneer DV-LX50
   * Pioneer PD-D6-J
   * Sherwood Newcastle SD-871
+  * Sony DVP-NS700V
   * Sony DVP-NS900V
-  * Sony SCD-CE595
-  * Sony SCD XB940 QS
   * Sony PlayStation3
+  * Sony SCD XB940 QS
+  * Sony SCD-555ES
+  * Sony SCD-CE595
+  * Yamaha CD-S1000
   * Yamaha CD-S2000
+  * Yamaha DVD-S1500
   * Yamaha DVD-S1800
   * Yamaha DVD-S2700
