@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories=".\win32;..\..\libs\libsacd;..\..\libs\libcommon;..\..\libs\libid3;..\..\libs\libiconv\include"
+				AdditionalIncludeDirectories=".\win32;..\..\libs\libsacd;..\..\libs\libcommon;..\..\libs\libid3;..\..\libs\libiconv\include;..\..\libs\libdstdec"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;HAVE_CONFIG_H"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -117,7 +117,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories=".\win32;..\..\libs\libsacd;..\..\libs\libcommon;..\..\libs\libid3;..\..\libs\libiconv\include"
+				AdditionalIncludeDirectories=".\win32;..\..\libs\libsacd;..\..\libs\libcommon;..\..\libs\libid3;..\..\libs\libiconv\include;..\..\libs\libdstdec"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;HAVE_CONFIG_H"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
@@ -185,10 +185,6 @@
 			</File>
 			<File
 				RelativePath="..\..\libs\libsacd\dsf.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\libs\libsacd\dst_decoder_win.c"
 				>
 			</File>
 			<File
@@ -377,6 +373,42 @@
 			</File>
 			<File
 				RelativePath="..\..\libs\libid3\unicode.c"
+				>
+			</File>
+		</Filter>
+		<Filter
+			Name="libdstdec"
+			>
+			<File
+				RelativePath="..\..\libs\libdstdec\ccp_calc.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\libs\libdstdec\dst_ac.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\libs\libdstdec\dst_data.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\libs\libdstdec\dst_decoder.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\libs\libdstdec\dst_decoder_ref.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\libs\libdstdec\dst_fram.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\libs\libdstdec\dst_init.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\libs\libdstdec\unpack_dst.c"
 				>
 			</File>
 		</Filter>

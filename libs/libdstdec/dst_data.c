@@ -67,7 +67,7 @@ Changes:
 #include <stdio.h>
 #include <stdlib.h>
 #include "types.h"
-#include "DSTData.h"
+#include "dst_data.h"
 
 
 /***********************************************************************

@@ -32,8 +32,8 @@
 #include "scarletbook.h"
 #ifdef __lv2ppu__
 #include "dst_decoder.h"
-#elif defined(_WIN32)
-#include "dst_decoder_win.h"
+#else
+#include "dst_decoder_ref.h"
 #endif
 
 #define PACKET_FRAME_BUFFER_COUNT 5
@@ -147,11 +147,9 @@ typedef struct scarletbook_output_t
     stats_progress_callback_t stats_progress_callback;
     stats_track_callback_t stats_track_callback;
 
-#if defined(__lv2ppu__) || defined(_WIN32) || defined(__DST_DECODER_H__)
     dst_decoder_t      *dst_decoder;
     int                 num_slots;
     int                 current_slot;
-#endif
 }
 scarletbook_output_t;
 

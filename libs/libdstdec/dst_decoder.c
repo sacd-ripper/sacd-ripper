@@ -42,9 +42,9 @@ assign or donate the code to a third party and to inhibit third party from
 using the code for non MPEG-4 Audio conforming products. This copyright notice
 must be included in all copies of derivative works.
 
-Copyright  2004, 2011
+Copyright  2004.
 
-Source file: DSTDecoder.h (Initialize decoder environment)
+Source file: DSTDecoder.c (Initialize decoder environment)
 
 Required libraries: <none>
 
@@ -58,23 +58,81 @@ Changes:
 
 ************************************************************************/
 
-#ifndef __DSTDECODER_H_INCLUDED
-#define __DSTDECODER_H_INCLUDED
-
 /*============================================================================*/
 /*       INCLUDES                                                             */
 /*============================================================================*/
 
-#include <stdint.h>
-#include "types.h"
-#include "UnpackDST.h"
+#include "dst_fram.h"
+#include "dst_init.h"
+#include "dst_decoder.h"
 
 /*============================================================================*/
-/*       FUNCTION PROTOTYPES                                                  */
+/*       GLOBAL FUNCTION IMPLEMENTATIONS                                      */
 /*============================================================================*/
 
-int Init(ebunch *D, int NrChannels, int Fs44);
-int Close(ebunch *D);
-int Decode(ebunch *D, uint8_t *DSTFrame, uint8_t *DSDMuxedChannelData, int FrameCnt, uint32_t *FrameSize);
+/*************************GLOBAL FUNCTION**************************************
+ * 
+ * Name                   : Init
+ * Description            : Initialises the encoder component.
+ * Input                  : NrOfChannels: 2,5,6
+ * Output                 :
+ * Pre-condition          :
+ * Post-condition         :
+ * Returns:               :
+ * Global parameter usage :
+ * 
+ *****************************************************************************/
+int Init(ebunch *D, int NrChannels, int Fs44)
+{
+    D->FrameHdr.NrOfChannels   = NrChannels;
+    D->FrameHdr.FrameNr        = 0;
+    D->StrFilter.TableType     = FILTER;
+    D->StrPtable.TableType     = PTABLE;
+    /*  64FS =>  4704 */
+    /* 128FS =>  9408 */
+    /* 256FS => 18816 */
+    D->FrameHdr.MaxFrameLen    = (588 * Fs44 / 8); 
+    D->FrameHdr.ByteStreamLen  = D->FrameHdr.MaxFrameLen   * D->FrameHdr.NrOfChannels;
+    D->FrameHdr.BitStreamLen   = D->FrameHdr.ByteStreamLen * RESOL;
+    D->FrameHdr.NrOfBitsPerCh  = D->FrameHdr.MaxFrameLen   * RESOL;
+    D->FrameHdr.MaxNrOfFilters = 2 * D->FrameHdr.NrOfChannels;
+    D->FrameHdr.MaxNrOfPtables = 2 * D->FrameHdr.NrOfChannels;
+    return DST_InitDecoder(D);
+}
 
-#endif /* __DSTDECODER_H_INCLUDED  */
+/*************************GLOBAL FUNCTION**************************************
+ * 
+ * Name                   : Close
+ * Description            : 
+ * Input                  : 
+ * Output                 :
+ * Pre-condition          :
+ * Post-condition         :
+ * Returns:               :
+ * Global parameter usage :
+ * 
+ *****************************************************************************/
+int Close(ebunch *D)
+{
+    return DST_CloseDecoder(D);
+}
+ 
+ /*************************GLOBAL FUNCTION**************************************
+ * 
+ * Name                   : Decode
+ * Description            : 
+ * Input                  : 
+ * Output                 :
+ * Pre-condition          :
+ * Post-condition         :
+ * Returns:               :
+ * Global parameter usage :
+ * 
+ *****************************************************************************/
+int Decode(ebunch *D, uint8_t *DSTFrame, uint8_t *DSDMuxedChannelData, int FrameCnt, uint32_t *FrameSize)
+{
+    return DST_FramDSTDecode(DSTFrame, DSDMuxedChannelData, *FrameSize, FrameCnt, D);
+}
+
+
+
