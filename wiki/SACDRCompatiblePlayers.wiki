@@ -10,6 +10,7 @@ Raw ISO images (SACD-R) that are burned to DVD-R can be played on several SACD p
   * Denon DVD-2910
   * Denon DVD-3910
   * Denon DVD-A11
+  * Denon DBP-1611UD
   * Marantz DV7600
   * Marantz UD5005
   * NAD M5
@@ -55,6 +56,7 @@ Raw ISO images (SACD-R) that are burned to DVD-R can be played on several SACD p
   * Marantz SA-15S1
   * Marantz SA-7001
   * Marantz SA-7003
+  * Onkyo DV-506
   * Onkyo DV-SP504
   * Oppo DV-980H
   * Parasound D3
