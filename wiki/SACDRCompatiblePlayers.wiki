@@ -9,6 +9,7 @@ Raw ISO images (SACD-R) that are burned to DVD-R can be played on several SACD p
   * Cambridge Audio Azur 650BD
   * Denon DVD-2910
   * Denon DVD-3910
+  * Denon DVD-A11
   * Marantz DV7600
   * Marantz UD5005
   * NAD M5
