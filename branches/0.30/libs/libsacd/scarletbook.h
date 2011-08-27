@@ -249,20 +249,20 @@ typedef struct
     char     id[8];                           // SACDText
     uint8_t  reserved[8];
     uint16_t album_title_position;
-    uint16_t album_title_phonetic_position;
     uint16_t album_artist_position;
-    uint16_t album_artist_phonetic_position;
     uint16_t album_publisher_position;
-    uint16_t album_publisher_phonetic_position;
     uint16_t album_copyright_position;
+    uint16_t album_title_phonetic_position;
+    uint16_t album_artist_phonetic_position;
+    uint16_t album_publisher_phonetic_position;
     uint16_t album_copyright_phonetic_position;
     uint16_t disc_title_position;
-    uint16_t disc_title_phonetic_position;
     uint16_t disc_artist_position;
-    uint16_t disc_artist_phonetic_position;
     uint16_t disc_publisher_position;
-    uint16_t disc_publisher_phonetic_position;
     uint16_t disc_copyright_position;
+    uint16_t disc_title_phonetic_position;
+    uint16_t disc_artist_phonetic_position;
+    uint16_t disc_publisher_phonetic_position;
     uint16_t disc_copyright_phonetic_position;
     uint8_t  data[2000];
 }
