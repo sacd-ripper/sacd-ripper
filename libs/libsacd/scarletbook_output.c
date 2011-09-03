@@ -621,7 +621,9 @@ static void *read_thread(void *arg)
             ft = list_entry(node_ptr, scarletbook_output_format_t, siblings);
             list_del(node_ptr);
 
+#if !defined(__lv2ppu__)
             dst_decoder_init_mt(output.dst_decoder, ft->channel_count);
+#endif
 
             output.stats_current_file_total_sectors = ft->length_lsn;
             output.stats_current_file_sectors_processed = 0;
@@ -793,7 +795,7 @@ int initialize_ripping(void)
     output.initialized = 1;
 
 #if defined(__lv2ppu__)
-    output_num_slots = 0;
+    output.num_slots = 0;
 #else
     output.num_slots = pthread_num_processors_np();
 #endif
