@@ -7,29 +7,41 @@ Raw ISO images (SACD-R) that are burned to DVD-R can be played on several SACD p
 ==Confirmed to play==
 
   * Cambridge Audio Azur 650BD
+  * Cambridge Audio Azur 751BD
+  * Denon DBP-1611UD
+  * Denon DBP-2012UD
   * Denon DVD-2910
   * Denon DVD-3910
+  * Denon DVD-5910
   * Denon DVD-A11
-  * Denon DBP-1611UD
   * Marantz DV7600
   * Marantz UD5005
   * NAD M5
+  * NAD M55
   * NAD T585
   * OPPO BDP-80
   * OPPO BDP-83
   * OPPO BDP-83SE
   * OPPO BDP-93
   * OPPO BDP-95
+  * Sony BDP-S180
   * Sony BDP-S370
+  * Sony BDP-S370/BX37
   * Sony BDP-S380
   * Sony BDP-S470
   * Sony BDP-S570
+  * Sony BDP-S580
+  * Sony BDP-S780
   * Sony BDP-S870
   * Sony BDP-S970
+  * Sony BDV-E870
   * Yamaha BD-S1067
+  * Yamaha BD-S1067  
 
 ==Confirmed to play after firmware update==
 
+  * Pioneer DV-600AV
+  * Pioneer DV-610AV
   * Samsung HD745/945/950
   * Samsung HD841/941
   * Yamaha DVD-S1800
@@ -41,32 +53,42 @@ Raw ISO images (SACD-R) that are burned to DVD-R can be played on several SACD p
   * Arcam DV137
   * BBK DV727S
   * Cambridge Audio DVD89
+  * Cambridge Audio DVD99
   * Cary DVD8
   * Denon DVD-1930
   * Denon DVD-1940
+  * Denon DVD-2900
   * Denon DVD-2930
   * Denon DVD-3930
   * EMM Labs CDSD
+  * Esoteric SZ-1s
   * Harman/Kardon DVD 47
   * Integra DPS-6.9
   * Marantz DV-6001
   * Marantz DV-6500
+  * Marantz DV-7001
   * Marantz DV-9500
   * Marantz DV-9600
   * Marantz SA-15S1
   * Marantz SA-7001
   * Marantz SA-7003
+  * NAD T535
   * Onkyo DV-506
   * Onkyo DV-SP504
+  * Onkyo DV-SP506
   * Oppo DV-980H
+  * Oppo DV-983H
   * Parasound D3
   * Philips DVP-9000S
+  * Pioneer DV-563A
   * Pioneer DV-565A
   * Pioneer DV-575A
+  * Pioneer DV-585A
   * Pioneer DV-600AV
   * Pioneer DV-610AV
   * Pioneer DV-656A
   * Pioneer DV-696AV
+  * Pioneer DV-733A
   * Pioneer DV-757Ai
   * Pioneer DV-868AVi
   * Pioneer DV-989AVi
@@ -75,12 +97,17 @@ Raw ISO images (SACD-R) that are burned to DVD-R can be played on several SACD p
   * Sherwood Newcastle SD-871
   * Sony DVP-NS700V
   * Sony DVP-NS900V
+  * Sony DVP-NS955V
+  * Sony DVP-S9000ES
   * Sony PlayStation3
   * Sony SCD XB940 QS
   * Sony SCD-555ES
   * Sony SCD-CE595
+  * Sony SCD-XA5400ES
+  * Sony SCD-XB790
   * Yamaha CD-S1000
   * Yamaha CD-S2000
   * Yamaha DVD-S1500
+  * Yamaha DVD-S1500  
   * Yamaha DVD-S1800
   * Yamaha DVD-S2700
