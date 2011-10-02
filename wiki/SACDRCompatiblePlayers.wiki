@@ -37,7 +37,7 @@ Raw ISO images (SACD-R) that are burned to DVD-R can be played on several SACD p
   * Sony BDV-E870
   * Yamaha BD-S1067
 
-==Confirmed to play after firmware update==
+==Confirmed to play after (custom) firmware update==
 
   * Pioneer DV-600AV
   * Pioneer DV-610AV
