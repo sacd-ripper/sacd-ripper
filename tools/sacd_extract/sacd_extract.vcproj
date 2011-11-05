@@ -376,6 +376,10 @@
 			Name="libdstdec"
 			>
 			<File
+				RelativePath="..\..\libs\libdstdec\buffer_pool.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\libs\libdstdec\ccp_calc.c"
 				>
 			</File>
@@ -401,6 +405,10 @@
 			</File>
 			<File
 				RelativePath="..\..\libs\libdstdec\unpack_dst.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\libs\libdstdec\yarn.c"
 				>
 			</File>
 		</Filter>
