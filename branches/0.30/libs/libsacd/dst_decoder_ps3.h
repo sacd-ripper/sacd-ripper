@@ -19,8 +19,8 @@
  *
  */
 
-#ifndef __DST_DECODER_H__
-#define __DST_DECODER_H__
+#ifndef __DST_DECODER_PS3_H__
+#define __DST_DECODER_PS3_H__
 
 #ifndef __lv2ppu__
 #error you need the psl1ght/lv2 ppu compatible compiler!
@@ -28,6 +28,7 @@
 
 #include <ppu-types.h>
 
+typedef void (*frame_decoded_callback_t)(uint8_t* frame_data, size_t frame_size, void *userdata);
 typedef struct dst_decoder_thread_s *dst_decoder_thread_t;
 
 #define NUM_DST_DECODERS                5 /* The number of DST decoders (SPUs) */ 
@@ -38,17 +39,19 @@ typedef struct dst_decoder_t
 
     int                             event_count;
 
-    int                             current_event;
+    int                             channel_count;
 
     dst_decoder_thread_t            decoder[NUM_DST_DECODERS];
+
+    uint8_t                        *dsd_data;
+
+    frame_decoded_callback_t        frame_decoded_callback;
+    void                           *userdata;
 }
 dst_decoder_t;
 
-int dst_decoder_create(dst_decoder_t **);
-int dst_decoder_destroy(dst_decoder_t *);
-int dst_decoder_decode(dst_decoder_t *, uint8_t *, size_t, int, int);
-int dst_decoder_prepare(dst_decoder_t *);
-int dst_decoder_wait(dst_decoder_t *, int);
-int dst_decoder_get_dsd_frame(dst_decoder_t *, uint8_t *, size_t *);
+dst_decoder_t* dst_decoder_create(int channel_count, frame_decoded_callback_t frame_decoded_callback, void *userdata);
+int dst_decoder_destroy(dst_decoder_t *dst_decoder);
+int dst_decoder_decode(dst_decoder_t *dst_decoder, uint8_t* frame_data, size_t frame_size);
 
 #endif /* __DST_DECODER_H__ */

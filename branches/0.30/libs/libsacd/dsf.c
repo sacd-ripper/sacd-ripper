@@ -187,7 +187,7 @@ int dsf_close(scarletbook_output_format_t *ft)
     return 0;
 }
 
-size_t dsf_write_frame(scarletbook_output_format_t *ft, const uint8_t *buf, size_t len, int last_frame)
+size_t dsf_write_frame(scarletbook_output_format_t *ft, const uint8_t *buf, size_t len)
 {
     dsf_handle_t *handle = (dsf_handle_t *) ft->priv;
     const uint8_t *buf_end_ptr = buf + len;
@@ -222,12 +222,6 @@ size_t dsf_write_frame(scarletbook_output_format_t *ft, const uint8_t *buf, size
             handle->buffer_ptr[i] = handle->buffer[i];
 
             handle->audio_data_size += SACD_BLOCK_SIZE_PER_CHANNEL;
-
-            // did we write all frames? if so, we are done!
-            if (last_frame && i == handle->channel_count - 1)
-            {
-                return (size_t) (handle->audio_data_size - prev_audio_data_size);
-            }
         }
     }
 
