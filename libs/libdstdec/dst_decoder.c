@@ -19,200 +19,355 @@
  *
  */
 
-#ifdef __lv2ppu__
-#error this code is not intended for the ps3
-#endif
+/*
+  This software is provided 'as-is', without any express or implied
+  warranty.  In no event will the author be held liable for any damages
+  arising from the use of this software.
 
-#include <stdio.h>
+  Permission is granted to anyone to use this software for any purpose,
+  including commercial applications, and to alter it and redistribute it
+  freely, subject to the following restrictions:
+
+  1. The origin of this software must not be misrepresented; you must not
+     claim that you wrote the original software. If you use this software
+     in a product, an acknowledgment in the product documentation would be
+     appreciated but is not required.
+  2. Altered source versions must be plainly marked as such, and must not be
+     misrepresented as being the original software.
+  3. This notice may not be removed or altered from any source distribution.
+
+  Mark Adler
+  madler@alumni.caltech.edu
+ */
+
+/*
+  Although mostly unrecognizable; the parallelization code has been borrowed 
+  from "pigz" (parallel zlib) made by Mark Adler, credits for the usage of 
+  "yarn" and this threading code go to him!
+*/
+
+#include <stdlib.h>
+#include <assert.h>
 #include <malloc.h>
-#include <memory.h>
+#include <pthread.h>
 
 #include <logging.h>
 
 #include "dst_decoder.h"
+#include "yarn.h"
+#include "buffer_pool.h"
 #include "dst_fram.h"
 #include "dst_init.h"
 
-#define DST_BUFFER_SIZE (MAX_DSDBITS_INFRAME / 8 * MAX_CHANNELS)
-#define DSD_BUFFER_SIZE (MAX_DSDBITS_INFRAME / 8 * MAX_CHANNELS)
+/* -- parallel decoding -- */
 
-#define CACHE_ALIGNMENT 64
-
-void *dst_decoder_thread(void *threadarg)
+/* decode or write job (passed from decode list to write list) -- if seq is
+   equal to -1, decode_thread is instructed to return; if more is false then
+   this is the last chunk, which after writing tells write_thread to return */
+typedef struct job_t
 {
-    frame_slot_t *frame_slot = (frame_slot_t *)threadarg;
-    for (;;)
-    {
-        pthread_mutex_lock(&frame_slot->put_mutex);
-        frame_slot->state = SLOT_RUNNING;
-        DST_FramDSTDecode(frame_slot->dst_data_slot->buf, frame_slot->dsd_data_slot->buf, frame_slot->dst_data_slot->size, frame_slot->frame_nr, &frame_slot->D);
-        frame_slot->dsd_data_slot->size = (size_t)(MAX_DSDBITS_INFRAME / 8 * frame_slot->D.FrameHdr.NrOfChannels);
+    long seq;                                 /* sequence number */
+    int more;                                 /* true if this is not the last chunk */
+    buffer_pool_space_t *in;                  /* input DST data to decode */
+    buffer_pool_space_t *out;                 /* resulting DSD decoded data */
+    struct job_t *next;                       /* next job in the list (either list) */
+} 
+job_t;
 
-        frame_slot->state = SLOT_READY;
-        pthread_mutex_unlock(&frame_slot->get_mutex);
-    }
-    pthread_exit(NULL);
+struct dst_decoder_s
+{
+    int procs;            /* maximum number of compression threads (>= 1) */
+    int channel_count;
+
+    int sequence;       /* each job get's a unique sequence number */
+
+    /* input and output buffer pools */
+    buffer_pool_t in_pool;
+    buffer_pool_t out_pool;
+
+    /* list of decode jobs (with tail for appending to list) */
+    lock *decode_have;   /* number of decode jobs waiting */
+    job_t *decode_head, **decode_tail;
+
+    /* list of write jobs */
+    lock *write_first;    /* lowest sequence number in list */
+    job_t *write_head;
+
+    /* number of decoding threads running */
+    int cthreads;
+
+    /* write thread if running */
+    thread *writeth;
+
+    frame_decoded_callback_t frame_decoded_callback;
+    void *userdata;
+};
+
+/* setup job lists (call from main thread) */
+static void setup_decoding_jobs(dst_decoder_t *dst_decoder)
+{
+    /* set up only if not already set up*/
+    if (dst_decoder->decode_have != NULL)
+        return;
+
+    /* allocate locks and initialize lists */
+    dst_decoder->decode_have = new_lock(0);
+    dst_decoder->decode_head = NULL;
+    dst_decoder->decode_tail = &dst_decoder->decode_head;
+    dst_decoder->write_first = new_lock(-1);
+    dst_decoder->write_head = NULL;
+
+    /* initialize buffer pools */
+    buffer_pool_create(&dst_decoder->in_pool, 64 * 1024, (dst_decoder->procs << 1) + 2);
+    buffer_pool_create(&dst_decoder->out_pool, 64 * 1024, -1);
 }
 
-static int dst_decoder_init(dst_decoder_t *dst_decoder, int channel_count)
+/* command the decode threads to all return, then join them all (call from
+   main thread), free all the thread-related resources */
+static void finish_decoding_jobs(dst_decoder_t *dst_decoder)
 {
-    int i;
+    job_t job;
+    int caught;
 
-    for (i = 0; i < dst_decoder->frame_slot_count; i++)
+    /* only do this once */
+    if (dst_decoder->decode_have == NULL)
+        return;
+
+    /* command all of the extant decode threads to return */
+    possess(dst_decoder->decode_have);
+    job.seq = -1;
+    job.next = NULL;
+    dst_decoder->decode_head = &job;
+    dst_decoder->decode_tail = &(job.next);
+    twist(dst_decoder->decode_have, BY, +1);       /* will wake them all up */
+
+    /* join all of the decode threads, verify they all came back */
+    caught = join_all();
+    LOG(lm_main, LOG_NOTICE, ("-- joined %d decode threads", caught));
+    assert(caught == dst_decoder->cthreads);
+    dst_decoder->cthreads = 0;
+
+    /* free the resources */
+    caught = buffer_pool_free(&dst_decoder->out_pool);
+    LOG(lm_main, LOG_NOTICE, ("-- freed %d output buffers", caught));
+    caught = buffer_pool_free(&dst_decoder->in_pool);
+    LOG(lm_main, LOG_NOTICE, ("-- freed %d input buffers", caught));
+    free_lock(dst_decoder->write_first);
+    free_lock(dst_decoder->decode_have);
+    dst_decoder->decode_have = NULL;
+}
+
+/* get the next decoding job from the head of the list, decode and compute
+   the check value on the input, and put a job in the write list with the
+   results -- keep looking for more jobs, returning when a job is found with a
+   sequence number of -1 (leave that job in the list for other incarnations to
+   find) */
+static void decode_thread(void *userdata)
+{
+    job_t *job;                /* job pulled and working on */ 
+    job_t *here, **prior;      /* pointers for inserting in write list */ 
+    ebunch      D;
+    dst_decoder_t *dst_decoder = (dst_decoder_t *) userdata;
+
+    if (DST_InitDecoder(&D, dst_decoder->channel_count, 64) != 0)
     {
-        frame_slot_t *frame_slot = &dst_decoder->frame_slots[i];
-        if (!frame_slot->initialized)
+        pthread_exit(0);
+    }
+
+    /* keep looking for work */
+    for(;;)
+    {
+        /* get a job */
+        possess(dst_decoder->decode_have);
+        wait_for(dst_decoder->decode_have, NOT_TO_BE, 0);
+        job = dst_decoder->decode_head;
+        assert(job != NULL);
+        if (job->seq == -1)
+            break;
+        dst_decoder->decode_head = job->next;
+        if (job->next == NULL)
+            dst_decoder->decode_tail = &dst_decoder->decode_head;
+        twist(dst_decoder->decode_have, BY, -1);
+
+        /* got a job */
+        LOG(lm_main, LOG_NOTICE, ("-- decoding #%ld", job->seq));
+
+        if (job->more)
         {
-            if (DST_InitDecoder(&frame_slot->D, channel_count, 64) == 0)
-            {
-                if (dst_decoder->frame_slot_count > 1)
-                {
-                    pthread_mutex_init(&frame_slot->get_mutex, NULL);
-                    pthread_mutex_lock(&frame_slot->get_mutex);
-                    pthread_mutex_init(&frame_slot->put_mutex, NULL);
-                    pthread_mutex_lock(&frame_slot->put_mutex);
-                    pthread_create(&frame_slot->thread, NULL, dst_decoder_thread, (void *)frame_slot);
-                }
-            }
-            else
-            {
-                LOG(lm_main, LOG_ERROR, ("Could not initialize decoder slot"));
-                return -1;
-            }
-            frame_slot->initialized = 1;
+            job->out = buffer_pool_get_space(&dst_decoder->out_pool);
+            DST_FramDSTDecode(job->in->buf, job->out->buf, job->in->len, job->seq, &D); 
+            job->out->len = (size_t)(MAX_DSDBITS_INFRAME / 8 * dst_decoder->channel_count);
+            buffer_pool_drop_space(job->in);
+
+            LOG(lm_main, LOG_NOTICE, ("-- decoded #%ld%s", job->seq, job->more ? "" : " (last)"));
         }
+
+        /* insert write job in list in sorted order, alert write thread */
+        possess(dst_decoder->write_first);
+        prior = &dst_decoder->write_head;
+        while ((here = *prior) != NULL) 
+        {
+            if (here->seq > job->seq)
+                break;
+            prior = &(here->next);
+        }
+        job->next = here;
+        *prior = job;
+        twist(dst_decoder->write_first, TO, dst_decoder->write_head->seq);
+
+        /* done with that one -- go find another job */
+    } 
+
+    /* found job with seq == -1 -- free deflate memory and return to join */
+    release(dst_decoder->decode_have);
+
+    if (DST_CloseDecoder(&D) != 0)
+    {
+        pthread_exit(0);
     }
-    dst_decoder->channel_count = channel_count;
-    dst_decoder->frame_nr      = 0;
-    return 0;
 }
 
-dst_decoder_t *dst_decoder_create(int channel_count, frame_decoded_callback_t frame_decoded_callback, void *userdata)
+/* collect the write jobs off of the list in sequence order and write out the
+   decoded data until the last chunk is written -- also write the header and
+   trailer and combine the individual check values of the input buffers */
+static void write_thread(void *userdata)
 {
-    dst_decoder_t *dst_decoder;
-    int i;
-    
-    dst_decoder = (dst_decoder_t *)calloc(1, sizeof(dst_decoder_t));
-    if (!dst_decoder)
-        return 0;
+    long seq;                       /* next sequence number looking for */
+    job_t *job;                /* job pulled and working on */
+    int more;                       /* true if more chunks to write */
+    dst_decoder_t *dst_decoder = (dst_decoder_t *) userdata;
 
-    dst_decoder->frame_slot_count = pthread_num_processors_np();
-    dst_decoder->buffer_slot_count = dst_decoder->frame_slot_count + 1;
-    dst_decoder->frame_decoded_callback = frame_decoded_callback;
-    dst_decoder->userdata = userdata;
+    /* build and write header */
+    LOG(lm_main, LOG_NOTICE, ("-- write thread running"));
 
-    dst_decoder->frame_slots = (frame_slot_t *) calloc(dst_decoder->frame_slot_count, sizeof(frame_slot_t));
-    dst_decoder->dsd_data_slots = (buffer_slot_t *) calloc(dst_decoder->buffer_slot_count, sizeof(buffer_slot_t));
-    dst_decoder->dst_data_slots = (buffer_slot_t *) calloc(dst_decoder->buffer_slot_count, sizeof(buffer_slot_t));
-
-    for (i = 0; i < dst_decoder->buffer_slot_count; i++)
+    /* process output of decode threads until end of input */    
+    seq = 0;
+    do 
     {
-#ifdef _WIN32
-        dst_decoder->dst_data_slots[i].buf = _aligned_malloc(DST_BUFFER_SIZE, CACHE_ALIGNMENT);
-        dst_decoder->dsd_data_slots[i].buf = _aligned_malloc(DSD_BUFFER_SIZE, CACHE_ALIGNMENT);
-#else
-        dst_decoder->dst_data_slots[i].buf = memalign(CACHE_ALIGNMENT, DST_BUFFER_SIZE);
-        dst_decoder->dsd_data_slots[i].buf = memalign(CACHE_ALIGNMENT, DSD_BUFFER_SIZE);
-#endif 
+        /* get next write job in order */
+        possess(dst_decoder->write_first);
+        wait_for(dst_decoder->write_first, TO_BE, seq);
+        job = dst_decoder->write_head;
+        dst_decoder->write_head = job->next;
+        twist(dst_decoder->write_first, TO, dst_decoder->write_head == NULL ? -1 : dst_decoder->write_head->seq);
+
+        more = job->more;
+
+        if (more)
+        {
+            /* write the decoded data and drop the output buffer */
+            dst_decoder->frame_decoded_callback(job->out->buf, job->out->len, dst_decoder->userdata);
+            buffer_pool_drop_space(job->out);
+        }
+
+        free(job);
+
+        /* get the next buffer in sequence */
+        seq++;
+    } 
+    while (more);
+
+    /* verify no more jobs, prepare for next use */
+    possess(dst_decoder->decode_have);
+    assert(dst_decoder->decode_head == NULL && peek_lock(dst_decoder->decode_have) == 0);
+    release(dst_decoder->decode_have);
+    possess(dst_decoder->write_first);
+    assert(dst_decoder->write_head == NULL);
+    twist(dst_decoder->write_first, TO, -1);
+}
+
+static void finish_write_job(dst_decoder_t *dst_decoder)
+{
+    job_t *job;                /* job for decode, then write */
+
+    /* create a new job, use next input chunk, previous as dictionary */
+    job = malloc(sizeof(job_t));
+    if (job == NULL)
+        exit(1);
+    job->seq = dst_decoder->sequence;
+    job->in = 0;
+    job->out = 0;
+    job->more = 0;
+
+    ++dst_decoder->sequence;
+
+    /* start another decode thread if needed */
+    if (dst_decoder->cthreads < dst_decoder->procs) 
+    {
+        (void)launch(decode_thread, dst_decoder);
+        dst_decoder->cthreads++;
     }
 
-    dst_decoder->channel_count = 0;
-    dst_decoder->current_frame_slot = 0;
-    dst_decoder->current_buffer_slot = 0;
+    /* put job at end of decode list, let all the decoders know */
+    possess(dst_decoder->decode_have);
+    job->next = NULL;
+    *dst_decoder->decode_tail = job;
+    dst_decoder->decode_tail = &(job->next);
+    twist(dst_decoder->decode_have, BY, +1);
 
-    dst_decoder_init(dst_decoder, channel_count);
+    join(dst_decoder->writeth);
+    dst_decoder->writeth = NULL;
+}
+
+dst_decoder_t* dst_decoder_create(int channel_count, frame_decoded_callback_t frame_decoded_callback, void *userdata)
+{
+    dst_decoder_t *dst_decoder = (dst_decoder_t*) calloc(sizeof(dst_decoder_t), 1);
+
+    if (!dst_decoder)
+        exit(1);
+
+    assert(frame_decoded_callback);
+
+    dst_decoder->channel_count = channel_count;
+    dst_decoder->userdata = userdata;
+    dst_decoder->frame_decoded_callback = frame_decoded_callback;
+    dst_decoder->procs = pthread_num_processors_np();
+    
+    /* if first time or after an option change, setup the job lists */
+    setup_decoding_jobs(dst_decoder);
+
+    /* start write thread */
+    dst_decoder->writeth = launch(write_thread, dst_decoder);
 
     return dst_decoder;
 }
 
-int dst_decoder_destroy(dst_decoder_t *dst_decoder)
+void dst_decoder_destroy(dst_decoder_t *dst_decoder)
 {
-    int i;
+    finish_write_job(dst_decoder);
+    finish_decoding_jobs(dst_decoder);
 
-    /* empty the filled slots */
-    for (i = 0; i < dst_decoder->frame_slot_count; i++)
-    {
-        dst_decoder_decode(dst_decoder, NULL, 0);
-    }
-    for (i = 0; i < dst_decoder->frame_slot_count; i++)
-    {
-        frame_slot_t *frame_slot = &dst_decoder->frame_slots[i];
-        if (frame_slot->initialized)
-        {
-            if (dst_decoder->frame_slot_count > 1)
-            {
-                pthread_cancel(frame_slot->thread);
-                pthread_mutex_destroy(&frame_slot->get_mutex);
-                pthread_mutex_destroy(&frame_slot->put_mutex);
-            }
-            if (DST_CloseDecoder(&frame_slot->D) != 0)
-            {
-                LOG(lm_main, LOG_ERROR, ("Could not close decoder slot"));
-            }
-            frame_slot->initialized = 0;
-        }
-    }
-    for (i = 0; i < dst_decoder->buffer_slot_count; i++)
-    {
-#ifdef _WIN32
-        _aligned_free(dst_decoder->dst_data_slots[i].buf);
-        _aligned_free(dst_decoder->dsd_data_slots[i].buf);
-#else
-        free(dst_decoder->dst_data_slots[i].buf);
-        free(dst_decoder->dsd_data_slots[i].buf);
-#endif 
-    }
-
-    free(dst_decoder->dst_data_slots);
-    free(dst_decoder->dsd_data_slots);
-    free(dst_decoder->frame_slots);
     free(dst_decoder);
+}
 
-    return 0;
-}   
-
-int dst_decoder_decode(dst_decoder_t *dst_decoder, uint8_t *dst_data, size_t dst_size)
+void dst_decoder_decode(dst_decoder_t *dst_decoder, uint8_t* frame_data, size_t frame_size)
 {
-    frame_slot_t *frame_slot;
+    job_t *job;                /* job for decode, then write */
 
-    /* Get current slot */
-    frame_slot = &dst_decoder->frame_slots[dst_decoder->current_frame_slot];
- 
-    /* Release worker (decoding) thread on the loaded slot */
-    if (dst_size > 0)
+    /* create a new job, use next input chunk, previous as dictionary */
+    job = malloc(sizeof(job_t));
+    if (job == NULL)
+        exit(1);
+    job->seq = dst_decoder->sequence;
+    job->in = buffer_pool_get_space(&dst_decoder->in_pool);
+    memcpy(job->in->buf, frame_data, frame_size);
+    job->in->len = frame_size;
+    job->out = NULL;
+    job->more = 1;
+
+    ++dst_decoder->sequence;
+
+    /* start another decode thread if needed */
+    if (dst_decoder->cthreads < dst_decoder->procs) 
     {
-        frame_slot->state = SLOT_LOADED;
-
-        /* advance buffer slot */
-        dst_decoder->current_buffer_slot = (++dst_decoder->current_buffer_slot) % dst_decoder->buffer_slot_count;
-
-        /* current frame_slot gets new dsd/dst buffer */
-        frame_slot->dsd_data_slot = &dst_decoder->dsd_data_slots[dst_decoder->current_buffer_slot];
-        frame_slot->dst_data_slot = &dst_decoder->dst_data_slots[dst_decoder->current_buffer_slot];
-
-        // TODO, this extra copy could be avoided..
-        memcpy(frame_slot->dst_data_slot->buf, dst_data, dst_size);
-        frame_slot->dst_data_slot->size = dst_size;
-
-        pthread_mutex_unlock(&frame_slot->put_mutex);
-    }
-    else
-    {
-        frame_slot->state = SLOT_EMPTY;
+        (void)launch(decode_thread, dst_decoder);
+        dst_decoder->cthreads++;
     }
 
-    /* Advance to the next slot */
-    dst_decoder->current_frame_slot = (dst_decoder->current_frame_slot + 1) % dst_decoder->frame_slot_count;
-    frame_slot = &dst_decoder->frame_slots[dst_decoder->current_frame_slot];
-
-    /* Dump decoded frame */
-    if (frame_slot->state != SLOT_EMPTY)
-    {
-        pthread_mutex_lock(&frame_slot->get_mutex);
-
-        dst_decoder->frame_decoded_callback(frame_slot->dsd_data_slot->buf, frame_slot->dsd_data_slot->size, dst_decoder->userdata);
-    }
-
-    dst_decoder->frame_nr++;
-    return 0;
+    /* put job at end of decode list, let all the decoders know */
+    possess(dst_decoder->decode_have);
+    job->next = NULL;
+    *dst_decoder->decode_tail = job;
+    dst_decoder->decode_tail = &(job->next);
+    twist(dst_decoder->decode_have, BY, +1);
 }
