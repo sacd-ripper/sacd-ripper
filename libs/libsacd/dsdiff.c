@@ -478,7 +478,7 @@ int dsdiff_close(scarletbook_output_format_t *ft)
     return 0;
 }
 
-size_t dsdiff_write_frame(scarletbook_output_format_t *ft, const uint8_t *buf, size_t len, int last_frame)
+size_t dsdiff_write_frame(scarletbook_output_format_t *ft, const uint8_t *buf, size_t len)
 {
     dsdiff_handle_t *handle = (dsdiff_handle_t *) ft->priv;
 

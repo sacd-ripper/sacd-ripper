@@ -19,6 +19,8 @@
  *
  */
 
+#error the ps3 code is currently broken in the 0.30 branch!!
+
 #ifndef __lv2ppu__
 #error you need the psl1ght/lv2 ppu compatible compiler!
 #endif
@@ -32,7 +34,7 @@
 
 #include <scarletbook.h>
 #include <logging.h>
-#include "dst_decoder.h"
+#include "dst_decoder_ps3.h"
 
 enum 
 {
@@ -87,6 +89,7 @@ struct dst_decoder_thread_s
     sys_event_queue_t       send_queue;
 
     uint8_t                *dsd_channel_data;
+    uint8_t                *dst_channel_data;
     dst_command_t          *command;
 };
 
@@ -192,6 +195,7 @@ static int dst_decoder_thread_create(dst_decoder_thread_t decoder, int spu_id, s
     }
 
     decoder->dsd_channel_data = (uint8_t *) memalign(128, FRAME_SIZE_64 * MAX_CHANNEL_COUNT);
+    decoder->dst_channel_data = (uint8_t *) memalign(128, FRAME_SIZE_64 * MAX_CHANNEL_COUNT);
     decoder->command = (dst_command_t *) memalign(128, sizeof(dst_command_t) * NUM_DST_COMMANDS);
 
     return 0;
@@ -258,53 +262,133 @@ static int dst_decoder_thread_destroy(dst_decoder_thread_t decoder)
     if (decoder->dsd_channel_data)
         free(decoder->dsd_channel_data);
 
+    if (decoder->dst_channel_data)
+        free(decoder->dst_channel_data);
+
     if (decoder->command)
         free(decoder->command);
 
     return 0;
 }   
 
-int dst_decoder_create(dst_decoder_t **dst_decoder)
+static int dst_decoder_wait(dst_decoder_t *dst_decoder, int timeout)
+{
+    sys_event_t event;
+    int ret;
+    int errors = 0;
+    int event_count = dst_decoder->event_count;
+
+    while (event_count > 0)
+    {
+        ret = sysEventQueueReceive(dst_decoder->recv_queue, &event, timeout);
+        if (ret != 0) 
+        {
+            LOG(lm_main, LOG_ERROR, ("sysEventQueueReceive failed: %#.8x", ret));
+            errors++;
+        } 
+        else 
+        {
+            switch(event.data_2 & 0x00000000FFFFFFFF)
+            {
+            case EVENT_RECEIVE_STARTED:
+            case EVENT_RECEIVE_DSD:
+                break;
+            case EVENT_RECEIVE_ERROR:
+                errors++;
+                break;
+            }
+        }
+        event_count--;
+    }
+    return errors;
+}
+
+static void process_dst_frames(dst_decoder_t *dst_decoder)
+{
+    if (dst_decoder->event_count > 0)
+    {
+        int current_event = 0;
+    
+        // wait for all frames to be decoded (decoding takes around 0.03 seconds per frame)
+        dst_decoder_wait(dst_decoder, 500000);
+    
+        while (current_event < dst_decoder->event_count)
+        {
+            int channel, i;
+            uint8_t *dsd_data;
+            dst_decoder_thread_t decoder = dst_decoder->decoder[current_event];
+            dst_command_t *command = decoder->command;
+    
+            dsd_data = dst_decoder->dsd_data;
+    
+            // DSD data is stored sequential per channel, now we need to interleave it..
+            for (i = 0; i < FRAME_SIZE_64; i++)
+            {
+                for (channel = 0; channel < command->channel_count; channel++)
+                {
+                    *dsd_data = *(decoder->dsd_channel_data + i + channel * FRAME_SIZE_64);
+                    ++dsd_data;
+                }
+            }
+    
+            dst_decoder->frame_decoded_callback(dst_decoder->dsd_data, command->dest_size, dst_decoder->userdata);
+    
+            current_event++;
+        }
+    
+        dst_decoder->event_count = 0;
+    }
+}
+
+dst_decoder_t* dst_decoder_create(int channel_count, frame_decoded_callback_t frame_decoded_callback, void *userdata)
 {
     sys_event_queue_attr_t queue_attr;
-    int ret, i;
+    dst_decoder_t *dst_decoder;
+    int i, ret;
 
-    *dst_decoder = (dst_decoder_t *) calloc(sizeof(dst_decoder_t), 1);
+    dst_decoder = (dst_decoder_t *) calloc(sizeof(dst_decoder_t), 1);
+    dst_decoder->channel_count = channel_count;
+    dst_decoder->frame_decoded_callback = frame_decoded_callback;
+    dst_decoder->userdata = userdata;
+    dst_decoder->dsd_data = (uint8_t *) memalign(128, FRAME_SIZE_64 * MAX_CHANNEL_COUNT);
 
     memset(&queue_attr, 0, sizeof(sys_event_queue_attr_t));
     queue_attr.attr_protocol = SYS_EVENT_QUEUE_PRIO;
     queue_attr.type = SYS_EVENT_QUEUE_PPU;
-    ret = sysEventQueueCreate(&(*dst_decoder)->recv_queue, &queue_attr, SYS_EVENT_QUEUE_KEY_LOCAL, DEFAULT_QUEUE_SIZE);
+    ret = sysEventQueueCreate(&dst_decoder->recv_queue, &queue_attr, SYS_EVENT_QUEUE_KEY_LOCAL, DEFAULT_QUEUE_SIZE);
     if (ret != 0) 
     {
         LOG(lm_main, LOG_ERROR, ("sysEventQueueCreate failed: %#.8x", ret));
-        return ret;
+        return 0;
     }
 
-    (*dst_decoder)->event_count = 0;
+    dst_decoder->event_count = 0;
     for (i = 0; i < NUM_DST_DECODERS; i++)
     {
-        (*dst_decoder)->decoder[i] = calloc(sizeof(struct dst_decoder_thread_s), 1);
-        ret = dst_decoder_thread_create((*dst_decoder)->decoder[i], i, (*dst_decoder)->recv_queue);
+        dst_decoder->decoder[i] = calloc(sizeof(struct dst_decoder_thread_s), 1);
+        ret = dst_decoder_thread_create(dst_decoder->decoder[i], i, dst_decoder->recv_queue);
         if (ret != 0)
         {
             LOG(lm_main, LOG_ERROR, ("dst_decoder_thread_create failed: %#.8x", ret));
-            return ret;
+            return 0;
         }
 
         // we are expecting a start event
-        (*dst_decoder)->event_count++;
+        dst_decoder->event_count++;
     }
 
     // prefetch all the start events..
-    ret = dst_decoder_wait(*dst_decoder, 500000);
+    ret = dst_decoder_wait(dst_decoder, 500000);
     if (ret != 0)
     {
         LOG(lm_main, LOG_ERROR, ("dst_decoder_wait failed: %#.8x", ret));
-        return ret;
+        return 0;
     }
 
-    return 0;
+    // clear event count, they have been handled..
+    dst_decoder->event_count = 0;
+
+    return dst_decoder;
 }
 
 int dst_decoder_destroy(dst_decoder_t *dst_decoder)
@@ -315,6 +399,8 @@ int dst_decoder_destroy(dst_decoder_t *dst_decoder)
     {
         return -1;
     }
+
+    process_dst_frames(dst_decoder);
     
     for (i = 0; i < NUM_DST_DECODERS; i++)
     {
@@ -338,31 +424,33 @@ int dst_decoder_destroy(dst_decoder_t *dst_decoder)
         LOG(lm_main, LOG_ERROR, ("sysEventQueueDestroy failed: %#.8x", ret));
     }
 
+    free(dst_decoder->dsd_data);
     free(dst_decoder);
 
     return 0;
 }   
 
-int dst_decoder_prepare(dst_decoder_t *dst_decoder)
-{
-    dst_decoder->event_count = 0;
-    dst_decoder->current_event = 0;
-
-    return 0;
-}
-
-int dst_decoder_decode(dst_decoder_t *dst_decoder, uint8_t *src_data, size_t source_size, int dst_encoded, int channel_count)
+int dst_decoder_decode(dst_decoder_t *dst_decoder, uint8_t *dst_data, size_t dst_size)
 {
     int ret;
-    dst_decoder_thread_t decoder = dst_decoder->decoder[dst_decoder->event_count];
+    dst_decoder_thread_t decoder;
+
+    if (dst_decoder->event_count == NUM_DST_DECODERS)
+    {
+        process_dst_frames(dst_decoder);
+    }
+
+    decoder = dst_decoder->decoder[dst_decoder->event_count];
+    
+    memcpy(decoder->dst_channel_data, dst_data, dst_size);
 
     memset(decoder->command, 0, sizeof(dst_command_t));
-    decoder->command->source_addr = (uint32_t) (uint64_t) src_data;
+    decoder->command->source_addr = (uint32_t) (uint64_t) decoder->dst_channel_data;
     decoder->command->dest_addr = (uint32_t) (uint64_t) decoder->dsd_channel_data;
-    decoder->command->source_size = source_size;
+    decoder->command->source_size = dst_size;
     decoder->command->dest_size = 0;
-    decoder->command->dst_encoded = dst_encoded;
-    decoder->command->channel_count = channel_count;
+    decoder->command->dst_encoded = 1;
+    decoder->command->channel_count = dst_decoder->channel_count;
 
     // send the DST conversion command
     ret = sysEventPortSend(decoder->event_port, EVENT_SEND_DST, (uint64_t) decoder->command, NUM_DST_COMMANDS);
@@ -381,63 +469,4 @@ int dst_decoder_decode(dst_decoder_t *dst_decoder, uint8_t *src_data, size_t sou
     }
 
     return ret;
-}
-
-int dst_decoder_wait(dst_decoder_t *dst_decoder, int timeout)
-{
-    sys_event_t event;
-    int ret;
-    int errors = 0;
-    int event_count = dst_decoder->event_count;
-
-    while (event_count > 0)
-    {
-        ret = sysEventQueueReceive(dst_decoder->recv_queue, &event, timeout);
-        if (ret != 0) 
-        {
-            LOG(lm_main, LOG_ERROR, ("sysEventQueueReceive failed: %#.8x", ret));
-            errors++;
-        } 
-        else 
-        {
-            switch(event.data_2 & 0x00000000FFFFFFFF)
-            {
-                case EVENT_RECEIVE_STARTED:
-                case EVENT_RECEIVE_DSD:
-                    break;
-                case EVENT_RECEIVE_ERROR:
-                    errors++;
-                    break;
-            }
-        }
-        event_count--;
-    }
-    return errors;
-}
-
-int dst_decoder_get_dsd_frame(dst_decoder_t *dst_decoder, uint8_t *dsd_data, size_t *dsd_size)
-{
-    if (dst_decoder->current_event < dst_decoder->event_count)
-    {
-        int channel, i;
-        dst_decoder_thread_t decoder = dst_decoder->decoder[dst_decoder->current_event];
-        dst_command_t *command = decoder->command;
-        *dsd_size = command->dest_size;
-
-        // DSD data is stored sequential per channel, now we need to interleave it..
-        for (i = 0; i < FRAME_SIZE_64; i++)
-        {
-            for (channel = 0; channel < command->channel_count; channel++)
-            {
-                *dsd_data = *(decoder->dsd_channel_data + i + channel * FRAME_SIZE_64);
-                ++dsd_data;
-            }
-        }
-
-        dst_decoder->current_event++;
-
-        return 1;
-    }
-
-    return 0;
 }

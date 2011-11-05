@@ -10,7 +10,6 @@ version 0.2.x
           - date/time
           - output format (ISO, mch DSDIFF (DSD), etc.)
     - proper naming on scarletbook_output, it's a mess.. 
-    - remove DST frame buffering from scarletbook_output and move to dst_decoder
     - add option to embed sac_module & decoder
     - use output_format_t.error_number for error handling
      - catch read failures 

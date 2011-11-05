@@ -32,7 +32,7 @@
 
 #include "scarletbook_output.h"
 
-size_t iso_write_frame(scarletbook_output_format_t *ft, const uint8_t *buf, size_t len, int last_frame)
+size_t iso_write_frame(scarletbook_output_format_t *ft, const uint8_t *buf, size_t len)
 {
     return fwrite(buf, 1, len * SACD_LSN_SIZE, ft->fd);
 }

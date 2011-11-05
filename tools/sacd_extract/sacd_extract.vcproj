@@ -270,10 +270,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\libs\libsacd\dst_decoder_win.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\libs\libsacd\endianess.h"
 				>
 			</File>
@@ -393,10 +389,6 @@
 			</File>
 			<File
 				RelativePath="..\..\libs\libdstdec\dst_decoder.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\libs\libdstdec\dst_decoder_ref.c"
 				>
 			</File>
 			<File

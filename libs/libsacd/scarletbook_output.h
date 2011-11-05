@@ -31,9 +31,9 @@
 
 #include "scarletbook.h"
 #ifdef __lv2ppu__
-#include "dst_decoder.h"
+#include "dst_decoder_ps3.h"
 #else
-#include "dst_decoder_ref.h"
+#include <dst_decoder.h>
 #endif
 
 #define PACKET_FRAME_BUFFER_COUNT 5
@@ -54,7 +54,7 @@ typedef struct scarletbook_format_handler_t
     char const *description;
     char const *name;
     int (*startwrite)(scarletbook_output_format_t *ft);
-    size_t (*write)(scarletbook_output_format_t *ft, const uint8_t *buf, size_t len, int last_frame);
+    size_t (*write)(scarletbook_output_format_t *ft, const uint8_t *buf, size_t len);
     int (*stopwrite)(scarletbook_output_format_t *ft);
     int         flags;
     size_t      priv_size;
@@ -96,21 +96,6 @@ typedef void (*stats_progress_callback_t)(uint32_t stats_total_sectors, uint32_t
 
 typedef void (*stats_track_callback_t)(char *filename, int current_track, int total_tracks);
 
-typedef struct audio_frame_t
-{
-    struct list_head    siblings;
-    uint8_t            *data;
-    int                 size;
-    int                 complete;
-    int                 started;
-
-    int                 sector_count;
-    int                 channel_count;
-
-    int                 dst_encoded;
-} 
-audio_frame_t;
-
 typedef struct scarletbook_output_t
 {
     int                 initialized;
@@ -120,22 +105,12 @@ typedef struct scarletbook_output_t
     uint8_t            *read_buffer;
 
 #ifdef __lv2ppu__
-    sys_ppu_thread_t    read_thread_id;
+    sys_ppu_thread_t    processing_thread_id;
 #else
-    pthread_t           read_thread_id;
+    pthread_t           processing_thread_id;
 #endif
     atomic_t            stop_processing;            // indicates if the thread needs to stop or has stopped
     atomic_t            processing;
-
-    audio_sector_t      scarletbook_audio_sector;
-
-    // we pre-cache our processed frames so we can do 
-    // parallel DST conversion using 5 SPUs
-    struct list_head    frames;
-    audio_frame_t      *frame;
-    uint8_t            *current_frame_ptr;
-    int                 full_frame_count;
-    uint8_t            *dsd_data;
 
     // stats
     int                 stats_total_tracks;
@@ -148,8 +123,6 @@ typedef struct scarletbook_output_t
     stats_track_callback_t stats_track_callback;
 
     dst_decoder_t      *dst_decoder;
-    int                 num_slots;
-    int                 current_slot;
 }
 scarletbook_output_t;
 

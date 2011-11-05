@@ -68,7 +68,7 @@ DST to DSD two SPU isoself modules will be extracted from the system. In order
 to do so you must give the SACD-Ripper the PS3 keys so it can extract them
 automatically.
 
-Get the PS3 keys from http://git-hacks.com/ps3free/ps3keys and put these in the
+Get the PS3 keys from https://github.com/Mamdooh/PS3keys and put these in the
 root of an USB disc. They will be asked for during first time installation,
 after that you can remove the keys from your USB disc.
 
