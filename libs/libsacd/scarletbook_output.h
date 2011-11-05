@@ -135,7 +135,7 @@ void interrupt_ripping(void);
 int is_ripping(void);
 int start_ripping(scarletbook_handle_t *);
 int stop_ripping(scarletbook_handle_t *);
-int queue_track_to_rip(scarletbook_handle_t *sb_handle, int area, int track, char *file_path, char *fmt, int dsd_encoded_export);
+int queue_track_to_rip(scarletbook_handle_t *sb_handle, int area, int track, char *file_path, char *fmt, int dsd_encoded_export, int gapless);
 int queue_raw_sectors_to_rip(scarletbook_handle_t *sb_handle, int start_lsn, int length_lsn, char *file_path, char *fmt);
 
 #endif /* SCARLETBOOK_OUTPUT_H_INCLUDED */

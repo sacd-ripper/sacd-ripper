@@ -233,14 +233,14 @@ static void decode_thread(void *userdata)
 static void write_thread(void *userdata)
 {
     long seq;                       /* next sequence number looking for */
-    job_t *job;                /* job pulled and working on */
+    job_t *job;                     /* job pulled and working on */
     int more;                       /* true if more chunks to write */
     dst_decoder_t *dst_decoder = (dst_decoder_t *) userdata;
 
     /* build and write header */
     LOG(lm_main, LOG_NOTICE, ("-- write thread running"));
 
-    /* process output of decode threads until end of input */    
+    /* process output of decode threads until end of input */
     seq = 0;
     do 
     {
@@ -344,7 +344,7 @@ void dst_decoder_decode(dst_decoder_t *dst_decoder, uint8_t* frame_data, size_t 
 {
     job_t *job;                /* job for decode, then write */
 
-    /* create a new job, use next input chunk, previous as dictionary */
+    /* create a new job, use next input chunk */
     job = malloc(sizeof(job_t));
     if (job == NULL)
         exit(1);
