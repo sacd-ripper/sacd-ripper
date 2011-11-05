@@ -271,9 +271,22 @@ static void AllocateDecMemory (ebunch * D)
 /*                                                                         */
 /***************************************************************************/
 
-int DST_InitDecoder(ebunch * D) 
+int DST_InitDecoder(ebunch * D, int NrOfChannels, int SampleRate) 
 {
   int  retval = 0;
+
+  memset(D, 0, sizeof(ebunch));
+
+  D->FrameHdr.NrOfChannels   = NrOfChannels;
+  /*  64FS =>  4704 */
+  /* 128FS =>  9408 */
+  /* 256FS => 18816 */
+  D->FrameHdr.MaxFrameLen    = (588 * SampleRate / 8); 
+  D->FrameHdr.ByteStreamLen  = D->FrameHdr.MaxFrameLen   * D->FrameHdr.NrOfChannels;
+  D->FrameHdr.BitStreamLen   = D->FrameHdr.ByteStreamLen * RESOL;
+  D->FrameHdr.NrOfBitsPerCh  = D->FrameHdr.MaxFrameLen   * RESOL;
+  D->FrameHdr.MaxNrOfFilters = 2 * D->FrameHdr.NrOfChannels;
+  D->FrameHdr.MaxNrOfPtables = 2 * D->FrameHdr.NrOfChannels;
 
   D->FrameHdr.FrameNr = 0;
   D->StrFilter.TableType = FILTER;
