@@ -1,138 +1,218 @@
-/***********************************************************************
-MPEG-4 Audio RM Module
-Lossless coding of 1-bit oversampled audio - DST (Direct Stream Transfer)
+/**
+ * SACD Ripper - http://code.google.com/p/sacd-ripper/
+ *
+ * Copyright (c) 2010-2011 by respective authors.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ */
 
-This software was originally developed by:
+#ifdef __lv2ppu__
+#error this code is not intended for the ps3
+#endif
 
-* Aad Rijnberg 
-  Philips Digital Systems Laboratories Eindhoven 
-  <aad.rijnberg@philips.com>
+#include <stdio.h>
+#include <malloc.h>
+#include <memory.h>
 
-* Fons Bruekers
-  Philips Research Laboratories Eindhoven
-  <fons.bruekers@philips.com>
-   
-* Eric Knapen
-  Philips Digital Systems Laboratories Eindhoven
-  <h.w.m.knapen@philips.com> 
+#include <logging.h>
 
-And edited by:
-
-* Richard Theelen
-  Philips Digital Systems Laboratories Eindhoven
-  <r.h.m.theelen@philips.com>
-
-* Maxim Anisiutkin
-  ICT Group
-  <maxim.anisiutkin@gmail.com>
-
-in the course of development of the MPEG-4 Audio standard ISO-14496-1, 2 and 3.
-This software module is an implementation of a part of one or more MPEG-4 Audio
-tools as specified by the MPEG-4 Audio standard. ISO/IEC gives users of the
-MPEG-4 Audio standards free licence to this software module or modifications
-thereof for use in hardware or software products claiming conformance to the
-MPEG-4 Audio standards. Those intending to use this software module in hardware
-or software products are advised that this use may infringe existing patents.
-The original developers of this software of this module and their company,
-the subsequent editors and their companies, and ISO/EIC have no liability for
-use of this software module or modifications thereof in an implementation.
-Copyright is not released for non MPEG-4 Audio conforming products. The
-original developer retains full right to use this code for his/her own purpose,
-assign or donate the code to a third party and to inhibit third party from
-using the code for non MPEG-4 Audio conforming products. This copyright notice
-must be included in all copies of derivative works.
-
-Copyright  2004.
-
-Source file: DSTDecoder.c (Initialize decoder environment)
-
-Required libraries: <none>
-
-Authors:
-RT:  Richard Theelen, PDSL-labs Eindhoven <r.h.m.theelen@philips.com>
-MA:  Maxim Anisiutkin, ICT Group <maxim.anisiutkin@gmail.com>
-
-Changes:
-08-Mar-2004 RT  Initial version
-26-Jun-2011 MA  Possibility to instantinate more than one decoder
-
-************************************************************************/
-
-/*============================================================================*/
-/*       INCLUDES                                                             */
-/*============================================================================*/
-
+#include "dst_decoder.h"
 #include "dst_fram.h"
 #include "dst_init.h"
-#include "dst_decoder.h"
 
-/*============================================================================*/
-/*       GLOBAL FUNCTION IMPLEMENTATIONS                                      */
-/*============================================================================*/
+#define DST_BUFFER_SIZE (MAX_DSDBITS_INFRAME / 8 * MAX_CHANNELS)
+#define DSD_BUFFER_SIZE (MAX_DSDBITS_INFRAME / 8 * MAX_CHANNELS)
 
-/*************************GLOBAL FUNCTION**************************************
- * 
- * Name                   : Init
- * Description            : Initialises the encoder component.
- * Input                  : NrOfChannels: 2,5,6
- * Output                 :
- * Pre-condition          :
- * Post-condition         :
- * Returns:               :
- * Global parameter usage :
- * 
- *****************************************************************************/
-int Init(ebunch *D, int NrChannels, int Fs44)
+#define CACHE_ALIGNMENT 64
+
+void *dst_decoder_thread(void *threadarg)
 {
-    D->FrameHdr.NrOfChannels   = NrChannels;
-    D->FrameHdr.FrameNr        = 0;
-    D->StrFilter.TableType     = FILTER;
-    D->StrPtable.TableType     = PTABLE;
-    /*  64FS =>  4704 */
-    /* 128FS =>  9408 */
-    /* 256FS => 18816 */
-    D->FrameHdr.MaxFrameLen    = (588 * Fs44 / 8); 
-    D->FrameHdr.ByteStreamLen  = D->FrameHdr.MaxFrameLen   * D->FrameHdr.NrOfChannels;
-    D->FrameHdr.BitStreamLen   = D->FrameHdr.ByteStreamLen * RESOL;
-    D->FrameHdr.NrOfBitsPerCh  = D->FrameHdr.MaxFrameLen   * RESOL;
-    D->FrameHdr.MaxNrOfFilters = 2 * D->FrameHdr.NrOfChannels;
-    D->FrameHdr.MaxNrOfPtables = 2 * D->FrameHdr.NrOfChannels;
-    return DST_InitDecoder(D);
+    frame_slot_t *frame_slot = (frame_slot_t *)threadarg;
+    for (;;)
+    {
+        pthread_mutex_lock(&frame_slot->put_mutex);
+        frame_slot->state = SLOT_RUNNING;
+        DST_FramDSTDecode(frame_slot->dst_data_slot->buf, frame_slot->dsd_data_slot->buf, frame_slot->dst_data_slot->size, frame_slot->frame_nr, &frame_slot->D);
+        frame_slot->dsd_data_slot->size = (size_t)(MAX_DSDBITS_INFRAME / 8 * frame_slot->D.FrameHdr.NrOfChannels);
+
+        frame_slot->state = SLOT_READY;
+        pthread_mutex_unlock(&frame_slot->get_mutex);
+    }
+    pthread_exit(NULL);
 }
 
-/*************************GLOBAL FUNCTION**************************************
- * 
- * Name                   : Close
- * Description            : 
- * Input                  : 
- * Output                 :
- * Pre-condition          :
- * Post-condition         :
- * Returns:               :
- * Global parameter usage :
- * 
- *****************************************************************************/
-int Close(ebunch *D)
+static int dst_decoder_init(dst_decoder_t *dst_decoder, int channel_count)
 {
-    return DST_CloseDecoder(D);
+    int i;
+
+    for (i = 0; i < dst_decoder->frame_slot_count; i++)
+    {
+        frame_slot_t *frame_slot = &dst_decoder->frame_slots[i];
+        if (!frame_slot->initialized)
+        {
+            if (DST_InitDecoder(&frame_slot->D, channel_count, 64) == 0)
+            {
+                if (dst_decoder->frame_slot_count > 1)
+                {
+                    pthread_mutex_init(&frame_slot->get_mutex, NULL);
+                    pthread_mutex_lock(&frame_slot->get_mutex);
+                    pthread_mutex_init(&frame_slot->put_mutex, NULL);
+                    pthread_mutex_lock(&frame_slot->put_mutex);
+                    pthread_create(&frame_slot->thread, NULL, dst_decoder_thread, (void *)frame_slot);
+                }
+            }
+            else
+            {
+                LOG(lm_main, LOG_ERROR, ("Could not initialize decoder slot"));
+                return -1;
+            }
+            frame_slot->initialized = 1;
+        }
+    }
+    dst_decoder->channel_count = channel_count;
+    dst_decoder->frame_nr      = 0;
+    return 0;
 }
+
+dst_decoder_t *dst_decoder_create(int channel_count, frame_decoded_callback_t frame_decoded_callback, void *userdata)
+{
+    dst_decoder_t *dst_decoder;
+    int i;
+    
+    dst_decoder = (dst_decoder_t *)calloc(1, sizeof(dst_decoder_t));
+    if (!dst_decoder)
+        return 0;
+
+    dst_decoder->frame_slot_count = pthread_num_processors_np();
+    dst_decoder->buffer_slot_count = dst_decoder->frame_slot_count + 1;
+    dst_decoder->frame_decoded_callback = frame_decoded_callback;
+    dst_decoder->userdata = userdata;
+
+    dst_decoder->frame_slots = (frame_slot_t *) calloc(dst_decoder->frame_slot_count, sizeof(frame_slot_t));
+    dst_decoder->dsd_data_slots = (buffer_slot_t *) calloc(dst_decoder->buffer_slot_count, sizeof(buffer_slot_t));
+    dst_decoder->dst_data_slots = (buffer_slot_t *) calloc(dst_decoder->buffer_slot_count, sizeof(buffer_slot_t));
+
+    for (i = 0; i < dst_decoder->buffer_slot_count; i++)
+    {
+#ifdef _WIN32
+        dst_decoder->dst_data_slots[i].buf = _aligned_malloc(DST_BUFFER_SIZE, CACHE_ALIGNMENT);
+        dst_decoder->dsd_data_slots[i].buf = _aligned_malloc(DSD_BUFFER_SIZE, CACHE_ALIGNMENT);
+#else
+        dst_decoder->dst_data_slots[i].buf = memalign(CACHE_ALIGNMENT, DST_BUFFER_SIZE);
+        dst_decoder->dsd_data_slots[i].buf = memalign(CACHE_ALIGNMENT, DSD_BUFFER_SIZE);
+#endif 
+    }
+
+    dst_decoder->channel_count = 0;
+    dst_decoder->current_frame_slot = 0;
+    dst_decoder->current_buffer_slot = 0;
+
+    dst_decoder_init(dst_decoder, channel_count);
+
+    return dst_decoder;
+}
+
+int dst_decoder_destroy(dst_decoder_t *dst_decoder)
+{
+    int i;
+
+    /* empty the filled slots */
+    for (i = 0; i < dst_decoder->frame_slot_count; i++)
+    {
+        dst_decoder_decode(dst_decoder, NULL, 0);
+    }
+    for (i = 0; i < dst_decoder->frame_slot_count; i++)
+    {
+        frame_slot_t *frame_slot = &dst_decoder->frame_slots[i];
+        if (frame_slot->initialized)
+        {
+            if (dst_decoder->frame_slot_count > 1)
+            {
+                pthread_cancel(frame_slot->thread);
+                pthread_mutex_destroy(&frame_slot->get_mutex);
+                pthread_mutex_destroy(&frame_slot->put_mutex);
+            }
+            if (DST_CloseDecoder(&frame_slot->D) != 0)
+            {
+                LOG(lm_main, LOG_ERROR, ("Could not close decoder slot"));
+            }
+            frame_slot->initialized = 0;
+        }
+    }
+    for (i = 0; i < dst_decoder->buffer_slot_count; i++)
+    {
+#ifdef _WIN32
+        _aligned_free(dst_decoder->dst_data_slots[i].buf);
+        _aligned_free(dst_decoder->dsd_data_slots[i].buf);
+#else
+        free(dst_decoder->dst_data_slots[i].buf);
+        free(dst_decoder->dsd_data_slots[i].buf);
+#endif 
+    }
+
+    free(dst_decoder->dst_data_slots);
+    free(dst_decoder->dsd_data_slots);
+    free(dst_decoder->frame_slots);
+    free(dst_decoder);
+
+    return 0;
+}   
+
+int dst_decoder_decode(dst_decoder_t *dst_decoder, uint8_t *dst_data, size_t dst_size)
+{
+    frame_slot_t *frame_slot;
+
+    /* Get current slot */
+    frame_slot = &dst_decoder->frame_slots[dst_decoder->current_frame_slot];
  
- /*************************GLOBAL FUNCTION**************************************
- * 
- * Name                   : Decode
- * Description            : 
- * Input                  : 
- * Output                 :
- * Pre-condition          :
- * Post-condition         :
- * Returns:               :
- * Global parameter usage :
- * 
- *****************************************************************************/
-int Decode(ebunch *D, uint8_t *DSTFrame, uint8_t *DSDMuxedChannelData, int FrameCnt, uint32_t *FrameSize)
-{
-    return DST_FramDSTDecode(DSTFrame, DSDMuxedChannelData, *FrameSize, FrameCnt, D);
+    /* Release worker (decoding) thread on the loaded slot */
+    if (dst_size > 0)
+    {
+        frame_slot->state = SLOT_LOADED;
+
+        /* advance buffer slot */
+        dst_decoder->current_buffer_slot = (++dst_decoder->current_buffer_slot) % dst_decoder->buffer_slot_count;
+
+        /* current frame_slot gets new dsd/dst buffer */
+        frame_slot->dsd_data_slot = &dst_decoder->dsd_data_slots[dst_decoder->current_buffer_slot];
+        frame_slot->dst_data_slot = &dst_decoder->dst_data_slots[dst_decoder->current_buffer_slot];
+
+        // TODO, this extra copy could be avoided..
+        memcpy(frame_slot->dst_data_slot->buf, dst_data, dst_size);
+        frame_slot->dst_data_slot->size = dst_size;
+
+        pthread_mutex_unlock(&frame_slot->put_mutex);
+    }
+    else
+    {
+        frame_slot->state = SLOT_EMPTY;
+    }
+
+    /* Advance to the next slot */
+    dst_decoder->current_frame_slot = (dst_decoder->current_frame_slot + 1) % dst_decoder->frame_slot_count;
+    frame_slot = &dst_decoder->frame_slots[dst_decoder->current_frame_slot];
+
+    /* Dump decoded frame */
+    if (frame_slot->state != SLOT_EMPTY)
+    {
+        pthread_mutex_lock(&frame_slot->get_mutex);
+
+        dst_decoder->frame_decoded_callback(frame_slot->dsd_data_slot->buf, frame_slot->dsd_data_slot->size, dst_decoder->userdata);
+    }
+
+    dst_decoder->frame_nr++;
+    return 0;
 }
-
-
-

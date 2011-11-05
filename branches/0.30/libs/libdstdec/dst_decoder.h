@@ -1,80 +1,80 @@
-/***********************************************************************
-MPEG-4 Audio RM Module
-Lossless coding of 1-bit oversampled audio - DST (Direct Stream Transfer)
+/**
+ * SACD Ripper - http://code.google.com/p/sacd-ripper/
+ *
+ * Copyright (c) 2010-2011 by respective authors.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ */
 
-This software was originally developed by:
+#ifndef __DST_DECODER_H__
+#define __DST_DECODER_H__
 
-* Aad Rijnberg 
-  Philips Digital Systems Laboratories Eindhoven 
-  <aad.rijnberg@philips.com>
-
-* Fons Bruekers
-  Philips Research Laboratories Eindhoven
-  <fons.bruekers@philips.com>
-   
-* Eric Knapen
-  Philips Digital Systems Laboratories Eindhoven
-  <h.w.m.knapen@philips.com> 
-
-And edited by:
-
-* Richard Theelen
-  Philips Digital Systems Laboratories Eindhoven
-  <r.h.m.theelen@philips.com>
-
-* Maxim Anisiutkin
-  ICT Group
-  <maxim.anisiutkin@gmail.com>
-
-in the course of development of the MPEG-4 Audio standard ISO-14496-1, 2 and 3.
-This software module is an implementation of a part of one or more MPEG-4 Audio
-tools as specified by the MPEG-4 Audio standard. ISO/IEC gives users of the
-MPEG-4 Audio standards free licence to this software module or modifications
-thereof for use in hardware or software products claiming conformance to the
-MPEG-4 Audio standards. Those intending to use this software module in hardware
-or software products are advised that this use may infringe existing patents.
-The original developers of this software of this module and their company,
-the subsequent editors and their companies, and ISO/EIC have no liability for
-use of this software module or modifications thereof in an implementation.
-Copyright is not released for non MPEG-4 Audio conforming products. The
-original developer retains full right to use this code for his/her own purpose,
-assign or donate the code to a third party and to inhibit third party from
-using the code for non MPEG-4 Audio conforming products. This copyright notice
-must be included in all copies of derivative works.
-
-Copyright  2004, 2011
-
-Source file: DSTDecoder.h (Initialize decoder environment)
-
-Required libraries: <none>
-
-Authors:
-RT:  Richard Theelen, PDSL-labs Eindhoven <r.h.m.theelen@philips.com>
-MA:  Maxim Anisiutkin, ICT Group <maxim.anisiutkin@gmail.com>
-
-Changes:
-08-Mar-2004 RT  Initial version
-26-Jun-2011 MA  Possibility to instantinate more than one decoder
-
-************************************************************************/
-
-#ifndef __DSTDECODER_H_INCLUDED
-#define __DSTDECODER_H_INCLUDED
-
-/*============================================================================*/
-/*       INCLUDES                                                             */
-/*============================================================================*/
-
+#include <pthread.h> 
 #include <stdint.h>
+
 #include "types.h"
-#include "unpack_dst.h"
 
-/*============================================================================*/
-/*       FUNCTION PROTOTYPES                                                  */
-/*============================================================================*/
+enum slot_state_t {SLOT_EMPTY, SLOT_LOADED, SLOT_RUNNING, SLOT_READY};
 
-int Init(ebunch *D, int NrChannels, int Fs44);
-int Close(ebunch *D);
-int Decode(ebunch *D, uint8_t *DSTFrame, uint8_t *DSDMuxedChannelData, int FrameCnt, uint32_t *FrameSize);
+typedef void (*frame_decoded_callback_t)(uint8_t* frame_data, size_t frame_size, void *userdata);
 
-#endif /* __DSTDECODER_H_INCLUDED  */
+typedef struct buffer_slot_t
+{
+    uint8_t*                    buf;
+    size_t                      size;
+} 
+buffer_slot_t;
+
+typedef struct frame_slot_t
+{
+    int                         initialized;
+    int                         frame_nr;
+    ebunch                      D;
+    buffer_slot_t              *dsd_data_slot;
+    buffer_slot_t              *dst_data_slot;
+    pthread_t                   thread;
+    volatile int                state;
+    pthread_mutex_t             get_mutex;
+    pthread_mutex_t             put_mutex;
+} 
+frame_slot_t;
+
+typedef struct dst_decoder_t
+{
+    frame_slot_t               *frame_slots;
+
+    int                         frame_slot_count;
+    int                         current_frame_slot;
+
+    buffer_slot_t              *dsd_data_slots;
+    buffer_slot_t              *dst_data_slots;
+
+    int                         buffer_slot_count;
+    int                         current_buffer_slot;
+
+    int                         channel_count;
+    uint32_t                    frame_nr;
+
+    frame_decoded_callback_t    frame_decoded_callback;
+    void                        *userdata;
+} 
+dst_decoder_t;
+
+dst_decoder_t *dst_decoder_create(int channel_count, frame_decoded_callback_t frame_decoded_callback, void *userdata);
+int dst_decoder_destroy(dst_decoder_t *dst_decoder);
+int dst_decoder_decode(dst_decoder_t *dst_decoder, uint8_t *dst_data, size_t dst_size);
+
+#endif // __DST_DECODER_H__

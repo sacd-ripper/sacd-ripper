@@ -67,8 +67,8 @@ Changes:
 /*       FUNCTION PROTOTYPES                                                  */
 /*============================================================================*/
 
-int  DST_InitDecoder(ebunch * D);
-int  DST_CloseDecoder(ebunch * D);
+int DST_InitDecoder(ebunch * D, int NrOfChannels, int SampleRate);
+int DST_CloseDecoder(ebunch * D);
 
 #endif  /* __DST_INIT_H_INCLUDED */
 
