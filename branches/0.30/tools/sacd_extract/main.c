@@ -56,6 +56,7 @@ static struct opts_s
     int            output_dsdiff;
     int            output_iso;
     int            convert_dst;
+    int            gapless;
     int            print;
     char          *input_device; /* Access method driver should use for control */
     char           output_file[512];
@@ -75,6 +76,7 @@ static int parse_options(int argc, char *argv[]) {
         "  -p, --output-dsdiff             : output as Philips DSDIFF file (default)\n"
         "  -s, --output-dsf                : output as Sony DSF file\n"
         "  -c, --convert-dst               : convert DST to DSD\n"
+        "  -g, --gapless                   : Gapless Mode\n"
         "  -i, --input[=FILE]              : set source and determine if \"bin\" image or\n"
         "                                    device\n"
         "  -P, --print                     : display disc and track information\n" 
@@ -85,16 +87,18 @@ static int parse_options(int argc, char *argv[]) {
 
     static const char usage_text[] = 
         "Usage: %s [-2|--2ch-tracks] [-m|--mch-tracks] [-p|--output-dsdiff]\n"
-        "        [-s|--output-dsf] [-c|--convert-dst] [-i|--input FILE] [-P|--print]\n"
+        "        [-s|--output-dsf] [-c|--convert-dst] [-g|--gapless]\n"
+        "        [-i|--input FILE] [-P|--print]\n"
         "        [-?|--help] [--usage]\n";
 
-    static const char options_string[] = "2mpsci::P?";
+    static const char options_string[] = "2mpscgi::P?";
     static const struct option options_table[] = {
         {"2ch-tracks", no_argument, NULL, '2' },
         {"mch-tracks", no_argument, NULL, 'm' },
         {"output-dsdiff", no_argument, NULL, 'p'}, 
         {"output-dsf", no_argument, NULL, 's'}, 
         {"convert-dst", no_argument, NULL, 'c'}, 
+        {"gapless", no_argument, NULL, 'g'}, 
         {"input", required_argument, NULL, 'i' },
         {"print", no_argument, NULL, 'P' },
 
@@ -123,6 +127,7 @@ static int parse_options(int argc, char *argv[]) {
             opts.output_dsf = 1; 
             break;
         case 'c': opts.convert_dst = 1; break;
+        case 'g': opts.gapless = 1; break;
         case 'i': opts.input_device = strdup(optarg); break;
         case 'P': opts.print = 1; break;
 
@@ -180,7 +185,8 @@ static void init(void) {
     opts.output_iso    = 0;
     opts.output_dsdiff = 1;
     opts.convert_dst   = 0;
-    opts.print    = 0;
+    opts.gapless       = 0;
+    opts.print         = 0;
     opts.input_device  = "/dev/cdrom";
 
 #ifdef _WIN32
@@ -277,15 +283,15 @@ int main(int argc, char* argv[])
                         {
                             file_path = make_filename(0, albumdir, musicfilename, "dsf");
                             queue_track_to_rip(handle, area_idx, i, file_path, "dsf", 
-                                1 /* always decode to DSD */
-                                );
+                                1, /* always decode to DSD */
+                                opts.gapless);
                         }
                         else if (opts.output_dsdiff)
                         {
                             file_path = make_filename(0, albumdir, musicfilename, "dff");
                             queue_track_to_rip(handle, area_idx, i, file_path, "dsdiff", 
-                                (opts.convert_dst ? 1 : handle->area[area_idx].area_toc->frame_format != FRAME_FORMAT_DST)
-                                );
+                                (opts.convert_dst ? 1 : handle->area[area_idx].area_toc->frame_format != FRAME_FORMAT_DST),
+                                opts.gapless);
                         }
 
                         free(musicfilename);
