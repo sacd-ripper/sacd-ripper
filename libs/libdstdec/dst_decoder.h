@@ -22,6 +22,8 @@
 #ifndef DST_DECODER_H
 #define DST_DECODER_H
 
+#include <stdint.h>
+
 typedef struct dst_decoder_s dst_decoder_t;
 typedef void (*frame_decoded_callback_t)(uint8_t* frame_data, size_t frame_size, void *userdata);
 

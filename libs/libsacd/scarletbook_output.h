@@ -23,23 +23,16 @@
 #define SCARLETBOOK_OUTPUT_H_INCLUDED
 
 #ifdef __lv2ppu__
-#include <sys/thread.h>
-#else
-#include <pthread.h>
-#endif
-#include <sys/atomic.h>
-
-#include "scarletbook.h"
-#ifdef __lv2ppu__
 #include "dst_decoder_ps3.h"
 #else
 #include <dst_decoder.h>
 #endif
 
-#define PACKET_FRAME_BUFFER_COUNT 5
+#include "scarletbook.h"
 
 // forward declaration
 typedef struct scarletbook_output_format_t scarletbook_output_format_t;
+typedef struct scarletbook_output_s scarletbook_output_t;
 
 enum
 {
@@ -86,6 +79,8 @@ struct scarletbook_output_format_t
     int                             error_nr;
     char                            error_str[256];
 
+    dst_decoder_t                  *dst_decoder;
+
     scarletbook_handle_t           *sb_handle;
 
     struct list_head                siblings;
@@ -96,46 +91,12 @@ typedef void (*stats_progress_callback_t)(uint32_t stats_total_sectors, uint32_t
 
 typedef void (*stats_track_callback_t)(char *filename, int current_track, int total_tracks);
 
-typedef struct scarletbook_output_t
-{
-    int                 initialized;
-
-    struct list_head    ripping_queue;
-
-    uint8_t            *read_buffer;
-
-#ifdef __lv2ppu__
-    sys_ppu_thread_t    processing_thread_id;
-#else
-    pthread_t           processing_thread_id;
-#endif
-    atomic_t            stop_processing;            // indicates if the thread needs to stop or has stopped
-    atomic_t            processing;
-
-    // stats
-    int                 stats_total_tracks;
-    int                 stats_current_track;
-    uint32_t            stats_total_sectors;
-    uint32_t            stats_total_sectors_processed;
-    uint32_t            stats_current_file_total_sectors;
-    uint32_t            stats_current_file_sectors_processed;
-    stats_progress_callback_t stats_progress_callback;
-    stats_track_callback_t stats_track_callback;
-
-    dst_decoder_t      *dst_decoder;
-}
-scarletbook_output_t;
-
-void init_stats(stats_track_callback_t, stats_progress_callback_t);
-
-scarletbook_format_handler_t const * sacd_find_output_format(char const *);
-
-int initialize_ripping(void);
-void interrupt_ripping(void);
-int is_ripping(void);
-int start_ripping(scarletbook_handle_t *);
-int stop_ripping(scarletbook_handle_t *);
-int queue_track_to_rip(scarletbook_handle_t *sb_handle, int area, int track, char *file_path, char *fmt, int dsd_encoded_export, int gapless);
-int queue_raw_sectors_to_rip(scarletbook_handle_t *sb_handle, int start_lsn, int length_lsn, char *file_path, char *fmt);
+scarletbook_output_t *scarletbook_output_create(scarletbook_handle_t *, stats_track_callback_t, stats_progress_callback_t);
+int scarletbook_output_destroy(scarletbook_output_t *);
+int scarletbook_output_enqueue_track(scarletbook_output_t *, int, int, char *, char *, int, int);
+int scarletbook_output_enqueue_raw_sectors(scarletbook_output_t *, int, int, char *, char *);
+int scarletbook_output_start(scarletbook_output_t *);
+void scarletbook_output_interrupt(scarletbook_output_t *);
+int scarletbook_output_is_busy(scarletbook_output_t *);
 
 #endif /* SCARLETBOOK_OUTPUT_H_INCLUDED */

@@ -63,6 +63,7 @@ static struct opts_s
 } opts;
 
 scarletbook_handle_t *handle;
+scarletbook_output_t *output;
 
 /* Parse all options. */
 static int parse_options(int argc, char *argv[]) {
@@ -156,7 +157,7 @@ static int parse_options(int argc, char *argv[]) {
 void handle_sigint(int sig_no)
 {
     fwprintf(stdout, L"\rUser interrupted..                                \n");
-    interrupt_ripping();
+    scarletbook_output_interrupt(output);
 }
 
 static void handle_status_update_track_callback(char *filename, int current_track, int total_tracks)
@@ -234,7 +235,7 @@ int main(int argc, char* argv[])
                     scarletbook_print(handle);
                 }
 
-                initialize_ripping();
+                output = scarletbook_output_create(handle, handle_status_update_track_callback, handle_status_update_progress_callback);
 
                 // select the channel area
                 area_idx = ((has_multi_channel(handle) && opts.multi_channel) || !has_two_channel(handle)) ? handle->mulch_area_idx : handle->twoch_area_idx;
@@ -255,7 +256,7 @@ int main(int argc, char* argv[])
                         {
                             sector_size = min(total_sectors, FAT32_SECTOR_LIMIT);
                             snprintf(musicfilename, 512, "%s.%03d", file_path, i);
-                            queue_raw_sectors_to_rip(handle, sector_offset, sector_size, musicfilename, "iso");
+                            scarletbook_output_enqueue_raw_sectors(output, sector_offset, sector_size, musicfilename, "iso");
                             sector_offset += sector_size;
                             total_sectors -= sector_size;
                         }
@@ -265,7 +266,7 @@ int main(int argc, char* argv[])
                     else
                     {
                         file_path = make_filename(0, 0, albumdir, "iso");
-                        queue_raw_sectors_to_rip(handle, 0, total_sectors, file_path, "iso");
+                        scarletbook_output_enqueue_raw_sectors(output, 0, total_sectors, file_path, "iso");
                         free(file_path);
                     }
                 }
@@ -282,14 +283,14 @@ int main(int argc, char* argv[])
                         if (opts.output_dsf)
                         {
                             file_path = make_filename(0, albumdir, musicfilename, "dsf");
-                            queue_track_to_rip(handle, area_idx, i, file_path, "dsf", 
+                            scarletbook_output_enqueue_track(output, area_idx, i, file_path, "dsf", 
                                 1, /* always decode to DSD */
                                 opts.gapless);
                         }
                         else if (opts.output_dsdiff)
                         {
                             file_path = make_filename(0, albumdir, musicfilename, "dff");
-                            queue_track_to_rip(handle, area_idx, i, file_path, "dsdiff", 
+                            scarletbook_output_enqueue_track(output, area_idx, i, file_path, "dsdiff", 
                                 (opts.convert_dst ? 1 : handle->area[area_idx].area_toc->frame_format != FRAME_FORMAT_DST),
                                 opts.gapless);
                         }
@@ -299,9 +300,8 @@ int main(int argc, char* argv[])
                     }
                 }
 
-                init_stats(handle_status_update_track_callback, handle_status_update_progress_callback);
-                start_ripping(handle);
-                stop_ripping(handle);
+                scarletbook_output_start(output);
+                scarletbook_output_destroy(output);
                 scarletbook_close(handle);
 
                 free(albumdir);
