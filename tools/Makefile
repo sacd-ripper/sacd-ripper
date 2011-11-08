@@ -1,4 +1,4 @@
-TARGETS := analysis_dump
+TARGETS := analysis_dump sacd_daemon
 
 all:
 	@for TARGET in $(TARGETS); do $(MAKE) --no-print-directory -C $$TARGET; done
