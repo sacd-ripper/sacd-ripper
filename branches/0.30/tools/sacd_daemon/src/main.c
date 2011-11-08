@@ -38,15 +38,19 @@
 #include <sys/thread.h> 
 #include <sys/spu.h> 
 
+#include <net/net.h>
+#include <net/netctl.h> 
+
 #include <sys/storage.h>
 #include <patch-utils.h>
 #include <utils.h>
 
 #include "rsxutil.h"
 #include "exit_handler.h"
-#include "output_device.h"
+#include "server.h"
 
 #include <logging.h>
+#include <version.h>
 
 #define MAX_PHYSICAL_SPU               6
 #define MAX_RAW_SPU                    1
@@ -213,60 +217,6 @@ int patch_syscall_864(void)
     return 0;
 }
 
-void dump_sample_to_output_device(void)
-{
-    msgType  dialog_type;
-    int      fd_in, ret;
-    int      fd_out;
-    uint32_t sectors_read;
-    uint64_t writelen;
-    char     *file_path = (char *) malloc(100);
-    char     *message   = (char *) malloc(512);
-
-    sprintf(file_path, "%s/sacd_analysis.bin", output_device);
-
-    ret = sysFsOpen(file_path, SYS_O_WRONLY | SYS_O_CREAT | SYS_O_TRUNC, &fd_out, NULL, 0);
-
-    sysFsChmod(file_path, S_IFMT | 0777); 
-
-    if (fd_out)
-    {
-        uint8_t *buffer = (uint8_t *) malloc(1024 * 2048);
-
-        ret = sys_storage_open(BD_DEVICE, &fd_in);
-        LOG(lm_main, LOG_DEBUG, ("sys storage_open %x %x\n", ret, fd_in));
-        if (ret == 0)
-        {
-            ret = sys_storage_read(fd_in, 0, 1024, buffer, &sectors_read);
-
-            LOG(lm_main, LOG_DEBUG, ("sys storage_read %x %x %x\n", ret, fd_in, sectors_read));
-
-            sysFsWrite(fd_out, buffer, 1024 * 2048, &writelen);
-
-            ret = sys_storage_close(fd_in);
-            LOG(lm_main, LOG_DEBUG, ("sys storage_close %x %x\n", ret, fd_in));
-
-        }
-        free(buffer);
-        sysFsClose(fd_out);
-    }
-
-    snprintf(message, 512, "Dump analysis has been written to: [%s]", file_path);
-    dialog_type = (MSG_DIALOG_NORMAL | MSG_DIALOG_DISABLE_CANCEL_ON);
-    msgDialogOpen2(dialog_type, message, NULL, NULL, NULL);
-
-    bd_disc_changed = 0;
-    while (!user_requested_exit() && bd_disc_changed == 0)
-    {
-        sysUtilCheckCallback();
-        flip();
-    }
-    msgDialogAbort();
-
-    free(file_path);
-    free(message);
-}
-
 static void bd_eject_disc_callback(void)
 {
     bd_contains_sacd_disc = -1;
@@ -291,15 +241,9 @@ static void bd_insert_disc_callback(uint32_t disc_type, char *title_id)
 
 void main_loop(void)
 {
+    int client_connected;
     msgType              dialog_type;
     char                 *message = (char *) malloc(512);
-
-    if (output_device_changed && output_device) 
-    {
-        char file_path[100];
-        sprintf(file_path, "%s/sacd_log.txt", output_device);
-        set_log_file(file_path);
-    }
 
     // did the disc change?
     if (bd_contains_sacd_disc && bd_disc_changed)
@@ -312,44 +256,37 @@ void main_loop(void)
 
     if (!bd_contains_sacd_disc)
     {
-        // was the disc changed since startup?
-        if (bd_disc_changed == -1 || !output_device)
-        {
-            snprintf(message, 512, "Please insert a disc.\n\n%s"
-                     , (output_device ? "" : "(Also make sure you connect an external fat32 formatted harddisk!)"));
-        }
-        else
-        {
-            snprintf(message, 512, "Would you like to RAW dump the first 2Mb to [%s (%.2fGB available)] for analysis?",
-                     output_device, output_device_space);
-
+    	union net_ctl_info info;
+    	
+    	if(netCtlGetInfo(NET_CTL_INFO_IP_ADDRESS, &info) == 0)
+    	{
+       		sprintf(message, "              SACD Daemon %s\n\n"
+       		                 "Status: Active\n"
+       		                 "IP Address: %s (port 2002)\n"
+       		                 "Client: %s\n"
+       		                 "Disc: %s",
+    			SACD_RIPPER_VERSION_STRING, info.ip_address, 
+    			(is_client_connected() ? "connected" : "none"),
+    			(bd_disc_changed == -1 ? "empty" : "inserted"));
+    	}
+    	else
+    	{
+    		sprintf(message, "No active network connection was detected.\n\nPress OK to refresh.");
             dialog_type |= MSG_DIALOG_BTN_TYPE_OK;
-        }
+    	} 
     }
 
     msgDialogOpen2(dialog_type, message, dialog_handler, NULL, NULL);
 
     dialog_action         = 0;
     bd_disc_changed       = 0;
-    output_device_changed = 0;
-    while (!dialog_action && !user_requested_exit() && bd_disc_changed == 0 && output_device_changed == 0)
+    client_connected      = is_client_connected();
+    while (!dialog_action && !user_requested_exit() && bd_disc_changed == 0 && client_connected == is_client_connected())
     {
-        // poll for new output devices
-        poll_output_devices();
-
         sysUtilCheckCallback();
         flip();
     }
     msgDialogAbort();
-
-    // user wants to dump 2Mb to output device
-    if (dialog_action == 1 && !bd_contains_sacd_disc)
-    {
-        dump_sample_to_output_device();
-
-        // action is handled
-        dialog_action = 0;
-    } 
 
     free(message);
 }
@@ -359,10 +296,14 @@ int main(int argc, char *argv[])
     int     ret;
     void    *host_addr = memalign(1024 * 1024, HOST_SIZE);
     msgType dialog_type;
+	sys_ppu_thread_t id; // start server thread
 
     load_modules();
 
     init_logging();
+
+	netInitialize();
+	netCtlInit(); 
 
     // Initialize SPUs
     LOG(lm_main, LOG_DEBUG, ("Initializing SPUs\n"));
@@ -418,29 +359,14 @@ int main(int argc, char *argv[])
         goto quit;
     }
 
-    dialog_type = (MSG_DIALOG_NORMAL | MSG_DIALOG_BTN_TYPE_OK | MSG_DIALOG_DISABLE_CANCEL_ON);
-    msgDialogOpen2(dialog_type, "Make sure the drive is empty!", dialog_handler, NULL, NULL);
-
-    dialog_action = 0;
-    while (!dialog_action && !user_requested_exit())
-    {
-        sysUtilCheckCallback();
-        flip();
-    }
-    msgDialogAbort();
-
-    if (user_requested_exit())
-        goto quit;
-
     // reset & re-authenticate the BD drive
     sys_storage_reset_bd();
     sys_storage_authenticate_bd();
 
     ret = sysDiscRegisterDiscChangeCallback(&bd_eject_disc_callback, &bd_insert_disc_callback);
 
-    // poll for an output_device
-    poll_output_devices();
-    
+	sysThreadCreate(&id, listener_thread, NULL, 1500, 0x400, 0, "listener");
+
     while (1)
     {
         // main loop
@@ -458,8 +384,9 @@ int main(int argc, char *argv[])
     unpatch_lv1_ss_services();
 
     destroy_logging();
+	netDeinitialize();
     unload_modules();
-
+    
     free(host_addr);
 
     return 0;

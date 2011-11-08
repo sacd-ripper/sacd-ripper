@@ -48,6 +48,10 @@ OBJS		:= \
             log.o \
             logging.o \
             fileutils.o \
+            socket.o \
+            timeout.o \
+            pb_decode.o \
+            pb_encode.o \
             utils.o
 all: ppu
 

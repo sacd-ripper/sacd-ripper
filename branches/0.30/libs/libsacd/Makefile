@@ -57,6 +57,8 @@ OBJS		:= \
             sac_accessor.o \
             ioctl.o \
             iso_writer.o \
+            sacd_ripper.pb.o \
+            sacd_pb_stream.o \
             sacd_reader.o 
 all: ppu
 
