@@ -643,6 +643,10 @@ void scarletbook_process_frames(scarletbook_handle_t *handle, uint8_t *read_buff
                 {
                     memcpy(handle->frame.data + handle->frame.size, read_buffer_ptr, packet->packet_length);
                     handle->frame.size += packet->packet_length;
+                    if (handle->frame.dst_encoded)
+                    {
+                        handle->frame.sector_count--;
+                    }
                 }
                 break;
             case DATA_TYPE_SUPPLEMENTARY:
@@ -659,7 +663,7 @@ void scarletbook_process_frames(scarletbook_handle_t *handle, uint8_t *read_buff
         read_buffer += SACD_LSN_SIZE;
     }
 
-    if (last_block && handle->frame.started) 
+    if (last_block && handle->frame.started && handle->frame.sector_count == 0) 
     {
         handle->frame.started = 0;
         frame_read_callback(handle, handle->frame.data, handle->frame.size, userdata);
