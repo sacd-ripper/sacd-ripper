@@ -118,7 +118,7 @@
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
 				AdditionalIncludeDirectories=".\win32;..\..\libs\libsacd;..\..\libs\libcommon;..\..\libs\libid3;..\..\libs\libiconv\include;..\..\libs\libdstdec"
-				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;HAVE_CONFIG_H"
+				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;HAVE_CONFIG_H;PTW32_STATIC_LIB"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
@@ -136,7 +136,8 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="pthreadVC2.lib  ..\..\libs\libiconv\lib\iconv.lib Ws2_32.lib"
+				AdditionalOptions="/NODEFAULTLIB:LIBCMT.lib"
+				AdditionalDependencies="pthreadVC2_static.lib  ..\..\libs\libiconv\lib\iconv.lib Ws2_32.lib"
 				LinkIncremental="1"
 				GenerateDebugInformation="true"
 				SubSystem="1"

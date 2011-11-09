@@ -33,6 +33,8 @@
 #include <io.h>
 #endif
 
+#include <pthread.h>
+
 #include <charset.h>
 #include <logging.h>
 
@@ -224,6 +226,11 @@ int main(int argc, char* argv[])
     int i, area_idx;
     sacd_reader_t *sacd_reader;
 
+#ifdef PTW32_STATIC_LIB
+    pthread_win32_process_attach_np();
+    pthread_win32_thread_attach_np();
+#endif
+
     init();
     if (parse_options(argc, argv)) 
     {
@@ -341,6 +348,11 @@ int main(int argc, char* argv[])
     }
 
     destroy_logging();
-    
+
+#ifdef PTW32_STATIC_LIB
+    pthread_win32_process_detach_np();
+    pthread_win32_thread_detach_np();
+#endif
+
     return 0;
 }

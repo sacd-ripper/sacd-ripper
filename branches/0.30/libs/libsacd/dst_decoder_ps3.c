@@ -19,7 +19,7 @@
  *
  */
 
-//#error the ps3 code is currently broken in the 0.30 branch!!
+#error the PS3 SACD Ripper code is currently broken in the 0.30 branch. For now I advice you to use the SACD Daemon in combination with sacd_extract.
 
 #ifndef __lv2ppu__
 #error you need the psl1ght/lv2 ppu compatible compiler!
