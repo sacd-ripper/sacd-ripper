@@ -19,6 +19,7 @@
  *
  */
 
+// If you remove the following line, it will compile but the DST decoded output will be incorrect!!
 #error the PS3 SACD Ripper code is currently broken in the 0.30 branch. For now I advice you to use the SACD Daemon in combination with sacd_extract.
 
 #ifndef __lv2ppu__
