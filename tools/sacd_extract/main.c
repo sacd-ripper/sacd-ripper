@@ -168,7 +168,7 @@ static int parse_options(int argc, char *argv[]) {
 
 void handle_sigint(int sig_no)
 {
-    fwprintf(stdout, L"\rUser interrupted..                                           \n");
+    fwprintf(stdout, L"\rUser interrupted..                                                      \n");
     scarletbook_output_interrupt(output);
 }
 
@@ -186,10 +186,10 @@ static void handle_status_update_progress_callback(uint32_t stats_total_sectors,
                                  uint32_t stats_current_file_total_sectors, uint32_t stats_current_file_sectors_processed)
 {
     fwprintf(stdout, L"\rCompleted: %d%% (%.1fMB), Total: %d%% (%.1fMB) at %.2fMB/sec", (stats_current_file_sectors_processed*100/stats_current_file_total_sectors), 
-                                             ((float)(stats_current_file_sectors_processed * SACD_LSN_SIZE) / 1048576.00),
-                                             (stats_total_sectors_processed*100/stats_total_sectors),
-                                             ((float)(stats_current_file_total_sectors * SACD_LSN_SIZE) / 1048576.00),
-                                             (float)((float) stats_total_sectors_processed * SACD_LSN_SIZE / 1048576.00) / (float)(time(0) - started_processing)
+                                             ((float)((double) stats_current_file_sectors_processed * SACD_LSN_SIZE / 1048576.00)),
+                                             (stats_total_sectors_processed * 100 / stats_total_sectors),
+                                             ((float)((double) stats_current_file_total_sectors * SACD_LSN_SIZE / 1048576.00)),
+                                             (float)((double) stats_total_sectors_processed * SACD_LSN_SIZE / 1048576.00) / (float)(time(0) - started_processing)
                                              );
     fflush(stdout);
 }
@@ -290,6 +290,7 @@ int main(int argc, char* argv[])
                     else
 #endif
                     {
+                        get_unique_filename(&albumdir, "iso");
                         file_path = make_filename(0, 0, albumdir, "iso");
                         scarletbook_output_enqueue_raw_sectors(output, 0, total_sectors, file_path, "iso");
                         free(file_path);
