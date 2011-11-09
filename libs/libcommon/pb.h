@@ -94,7 +94,7 @@ struct _pb_field_t {
     pb_type_t type;
     uint8_t data_offset; /* Offset of field data, relative to previous field. */
     int8_t size_offset; /* Offset of array size or has-boolean, relative to data */
-    uint8_t data_size; /* Data size in bytes for a single item */
+    uint32_t data_size; /* Data size in bytes for a single item */
     uint8_t array_size; /* Maximum number of entries in array */
     
     /* Field definitions for submessage
@@ -109,7 +109,7 @@ struct _pb_field_t {
  */
 typedef struct {
     size_t size;
-    uint8_t bytes[1];
+    uint8_t *bytes;
 } pb_bytes_array_t;
 
 /* This structure is used for giving the callback function.

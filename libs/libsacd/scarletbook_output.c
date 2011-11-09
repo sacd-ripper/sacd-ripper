@@ -308,7 +308,6 @@ static void *processing_thread(void *arg)
     scarletbook_output_format_t * ft;
     int non_encrypted_disc = 0;
     int checked_for_non_encrypted_disc = 0;
-    ssize_t ret;
 
     sysAtomicSet(&output->processing, 1);
     while (!list_empty(&output->ripping_queue))
@@ -318,7 +317,10 @@ static void *processing_thread(void *arg)
         ft = list_entry(node_ptr, scarletbook_output_format_t, siblings);
         list_del(node_ptr);
 
-        ft->dst_decoder = dst_decoder_create(ft->channel_count, frame_decoded_callback, ft);
+        if (ft->dsd_encoded_export && ft->dst_encoded_import)
+        {
+            ft->dst_decoder = dst_decoder_create(ft->channel_count, frame_decoded_callback, ft);
+        }
 
         output->stats_current_file_total_sectors = ft->length_lsn;
         output->stats_current_file_sectors_processed = 0;
@@ -391,7 +393,7 @@ static void *processing_thread(void *arg)
                     block_size = min(end_lsn - ft->current_lsn, block_size);
 
                     // read some blocks
-                    ret = sacd_read_block_raw(ft->sb_handle->sacd, ft->current_lsn, block_size, output->read_buffer);
+                    block_size = (uint32_t) sacd_read_block_raw(ft->sb_handle->sacd, ft->current_lsn, block_size, output->read_buffer);
 
                     ft->current_lsn += block_size;
                     output->stats_total_sectors_processed += block_size;
@@ -451,7 +453,10 @@ static void *processing_thread(void *arg)
 
             sysAtomicSet(&output->processing, 0);
 
-            dst_decoder_destroy(ft->dst_decoder);
+            if (ft->dsd_encoded_export && ft->dst_encoded_import)
+            {
+                dst_decoder_destroy(ft->dst_decoder);
+            }
 
             close_output_file(ft);
 
@@ -474,7 +479,10 @@ static void *processing_thread(void *arg)
 #endif
         }
 
-        dst_decoder_destroy(ft->dst_decoder);
+        if (ft->dsd_encoded_export && ft->dst_encoded_import)
+        {
+            dst_decoder_destroy(ft->dst_decoder);
+        }
 
         close_output_file(ft);
     } 

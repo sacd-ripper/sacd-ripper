@@ -28,6 +28,7 @@
 #include <sys/stat.h>
 #include <wchar.h>
 #include <locale.h>
+#include <time.h>
 #ifdef _WIN32
 #include <io.h>
 #endif
@@ -76,10 +77,11 @@ static int parse_options(int argc, char *argv[]) {
         "  -m, --mch-tracks                : Export multi-channel tracks\n"
         "  -p, --output-dsdiff             : output as Philips DSDIFF file (default)\n"
         "  -s, --output-dsf                : output as Sony DSF file\n"
+        "  -I, --output-iso                : output as RAW ISO\n"
         "  -c, --convert-dst               : convert DST to DSD\n"
-        "  -g, --gapless                   : Gapless Mode\n"
-        "  -i, --input[=FILE]              : set source and determine if \"bin\" image or\n"
-        "                                    device\n"
+        "  -g, --gapless                   : turn gapless mode on\n"
+        "  -i, --input[=FILE]              : set source and determine if \"iso\" image, \n"
+        "                                    device or server (ex. -i192.168.1.10:2002)\n"
         "  -P, --print                     : display disc and track information\n" 
         "\n"
         "Help options:\n"
@@ -88,16 +90,17 @@ static int parse_options(int argc, char *argv[]) {
 
     static const char usage_text[] = 
         "Usage: %s [-2|--2ch-tracks] [-m|--mch-tracks] [-p|--output-dsdiff]\n"
-        "        [-s|--output-dsf] [-c|--convert-dst] [-g|--gapless]\n"
-        "        [-i|--input FILE] [-P|--print]\n"
+        "        [-s|--output-dsf] [-I|--output-iso] [-c|--convert-dst]\n"
+        "        [-g|--gapless] [-i|--input FILE] [-P|--print]\n"
         "        [-?|--help] [--usage]\n";
 
-    static const char options_string[] = "2mpscgi::P?";
+    static const char options_string[] = "2mpsIcgi::P?";
     static const struct option options_table[] = {
         {"2ch-tracks", no_argument, NULL, '2' },
         {"mch-tracks", no_argument, NULL, 'm' },
         {"output-dsdiff", no_argument, NULL, 'p'}, 
         {"output-dsf", no_argument, NULL, 's'}, 
+        {"output-iso", no_argument, NULL, 'I'}, 
         {"convert-dst", no_argument, NULL, 'c'}, 
         {"gapless", no_argument, NULL, 'g'}, 
         {"input", required_argument, NULL, 'i' },
@@ -122,10 +125,17 @@ static int parse_options(int argc, char *argv[]) {
         case 'p': 
             opts.output_dsdiff = 1; 
             opts.output_dsf = 0; 
+            opts.output_iso = 0;
             break;
         case 's': 
             opts.output_dsdiff = 0; 
             opts.output_dsf = 1; 
+            opts.output_iso = 0;
+            break;
+        case 'I': 
+            opts.output_dsdiff = 0; 
+            opts.output_dsf = 0; 
+            opts.output_iso = 1;
             break;
         case 'c': opts.convert_dst = 1; break;
         case 'g': opts.gapless = 1; break;
@@ -156,7 +166,7 @@ static int parse_options(int argc, char *argv[]) {
 
 void handle_sigint(int sig_no)
 {
-    fwprintf(stdout, L"\rUser interrupted..                                \n");
+    fwprintf(stdout, L"\rUser interrupted..                                           \n");
     scarletbook_output_interrupt(output);
 }
 
@@ -168,11 +178,17 @@ static void handle_status_update_track_callback(char *filename, int current_trac
     free(wide_filename);
 }
 
+static time_t started_processing;
+
 static void handle_status_update_progress_callback(uint32_t stats_total_sectors, uint32_t stats_total_sectors_processed,
                                  uint32_t stats_current_file_total_sectors, uint32_t stats_current_file_sectors_processed)
 {
-    fwprintf(stdout, L"\rCompleted: %d%%, Total: %d%%", (stats_current_file_sectors_processed*100/stats_current_file_total_sectors), 
-                                             (stats_total_sectors_processed*100/stats_total_sectors));
+    fwprintf(stdout, L"\rCompleted: %d%% (%.1fMB), Total: %d%% (%.1fMB) at %.2fMB/sec", (stats_current_file_sectors_processed*100/stats_current_file_total_sectors), 
+                                             ((float)(stats_current_file_sectors_processed * SACD_LSN_SIZE) / 1048576.00),
+                                             (stats_total_sectors_processed*100/stats_total_sectors),
+                                             ((float)(stats_current_file_total_sectors * SACD_LSN_SIZE) / 1048576.00),
+                                             (float)((float) stats_total_sectors_processed * SACD_LSN_SIZE / 1048576.00) / (float)(time(0) - started_processing)
+                                             );
     fflush(stdout);
 }
 
@@ -246,6 +262,7 @@ int main(int argc, char* argv[])
                 {
                     #define FAT32_SECTOR_LIMIT 2090000
                     uint32_t total_sectors = sacd_get_total_sectors(sacd_reader);
+#ifdef SECTOR_LIMIT
                     uint32_t sector_size = FAT32_SECTOR_LIMIT;
                     uint32_t sector_offset = 0;
                     if (total_sectors > FAT32_SECTOR_LIMIT)
@@ -264,6 +281,7 @@ int main(int argc, char* argv[])
                         free(musicfilename);
                     }
                     else
+#endif
                     {
                         file_path = make_filename(0, 0, albumdir, "iso");
                         scarletbook_output_enqueue_raw_sectors(output, 0, total_sectors, file_path, "iso");
@@ -300,13 +318,14 @@ int main(int argc, char* argv[])
                     }
                 }
 
+                started_processing = time(0);
                 scarletbook_output_start(output);
                 scarletbook_output_destroy(output);
                 scarletbook_close(handle);
 
                 free(albumdir);
 
-                fprintf(stdout, "\rWe are done..                                     \n");
+                fprintf(stdout, "\rWe are done..                                                          \n");
             }
         }
 

@@ -28,9 +28,13 @@
 
 static bool write_callback(pb_ostream_t *stream, const uint8_t *buf, size_t count)
 {
-    size_t got;
+    bool ret;
+    size_t written;
     p_socket socket = (p_socket) stream->state;
-    return socket_send(socket, (const char *) buf, count, &got, 0, 0) == IO_DONE;
+
+    ret = (socket_send(socket, (const char *) buf, count, &written, 0, 0) == IO_DONE && written == count);
+
+    return ret;
 }
 
 static bool read_callback(pb_istream_t *stream, uint8_t *buf, size_t count)

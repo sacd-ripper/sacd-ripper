@@ -35,7 +35,7 @@ const pb_field_t ServerResponse_fields[4] = {
     {3, PB_HTYPE_OPTIONAL | PB_LTYPE_BYTES,
     pb_delta_end(ServerResponse, data, result),
     pb_delta(ServerResponse, has_data, data),
-    pb_membersize(ServerResponse_data_t, bytes), 0, 0},
+    512 * 2048, 0, 0},
 
     PB_LAST_FIELD
 };

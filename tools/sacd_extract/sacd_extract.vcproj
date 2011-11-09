@@ -62,7 +62,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				LinkLibraryDependencies="true"
-				AdditionalDependencies="pthreadVC2.lib ..\..\libs\libiconv\lib\iconv.lib"
+				AdditionalDependencies="pthreadVC2.lib ..\..\libs\libiconv\lib\iconv.lib Ws2_32.lib"
 				LinkIncremental="2"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -136,7 +136,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="pthreadVC2.lib  ..\..\libs\libiconv\lib\iconv.lib"
+				AdditionalDependencies="pthreadVC2.lib  ..\..\libs\libiconv\lib\iconv.lib Ws2_32.lib"
 				LinkIncremental="1"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -216,11 +216,27 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\libs\libcommon\pb_decode.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\libs\libcommon\pb_encode.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\libs\libsacd\sacd_input.c"
 				>
 			</File>
 			<File
+				RelativePath="..\..\libs\libsacd\sacd_pb_stream.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\libs\libsacd\sacd_reader.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\libs\libsacd\sacd_ripper.pb.c"
 				>
 			</File>
 			<File
@@ -245,6 +261,14 @@
 			</File>
 			<File
 				RelativePath="..\..\libs\libsacd\scarletbook_read.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\libs\libcommon\socket.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\libs\libcommon\timeout.c"
 				>
 			</File>
 			<File

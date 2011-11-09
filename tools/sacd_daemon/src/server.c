@@ -35,6 +35,7 @@
 #include <pb_decode.h>
 #include <sacd_pb_stream.h>
 #include <utils.h>
+#include <logging.h>
 
 #include <sacd_reader.h>
 #include <sacd_ripper.pb.h>
@@ -54,20 +55,26 @@ int is_client_connected(void)
 
 static void client_thread(void *userdata)
 {
-	p_socket socket = (p_socket) userdata;
+	p_socket client = (p_socket) userdata;
     ServerRequest request;
     ServerResponse response;
     uint8_t zero = 0;
-    pb_istream_t input = pb_istream_from_socket(socket);
-    pb_ostream_t output = pb_ostream_from_socket(socket);
+    pb_istream_t input = pb_istream_from_socket(client);
+    pb_ostream_t output = pb_ostream_from_socket(client);
     sacd_reader_t   *sacd_reader = 0;
     scarletbook_handle_t *handle = 0;
     int non_encrypted_disc = 0;
     int checked_for_non_encrypted_disc = 0;
+    uint32_t encrypted_start_1 = 0;
+    uint32_t encrypted_start_2 = 0;
+    uint32_t encrypted_end_1 = 0;
+    uint32_t encrypted_end_2 = 0;
+    uint32_t block_size = 0;
+    uint32_t end_lsn = 0;
 
 	client_connected = 1;
 	
-	response.data.bytes = (uint8_t *) malloc(1024 * 1024 * 2);
+	response.data.bytes = (uint8_t *) malloc(MAX_PROCESSING_BLOCK_SIZE * SACD_LSN_SIZE);
 
     for (;;)
     {
@@ -75,43 +82,21 @@ static void client_thread(void *userdata)
         {
             break;
         }
-        
+
         response.has_data = false;
         response.data.size = 0;
         response.result = -1;
     
         switch(request.type)
         {
-        case ServerRequest_Type_DISC_OPEN:
-            response.type = ServerResponse_Type_DISC_OPENED;
-            sacd_reader = sacd_open("/dev_bdvd");
-            if (sacd_reader) 
-            {
-                handle = scarletbook_open(sacd_reader, 0);
-                checked_for_non_encrypted_disc = 0;
-                non_encrypted_disc = 0;                
-            }
-            response.result = (handle && sacd_authenticate(sacd_reader));
-            break;
-        case ServerRequest_Type_DISC_CLOSE:
-            response.type = ServerResponse_Type_DISC_CLOSED;
-            if (handle && sacd_reader)
-            {
-                scarletbook_close(handle);
-                sacd_close(sacd_reader);
-                response.result = 1;
-            }
-            break;
         case ServerRequest_Type_DISC_READ:
             {
                 response.type = ServerResponse_Type_DISC_READ;
                 if (handle && sacd_reader)
                 {
-                    response.result = sacd_read_block_raw(sacd_reader, request.sector_offset, request.sector_count, response.data.bytes);
-                    response.has_data = response.result > 0;
-                    response.data.size = max(response.result * SACD_LSN_SIZE, response.result);
-      
-#if 0                    
+                    int encrypted = 0;
+                    end_lsn = request.sector_offset + request.sector_count;
+     
                     // check what block ranges are encrypted..
                     if (request.sector_offset < encrypted_start_1)
                     {
@@ -133,11 +118,11 @@ static void client_thread(void *userdata)
                         block_size = min(encrypted_end_2 + 1 - request.sector_offset, MAX_PROCESSING_BLOCK_SIZE);
                         encrypted = 1;
                     }
-                    else
-                    {
-                        block_size = MAX_PROCESSING_BLOCK_SIZE;
-                        encrypted = 0;
-                    }
+                    block_size = min(end_lsn - request.sector_offset, block_size);
+
+                    response.result = sacd_read_block_raw(sacd_reader, request.sector_offset, block_size, response.data.bytes);
+                    response.has_data = response.result > 0;
+                    response.data.size = response.result * SACD_LSN_SIZE;
                     
                     // the ATAPI call which returns the flag if the disc is encrypted or not is unknown at this point. 
                     // user reports tell me that the only non-encrypted discs out there are DSD 3 14/16 discs. 
@@ -160,8 +145,50 @@ static void client_thread(void *userdata)
                     {
                         sacd_decrypt(sacd_reader, response.data.bytes, block_size);
                     }
-#endif                    
                 }
+            }
+            break;
+        case ServerRequest_Type_DISC_OPEN:
+            response.type = ServerResponse_Type_DISC_OPENED;
+            sacd_reader = sacd_open("/dev_bdvd");
+            if (sacd_reader) 
+            {
+                handle = scarletbook_open(sacd_reader, 0);
+                checked_for_non_encrypted_disc = 0;
+                non_encrypted_disc = 0;
+                
+                if (handle)
+                {
+                    // set the encryption range
+                    if (handle->area[0].area_toc != 0)
+                    {
+                        encrypted_start_1 = handle->area[0].area_toc->track_start;
+                        encrypted_end_1 = handle->area[0].area_toc->track_end;
+                    }
+                    if (handle->area[1].area_toc != 0)
+                    {
+                        encrypted_start_2 = handle->area[1].area_toc->track_start;
+                        encrypted_end_2 = handle->area[1].area_toc->track_end;
+                    }
+
+                    response.result = sacd_authenticate(sacd_reader);
+                }
+            }
+            break;
+        case ServerRequest_Type_DISC_CLOSE:
+            {
+                response.type = ServerResponse_Type_DISC_CLOSED;
+                if (handle)
+                {
+                    scarletbook_close(handle);
+                    handle = 0;
+                }
+                if (sacd_reader)
+                {
+                    sacd_close(sacd_reader);
+                    sacd_reader = 0;
+                }
+                response.result = 0;
             }
             break;
         case ServerRequest_Type_DISC_SIZE:
@@ -172,7 +199,7 @@ static void client_thread(void *userdata)
             }
             break;
         }
-    
+
         if (!pb_encode(&output, ServerResponse_fields, &response))
         {
             break;
@@ -186,10 +213,16 @@ static void client_thread(void *userdata)
             break;
         }
     }
+
+    if (handle)
+        scarletbook_close(handle);
+        
+    if (sacd_reader)
+        sacd_close(sacd_reader);
     
     free(response.data.bytes);
 	
-	closesocket((int) *socket);
+	closesocket((int) *client);
 	client_connected = 0;
 	
 	sysThreadExit(0);

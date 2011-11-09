@@ -371,7 +371,7 @@ static void pb_message_set_to_defaults(const pb_field_t fields[], void *dest_str
         }
         else
         {
-            memset(iter.pData, 0, iter.current->data_size);
+            //memset(iter.pData, 0, iter.current->data_size);
         }
     } while (pb_field_next(&iter));
 }
@@ -504,8 +504,8 @@ bool checkreturn pb_dec_bytes(pb_istream_t *stream, const pb_field_t *field, voi
         return false;
     x->size = temp;
     
-    //if (x->size > field->data_size)
-        //return false;
+    if (x->size > field->data_size)
+        return false;
     
     return pb_read(stream, x->bytes, x->size);
 }

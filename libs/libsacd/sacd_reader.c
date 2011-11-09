@@ -63,6 +63,8 @@ static sacd_reader_t *sacd_open_image_file(const char *location)
     sacd_reader_t *sacd;
     sacd_input_t  dev;
 
+    sacd_input_setup(location);
+
     dev = sacd_input_open(location);
     if (!dev)
     {
