@@ -103,6 +103,19 @@ struct dst_decoder_s
     void *userdata;
 };
 
+static unsigned processor_count(void)
+{
+#if defined(_WIN32)
+    return pthread_num_processors_np();
+#elif defined(_GNU_SOURCE)
+    return get_nprocs();
+#elif defined(__APPLE__) || defined(__FreeBSD__)
+    int count;
+    size_t size=sizeof(count);
+    return sysctlbyname("hw.ncpu",&count,&size,NULL,0) ? 1 : count;
+#endif
+}
+
 /* setup job lists (call from main thread) */
 static void setup_decoding_jobs(dst_decoder_t *dst_decoder)
 {
@@ -321,7 +334,7 @@ dst_decoder_t* dst_decoder_create(int channel_count, frame_decoded_callback_t fr
     dst_decoder->channel_count = channel_count;
     dst_decoder->userdata = userdata;
     dst_decoder->frame_decoded_callback = frame_decoded_callback;
-    dst_decoder->procs = pthread_num_processors_np();
+    dst_decoder->procs = processor_count();
     
     /* if first time or after an option change, setup the job lists */
     setup_decoding_jobs(dst_decoder);
