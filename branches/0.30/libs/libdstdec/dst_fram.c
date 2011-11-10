@@ -92,7 +92,7 @@ Changes:
 /*                                                                         */
 /***************************************************************************/
 
-static void FillTable4Bit(int NrOfChannels, int NrOfBitsPerCh, Segment *S, int8_t Table4Bit[MAX_CHANNELS][MAX_DSDBITS_INFRAME])
+static void FillTable4Bit(int NrOfChannels, int NrOfBitsPerCh, Segment *S, char Table4Bit[MAX_CHANNELS][MAX_DSDBITS_INFRAME])
 {
     int BitNr;
     int ChNr;
