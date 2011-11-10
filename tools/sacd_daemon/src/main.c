@@ -48,7 +48,9 @@
 #include "rsxutil.h"
 #include "exit_handler.h"
 #include "server.h"
+#ifdef ENABLE_LOGGING
 #include "output_device.h"
+#endif
 
 #include <logging.h>
 #include <version.h>
@@ -366,6 +368,7 @@ int main(int argc, char *argv[])
 
     ret = sysDiscRegisterDiscChangeCallback(&bd_eject_disc_callback, &bd_insert_disc_callback);
 
+#ifdef ENABLE_LOGGING
     // poll for an output_device
     poll_output_devices();
 
@@ -375,6 +378,7 @@ int main(int argc, char *argv[])
         sprintf(file_path, "%s/daemon_log.txt", output_device);
         set_log_file(file_path);
     }
+#endif
 
 	sysThreadCreate(&id, listener_thread, NULL, 1500, 0x400, 0, "listener");
 
