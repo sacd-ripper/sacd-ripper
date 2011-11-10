@@ -22,14 +22,12 @@ include_directories("../../libs/libid3")
 include_directories("../../libs/libsacd")
 
 # Extra flags for GCC
-if (CMAKE_COMPILER_IS_GNUC)
+if (CMAKE_COMPILER_IS_GNUCC)
   add_definitions(
       -pipe
-      -Wall -Wextra -Werror -Wcast-align -Wpointer-arith
-      -Woverloaded-virtual -Wno-unused-parameter
-      -fno-operator-names -ffor-scope
-      -msse2)
-endif (CMAKE_COMPILER_IS_GNUC)
+      -Wall -Wextra -Wcast-align -Wpointer-arith
+      -Wno-unused-parameter -msse2)
+endif (CMAKE_COMPILER_IS_GNUCC)
 
 if (MSVC)
     SET (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /MTd")
@@ -38,7 +36,7 @@ if (MSVC)
     ADD_DEFINITIONS(-D_CRT_SECURE_NO_DEPRECATE)
     ADD_DEFINITIONS(-D_CRT_NONSTDC_NO_WARNINGS)
     SET (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} ws2_32.lib pthreadVC2.lib iconv.lib")
-	SET (CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} ws2_32.lib pthreadVC2_static.lib iconv.lib /NODEFAULTLIB:LIBCMT.LIB") 
+    SET (CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} ws2_32.lib pthreadVC2_static.lib iconv.lib /NODEFAULTLIB:LIBCMT.LIB") 
 
     # disable warnings about libiconv link directory
     cmake_policy(SET CMP0015 NEW)

@@ -29,6 +29,7 @@
 #include <wchar.h>
 #include <locale.h>
 #include <time.h>
+#include <malloc.h>
 #ifdef _WIN32
 #include <io.h>
 #endif

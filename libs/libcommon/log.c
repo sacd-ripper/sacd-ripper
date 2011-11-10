@@ -322,7 +322,7 @@ void log_print(const char *fmt, ...)
 #ifdef __lv2ppu__
     sysThreadGetId(&me);
 #endif
-    nb_tid += snprintf(line + nb_tid, sizeof(line) - nb_tid - 1, "%ld[%p]: ", me, (void *) me);
+    nb_tid += snprintf(line + nb_tid, sizeof(line) - nb_tid - 1, "%d[%p]: ", me, (void *) me);
 
     va_start(ap, fmt);
     nb = nb_tid + vsnprintf(line + nb_tid, sizeof(line) - nb_tid - 1, fmt, ap);

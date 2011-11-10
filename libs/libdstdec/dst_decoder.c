@@ -50,6 +50,10 @@
 #include <assert.h>
 #include <malloc.h>
 #include <pthread.h>
+#include <string.h>
+#ifdef __linux__
+#include <sys/sysinfo.h>
+#endif
 
 #include <logging.h>
 
@@ -107,7 +111,7 @@ static unsigned processor_count(void)
 {
 #if defined(_WIN32)
     return pthread_num_processors_np();
-#elif defined(_GNU_SOURCE)
+#elif defined(__linux__)
     return get_nprocs();
 #elif defined(__APPLE__) || defined(__FreeBSD__)
     int count;
