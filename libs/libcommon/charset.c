@@ -62,7 +62,7 @@ char* charset_convert(const char *string, size_t insize, char *from, char *to)
 	outptr = out;
 
  retry:
-	if (iconv(cd, &input, &insize, &outptr, &outleft) == -1)
+	if (iconv(cd, &input, &insize, &outptr, &outleft) == (size_t) -1)
 	{
 		int used;
 		switch (errno)
