@@ -99,11 +99,11 @@ static void FillTable4Bit(int NrOfChannels, int NrOfBitsPerCh, Segment *S, char 
     int SegNr;
     int Start;
     int End;
-    int8_t Val;
+    char Val;
 
     for (ChNr = 0; ChNr < NrOfChannels; ChNr++)
     {
-        int8_t *Table4BitCh = Table4Bit[ChNr];
+        char *Table4BitCh = Table4Bit[ChNr];
         for (SegNr = 0, Start = 0; SegNr < S->NrOfSegments[ChNr] - 1; SegNr++)
         {
             Val = (int8_t) S->Table4Segment[ChNr][SegNr];
