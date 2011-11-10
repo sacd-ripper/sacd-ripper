@@ -404,7 +404,7 @@ int getbits(StrData* SD, long *outword, int out_bitptr)
             SD->BitPosition = 8;
         }
 
-        thisbits = min(SD->BitPosition, out_bitptr);
+        thisbits = MIN(SD->BitPosition, out_bitptr);
         shift = (SD->BitPosition - thisbits);
         mask = masks[thisbits] << shift;
 

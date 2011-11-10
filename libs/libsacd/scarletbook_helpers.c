@@ -46,11 +46,11 @@ char *get_album_dir(scarletbook_handle_t *handle)
         artist = master_text->disc_artist_phonetic;
 
     if (master_text->album_title)
-        album_title = master_text->album_title; 
+        album_title = master_text->album_title;
     else if (master_text->album_title_phonetic)
         album_title = master_text->album_title_phonetic;
     else if (master_text->disc_title)
-        album_title = master_text->disc_title; 
+        album_title = master_text->disc_title;
     else if (master_text->disc_title_phonetic)
         album_title = master_text->disc_title_phonetic;
 

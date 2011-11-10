@@ -312,7 +312,7 @@ sacd_reader_t *sacd_open(const char *ppath)
                             me->mnt_fsname,
                             me->mnt_dir);
                     auth_drive = sacd_open_image_file(me->mnt_fsname);
-                    dev_name   = _strdup(me->mnt_fsname);
+                    dev_name   = strdup(me->mnt_fsname);
                     break;
                 }
             }

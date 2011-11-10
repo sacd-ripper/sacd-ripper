@@ -244,7 +244,7 @@ static struct id3_framedesc22 framedesc22[] = {
 static struct id3_framedesc *find_frame_description(uint32_t id)
 {
 	int i;
-	for (i = 0; i < sizeof(framedesc) / sizeof(struct id3_framedesc); i++)
+	for (i = 0; i < (int) (sizeof(framedesc) / sizeof(struct id3_framedesc)); i++)
 		if (framedesc[i].fd_id == id)
 			return &framedesc[i];
 	return NULL;
@@ -294,7 +294,7 @@ int id3_read_frame(struct id3_tag *id3)
 	frame->fr_owner = id3;
 	/* FIXME v2.4.0 */
 	frame->fr_raw_size = buf[4] << 24 | buf[5] << 16 | buf[6] << 8 | buf[7];
-	if (frame->fr_raw_size < 0 || frame->fr_raw_size > 1000000)
+	if (frame->fr_raw_size > 1000000)
 	{
 		free(frame);
 		return -1;
@@ -579,7 +579,7 @@ struct id3_frame *id3_add_frame(struct id3_tag *id3, uint32_t type)
 	/*
 	 * Try finding the correct frame descriptor.
 	 */
-	for (i = 0; i < sizeof(framedesc) / sizeof(struct id3_framedesc); i++)
+	for (i = 0; i < (int) (sizeof(framedesc) / sizeof(struct id3_framedesc)); i++)
 	{
 		if (framedesc[i].fd_id == type)
 		{
@@ -680,7 +680,7 @@ void id3_frame_clear_data(struct id3_frame *frame)
 static uint32_t find_v24_id(uint32_t v22)
 {
 	int i;
-	for (i = 0; i < sizeof(framedesc22) / sizeof(framedesc22[0]); i++)
+	for (i = 0; i < (int) (sizeof(framedesc22) / sizeof(framedesc22[0])); i++)
 		if (framedesc22[i].fd_v22 == v22)
 			return framedesc22[i].fd_v24;
 
@@ -728,7 +728,7 @@ static int id3_read_frame_v22(struct id3_tag *id3)
 
 	frame->fr_owner = id3;
 	frame->fr_raw_size = size;
-	if (frame->fr_raw_size < 0 || frame->fr_raw_size > 1000000)
+	if (frame->fr_raw_size > 1000000)
 	{
 		free(frame);
 		return -1;
