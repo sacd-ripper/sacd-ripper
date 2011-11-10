@@ -24,7 +24,7 @@ include_directories("../../libs/libsacd")
 # Extra flags for GCC
 if (CMAKE_COMPILER_IS_GNUCC)
   add_definitions(
-      -pipe
+      -pipe -Werr
       -Wall -Wextra -Wcast-align -Wpointer-arith
       -Wno-unused-parameter -msse2)
 endif (CMAKE_COMPILER_IS_GNUCC)
