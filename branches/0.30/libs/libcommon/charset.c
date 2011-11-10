@@ -32,12 +32,12 @@ char* charset_get_current(void)
 	return charset;
 }
 
-char* charset_convert(const char *string, size_t insize, char *from, char *to)
+char* charset_convert(char *string, size_t insize, char *from, char *to)
 {
 	size_t outleft, outsize;
 	iconv_t cd;
 	char *out, *outptr;
-	const char *input = (const char *) string;
+	char *input = string;
 
 	if (!string)
 		return NULL;
@@ -62,7 +62,11 @@ char* charset_convert(const char *string, size_t insize, char *from, char *to)
 	outptr = out;
 
  retry:
-	if (iconv(cd, &input, &insize, &outptr, &outleft) == (size_t) -1)
+#ifdef __lv2ppu__ 
+ 	if (iconv(cd, (const char **) &input, &insize, &outptr, &outleft) == (size_t) -1)
+#else
+ 	if (iconv(cd, &input, &insize, &outptr, &outleft) == (size_t) -1)
+#endif
 	{
 		int used;
 		switch (errno)
@@ -95,14 +99,14 @@ char* charset_convert(const char *string, size_t insize, char *from, char *to)
 	return out;
 }
 
-char* charset_from_utf8(const char *string)
+char* charset_from_utf8(char *string)
 {
 	if (!string)
 		return NULL;
 	return charset_convert(string, strlen(string), "UTF-8", NULL);
 }
 
-char* charset_to_utf8(const char *string)
+char* charset_to_utf8(char *string)
 {
 	if (!string)
 		return NULL;

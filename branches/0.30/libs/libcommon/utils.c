@@ -42,7 +42,7 @@ char *substr(const char *pstr, int start, int numchars)
 #else
         char *wchar_type = "WCHAR_T";
 #endif
-        wchar_t *wc = (wchar_t *) charset_convert(pstr + start, numchars, "UTF-8", wchar_type);
+        wchar_t *wc = (wchar_t *) charset_convert((char *) pstr + start, numchars, "UTF-8", wchar_type);
         char *c = charset_convert((char *) wc, wcslen(wc) * sizeof(wchar_t), wchar_type, "UTF-8");
         strcpy(pnew, c);
         free(wc);
