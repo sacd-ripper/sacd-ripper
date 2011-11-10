@@ -23,7 +23,6 @@
 #define SACD_READER_H_INCLUDED
 
 #ifdef _MSC_VER
-#include <config.h>
 
 #include <stdio.h>
 #include <stdlib.h>

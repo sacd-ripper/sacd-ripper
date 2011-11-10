@@ -25,11 +25,15 @@
 
 #include "socket.h"
 
+#define _SOCKET_INCLUDE_C
+
 #ifdef _WIN32
 #include "wsocket.c"
 #else
 #include "usocket.c"
 #endif
+
+#undef _SOCKET_INCLUDE_C
 
 /*-------------------------------------------------------------------------*\
 * I/O error strings

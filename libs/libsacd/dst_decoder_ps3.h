@@ -22,9 +22,7 @@
 #ifndef __DST_DECODER_PS3_H__
 #define __DST_DECODER_PS3_H__
 
-#ifndef __lv2ppu__
-#error you need the psl1ght/lv2 ppu compatible compiler!
-#endif
+#ifdef __lv2ppu__
 
 #include <ppu-types.h>
 
@@ -53,5 +51,7 @@ dst_decoder_t;
 dst_decoder_t* dst_decoder_create(int channel_count, frame_decoded_callback_t frame_decoded_callback, void *userdata);
 int dst_decoder_destroy(dst_decoder_t *dst_decoder);
 int dst_decoder_decode(dst_decoder_t *dst_decoder, uint8_t* frame_data, size_t frame_size);
+
+#endif
 
 #endif /* __DST_DECODER_H__ */

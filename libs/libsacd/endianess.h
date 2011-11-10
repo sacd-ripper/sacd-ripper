@@ -22,8 +22,6 @@
 #ifndef ENDIANESS_H_INCLUDED
 #define ENDIANESS_H_INCLUDED
 
-#include <config.h>
-
 #if defined(__BIG_ENDIAN__)
 
 /* All bigendian systems are fine, just ignore the swaps. */

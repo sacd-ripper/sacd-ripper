@@ -27,7 +27,6 @@
 
 #include <charset.h>
 
-#include "config.h"
 #include "scarletbook.h"
 #include "version.h"
 

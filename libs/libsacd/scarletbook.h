@@ -24,7 +24,6 @@
 
 #include <inttypes.h>
 #include <list.h>
-#include "config.h"
 
 #undef ATTRIBUTE_PACKED
 #undef PRAGMA_PACK_BEGIN
