@@ -20,12 +20,14 @@
  */
 
 #ifndef __FILEUTILS_H__
-#define __FILEUTILS_H__ 
+#define __FILEUTILS_H__
 
 #include <stdio.h>
 
 #ifdef _WIN32
 typedef int mode_t;
+#else
+#include <sys/stat.h>
 #endif
 
 // substitute various items into a formatted string (similar to printf)

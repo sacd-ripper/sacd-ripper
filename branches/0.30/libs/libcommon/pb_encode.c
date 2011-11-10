@@ -98,7 +98,7 @@ static bool checkreturn encode_array(pb_ostream_t *stream, const pb_field_t *fie
         }
         else
         {
-            pb_ostream_t sizestream = {0};
+            pb_ostream_t sizestream = {0, 0, 0, 0};
             p = pData;
             for (i = 0; i < count; i++)
             {
@@ -347,7 +347,7 @@ bool checkreturn pb_enc_string(pb_ostream_t *stream, const pb_field_t *field, co
 
 bool checkreturn pb_enc_submessage(pb_ostream_t *stream, const pb_field_t *field, const void *src)
 {
-    pb_ostream_t substream = {0};
+    pb_ostream_t substream = {0, 0, 0, 0};
     size_t size;
     bool status;
     

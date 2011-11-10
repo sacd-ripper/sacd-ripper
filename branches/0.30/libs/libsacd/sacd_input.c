@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <string.h>
 #include <sys/stat.h>
 
 #if defined(__lv2ppu__)
@@ -186,8 +187,10 @@ static sacd_input_t sacd_dev_input_open(const char *target)
         }
 
     }
-#else
+#elif defined _WIN32
     dev->fd = open(target, O_RDONLY | O_BINARY);
+#else
+    dev->fd = open(target, O_RDONLY);
 #endif
     if (dev->fd < 0)
     {

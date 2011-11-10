@@ -31,8 +31,10 @@
 #include <sys/file.h>
 #include <sys/thread.h>
 #elif defined(WIN32)
-#include <pthread.h>
 #include <io.h>
+#endif
+#ifndef __lv2ppu__
+#include <pthread.h>
 #endif
 #include <sys/atomic.h>
 
