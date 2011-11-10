@@ -57,10 +57,6 @@
 
 #define MAKE_MARKER(a, b, c, d)    ((a) | ((b) << 8) | ((c) << 16) | ((d) << 24))
 
-#define htole16(x)                  (uint16_t) (x)
-#define htole32(x)                  (uint32_t) (x)
-#define htole64(x)                  (uint64_t) (x)
-
 /* For __FreeBSD_version */
 #if defined(HAVE_SYS_PARAM_H)
 #include <sys/param.h>
@@ -150,5 +146,19 @@
 #endif
 
 #endif /* __BIG_ENDIAN__ */
+
+#ifndef __BIG_ENDIAN__
+
+#ifndef htole16
+#define htole16(x)                  (uint16_t) (x)
+#endif
+#ifndef htole32
+#define htole32(x)                  (uint32_t) (x)
+#endif
+#ifndef htole64
+#define htole64(x)                  (uint64_t) (x)
+#endif
+
+#endif
 
 #endif /* ENDIANESS_H_INCLUDED */
