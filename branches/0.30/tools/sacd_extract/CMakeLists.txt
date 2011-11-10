@@ -27,7 +27,8 @@ if (CMAKE_COMPILER_IS_GNUC)
       -pipe
       -Wall -Wextra -Werror -Wcast-align -Wpointer-arith
       -Woverloaded-virtual -Wno-unused-parameter
-      -fno-operator-names -ffor-scope)
+      -fno-operator-names -ffor-scope
+      -msse2)
 endif (CMAKE_COMPILER_IS_GNUC)
 
 if (MSVC)
