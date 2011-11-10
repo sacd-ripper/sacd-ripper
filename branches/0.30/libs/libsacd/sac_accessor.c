@@ -19,9 +19,7 @@
  *
  */
 
-#ifndef __lv2ppu__
-#error you need the psl1ght/lv2 ppu compatible compiler!
-#endif
+#ifdef __lv2ppu__
 
 #include <ppu-lv2.h>
 #include <sys/spu.h>
@@ -724,5 +722,7 @@ int file_alloc_load(const char *file_path, uint8_t **buf, unsigned int *size)
     *size = status.st_size;
     return 0;
 }
+
+#endif
 
 #endif

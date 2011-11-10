@@ -20,6 +20,8 @@
  * DEALINGS IN THE SOFTWARE. 
  */ 
 
+#ifdef _SOCKET_INCLUDE_C
+
 #include <string.h>
 
 #include "socket.h"
@@ -412,3 +414,5 @@ static const char *wstrerror(int err) {
         default: return "Unknown error";
     }
 }
+
+#endif

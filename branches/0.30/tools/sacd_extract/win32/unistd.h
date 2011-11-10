@@ -33,18 +33,31 @@
 #include <errno.h>
 #include <direct.h>
 
-#include <config.h>
-
 #ifndef _SYS_UNISTD_H_
 #define _SYS_UNISTD_H_
 
+#ifndef inline
 #define inline __inline
+#endif
+
+#ifndef ssize_t
+#define ssize_t __int64
+#endif
 
 #define mkdir( A, B )   _mkdir( A )
 #define lstat           stat
 
 #ifndef S_ISDIR
 #define S_ISDIR(A)      ( S_IFDIR & A )
+#endif
+#ifndef S_ISREG
+#define S_ISREG(m) ((m) & _S_IFREG)
+#endif
+#ifndef S_ISBLK
+#define S_ISBLK(m) 0
+#endif
+#ifndef S_ISCHR
+#define S_ISCHR(m) 0 
 #endif
 
 #define S_IXUSR         S_IEXEC

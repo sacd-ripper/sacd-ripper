@@ -20,6 +20,8 @@
  * DEALINGS IN THE SOFTWARE. 
  */ 
 
+#ifdef SOCKET_H
+
 #ifndef WSOCKET_H
 #define WSOCKET_H
 
@@ -35,3 +37,5 @@ typedef t_socket *p_socket;
 #define SOCKET_INVALID (INVALID_SOCKET)
 
 #endif /* WSOCKET_H */
+
+#endif

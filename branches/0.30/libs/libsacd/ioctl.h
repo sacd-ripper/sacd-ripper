@@ -22,9 +22,7 @@
 #ifndef __IOCTL_H__
 #define __IOCTL_H__
 
-#ifndef __lv2ppu__
-#error you need the psl1ght/lv2 ppu compatible compiler!
-#endif
+#ifdef __lv2ppu__
 
 #include <stdint.h>
 #include <ppu-lv2.h>
@@ -50,6 +48,8 @@ extern int ioctl_report_key_finish(int fd, uint8_t agid);
 
 #ifdef __cplusplus
 };
+#endif
+
 #endif
 
 #endif /* __IOCTL_H__ */

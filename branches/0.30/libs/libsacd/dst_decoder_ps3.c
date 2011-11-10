@@ -19,12 +19,10 @@
  *
  */
 
+#ifdef __lv2ppu__
+
 // If you remove the following line, it will compile but the DST decoded output will be incorrect!!
 #error the PS3 SACD Ripper code is currently broken in the 0.30 branch. For now I advice you to use the SACD Daemon in combination with sacd_extract.
-
-#ifndef __lv2ppu__
-#error you need the psl1ght/lv2 ppu compatible compiler!
-#endif
 
 #include <sys/spu.h>
 #include <sys/event_queue.h>
@@ -471,3 +469,5 @@ int dst_decoder_decode(dst_decoder_t *dst_decoder, uint8_t *dst_data, size_t dst
 
     return ret;
 }
+
+#endif
