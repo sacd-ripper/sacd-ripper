@@ -35,7 +35,7 @@ char *substr(const char *pstr, int start, int numchars)
 {
     static char pnew[512];
     memset(pnew, 0, sizeof(pnew));
-    if (numchars < sizeof(pnew))
+    if (numchars < (int) sizeof(pnew))
     {
         char *wchar_type = (sizeof(wchar_t) == 2) ? "UCS-2-INTERNAL" : "UCS-4-INTERNAL";
         wchar_t *wc = (wchar_t *) charset_convert(pstr + start, numchars, "UTF-8", wchar_type);
