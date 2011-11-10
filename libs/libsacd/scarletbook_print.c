@@ -43,7 +43,7 @@ static const wchar_t *ucs(const char* str)
 #else
     char *wchar_type = "WCHAR_T";
 #endif
-    wchar_t *wc = (wchar_t *) charset_convert(str, strlen(str), "UTF-8", wchar_type);
+    wchar_t *wc = (wchar_t *) charset_convert((char *) str, strlen(str), "UTF-8", wchar_type);
     wcscpy(buf, wc);
     free(wc);
     return buf;
