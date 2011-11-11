@@ -71,6 +71,8 @@ buffer_pool_space_t *buffer_pool_get_space(buffer_pool_t *pool)
     space->use = new_lock(1);           /* initially one user */
 #ifdef _WIN32
     space->buf = _aligned_malloc(pool->size, 64);
+#elif __APPLE__
+    posix_memalign(space->buf, 64, pool->size);
 #else
     space->buf = memalign(64, pool->size);
 #endif
