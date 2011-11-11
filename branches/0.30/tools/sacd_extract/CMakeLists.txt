@@ -16,6 +16,9 @@ include_directories(${sacd_extract_SOURCE_DIR})
 if (MSVC)
     include_directories("./win32")
 endif (MSVC)
+if (APPLE)
+    include_directories("./osx")
+endif (APPLE)
 include_directories("../../libs/libcommon")
 include_directories("../../libs/libdstdec")
 include_directories("../../libs/libid3")
@@ -24,7 +27,7 @@ include_directories("../../libs/libsacd")
 # Extra flags for GCC
 if (CMAKE_COMPILER_IS_GNUCC)
   add_definitions(
-      -pipe -Werror
+      -pipe
       -Wall -Wextra -Wcast-align -Wpointer-arith
       -Wno-unused-parameter -msse2)
 endif (CMAKE_COMPILER_IS_GNUCC)
@@ -45,6 +48,8 @@ if (MSVC)
     link_directories("../../libs/libiconv/lib/")
 elseif(WIN32)
   set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIRARIES} -lpthread -lws2_32 -liconv")
+elseif(APPLE)
+  set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIRARIES} -lpthread -liconv")
 else()
   set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIRARIES} -lpthread")
 endif()
