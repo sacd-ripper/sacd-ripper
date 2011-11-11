@@ -19,12 +19,11 @@
  *
  */
 
-#include "config.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
 #include <string.h>
+#include <malloc.h>
 
 #include <charset.h>
 
@@ -66,6 +65,15 @@ scarletbook_handle_t *scarletbook_open(sacd_reader_t *sacd, int title)
 
     sb = (scarletbook_handle_t *) calloc(sizeof(scarletbook_handle_t), 1);
     if (!sb)
+        return NULL;
+
+#ifdef __lv2ppu__
+    sb->frame.data = (uint8_t *) memalign(128, MAX_DST_SIZE);
+#else
+    sb->frame.data = (uint8_t *) malloc(MAX_DST_SIZE);
+#endif
+
+    if (!sb->frame.data)
         return NULL;
 
     sb->sacd      = sacd;
@@ -196,6 +204,9 @@ void scarletbook_close(scarletbook_handle_t *handle)
 
     if (handle->master_data)
         free((void *) handle->master_data);
+
+    if (handle->frame.data)
+        free((void *) handle->frame.data);
 
     memset(handle, 0, sizeof(scarletbook_handle_t));
 
@@ -535,3 +546,125 @@ static int scarletbook_read_area_toc(scarletbook_handle_t *handle, int area_idx)
     return 1;
 }
 
+void scarletbook_frame_init(scarletbook_handle_t *handle)
+{
+    handle->packet_info_idx = 0;
+    handle->frame.size = 0;
+    handle->frame.started = 0;
+    memset(&handle->audio_sector, 0, sizeof(audio_sector_t));
+}
+
+static inline int get_channel_count(audio_frame_info_t *frame_info)
+{
+    if (frame_info->channel_bit_2 == 1 && frame_info->channel_bit_3 == 0)
+    {
+        return 6;
+    }
+    else if (frame_info->channel_bit_2 == 0 && frame_info->channel_bit_3 == 1)
+    {
+        return 5;
+    }
+    else
+    {
+        return 2;
+    }
+}
+
+void scarletbook_process_frames(scarletbook_handle_t *handle, uint8_t *read_buffer, int blocks_read, int last_block, frame_read_callback_t frame_read_callback, void *userdata)
+{
+    int i, frame_info_counter;
+
+    while(blocks_read--)
+    {
+        uint8_t *read_buffer_ptr = read_buffer;
+
+        if (handle->packet_info_idx == handle->audio_sector.header.packet_info_count) 
+        {
+            handle->packet_info_idx = 0;
+
+            memcpy(&handle->audio_sector.header, read_buffer_ptr, AUDIO_SECTOR_HEADER_SIZE);
+            read_buffer_ptr += AUDIO_SECTOR_HEADER_SIZE;
+#if defined(__BIG_ENDIAN__)
+            memcpy(&handle->audio_sector.packet, read_buffer_ptr, AUDIO_PACKET_INFO_SIZE * handle->audio_sector.header.packet_info_count);
+            read_buffer_ptr += AUDIO_PACKET_INFO_SIZE * handle->audio_sector.header.packet_info_count;
+#else
+            // Little Endian systems cannot properly deal with audio_packet_info_t
+            {
+                for (i = 0; i < handle->audio_sector.header.packet_info_count; i++)
+                {
+                    handle->audio_sector.packet[i].frame_start = (read_buffer_ptr[0] >> 7) & 1;
+                    handle->audio_sector.packet[i].data_type = (read_buffer_ptr[0] >> 3) & 7;
+                    handle->audio_sector.packet[i].packet_length = (read_buffer_ptr[0] & 7) << 8 | read_buffer_ptr[1];
+                    read_buffer_ptr += AUDIO_PACKET_INFO_SIZE;
+                }
+            }
+#endif
+            if (handle->audio_sector.header.dst_encoded)
+            {
+                memcpy(&handle->audio_sector.frame, read_buffer_ptr, AUDIO_FRAME_INFO_SIZE * handle->audio_sector.header.frame_info_count);
+                read_buffer_ptr += AUDIO_FRAME_INFO_SIZE * handle->audio_sector.header.frame_info_count;
+            }
+            else
+            {
+                for (i = 0; i < handle->audio_sector.header.frame_info_count; i++)
+                {
+                    memcpy(&handle->audio_sector.frame[i], read_buffer_ptr, AUDIO_FRAME_INFO_SIZE - 1);
+                    read_buffer_ptr += AUDIO_FRAME_INFO_SIZE - 1;
+                }
+            }
+        }
+
+        frame_info_counter = 0;
+        while (handle->packet_info_idx < handle->audio_sector.header.packet_info_count) 
+        {
+            audio_packet_info_t* packet = &handle->audio_sector.packet[handle->packet_info_idx];
+            switch (packet->data_type) 
+            {
+            case DATA_TYPE_AUDIO:
+                if (packet->frame_start)
+                {
+                    if (handle->frame.started) 
+                    {
+                        handle->frame.started = 0;
+                        frame_read_callback(handle, handle->frame.data, handle->frame.size, userdata);
+                    }
+                    handle->frame.size = 0;
+                    handle->frame.dst_encoded = handle->audio_sector.header.dst_encoded;
+                    handle->frame.sector_count = handle->audio_sector.frame[frame_info_counter].sector_count;
+                    handle->frame.channel_count = get_channel_count(&handle->audio_sector.frame[frame_info_counter]);
+                    handle->frame.started = 1;
+
+                    // advance frame_info_counter
+                    frame_info_counter++;
+                }
+                if (handle->frame.started)
+                {
+                    memcpy(handle->frame.data + handle->frame.size, read_buffer_ptr, packet->packet_length);
+                    handle->frame.size += packet->packet_length;
+                    if (handle->frame.dst_encoded)
+                    {
+                        handle->frame.sector_count--;
+                    }
+                }
+                break;
+            case DATA_TYPE_SUPPLEMENTARY:
+            case DATA_TYPE_PADDING:
+                break;
+            default:
+                break;
+            }
+            // advance the source pointer
+            read_buffer_ptr += packet->packet_length;
+
+            handle->packet_info_idx++;
+        }
+        read_buffer += SACD_LSN_SIZE;
+    }
+
+    if (last_block && handle->frame.started && handle->frame.sector_count == 0) 
+    {
+        handle->frame.started = 0;
+        frame_read_callback(handle, handle->frame.data, handle->frame.size, userdata);
+    }
+
+}

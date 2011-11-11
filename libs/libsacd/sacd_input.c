@@ -19,12 +19,11 @@
  *
  */
 
-#include "config.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <string.h>
 #include <sys/stat.h>
 
 #if defined(__lv2ppu__)
@@ -41,9 +40,23 @@
 
 #include <utils.h>
 #include <logging.h>
+#include <socket.h>
+#include <pb.h>
+#include <pb_encode.h>
+#include <pb_decode.h>
 
 #include "scarletbook.h"
 #include "sacd_input.h"
+#include "sacd_pb_stream.h"
+#include "sacd_ripper.pb.h"
+
+sacd_input_t (*sacd_input_open)         (const char *);
+int          (*sacd_input_close)        (sacd_input_t);
+ssize_t      (*sacd_input_read)         (sacd_input_t, int, int, void *);
+char *       (*sacd_input_error)        (sacd_input_t);
+int          (*sacd_input_authenticate) (sacd_input_t);
+int          (*sacd_input_decrypt)      (sacd_input_t, uint8_t *, int);
+uint32_t     (*sacd_input_total_sectors)(sacd_input_t);
 
 struct sacd_input_s
 {
@@ -53,7 +66,7 @@ struct sacd_input_s
 #endif
 };
 
-int sacd_input_authenticate(sacd_input_t dev)
+static int sacd_dev_input_authenticate(sacd_input_t dev)
 {
 #if defined(__lv2ppu__)
     int ret = create_sac_accessor();
@@ -80,7 +93,7 @@ int sacd_input_authenticate(sacd_input_t dev)
     return 0;
 }
 
-int sacd_input_decrypt(sacd_input_t dev, uint8_t *buffer, int blocks)
+static int sacd_dev_input_decrypt(sacd_input_t dev, uint8_t *buffer, int blocks)
 {
 #if defined(__lv2ppu__)
     int ret, block_number = 0;
@@ -119,7 +132,7 @@ int sacd_input_decrypt(sacd_input_t dev, uint8_t *buffer, int blocks)
 /**
  * initialize and open a SACD device or file.
  */
-sacd_input_t sacd_input_open(const char *target)
+static sacd_input_t sacd_dev_input_open(const char *target)
 {
     sacd_input_t dev;
 
@@ -174,8 +187,10 @@ sacd_input_t sacd_input_open(const char *target)
         }
 
     }
-#else
+#elif defined _WIN32
     dev->fd = open(target, O_RDONLY | O_BINARY);
+#else
+    dev->fd = open(target, O_RDONLY);
 #endif
     if (dev->fd < 0)
     {
@@ -194,7 +209,7 @@ error:
 /**
  * return the last error message
  */
-char *sacd_input_error(sacd_input_t dev)
+static char *sacd_dev_input_error(sacd_input_t dev)
 {
     /* use strerror(errno)? */
     return (char *) "unknown error";
@@ -203,7 +218,7 @@ char *sacd_input_error(sacd_input_t dev)
 /**
  * read data from the device.
  */
-ssize_t sacd_input_read(sacd_input_t dev, int pos, int blocks, void *buffer)
+static ssize_t sacd_dev_input_read(sacd_input_t dev, int pos, int blocks, void *buffer)
 {
 #if defined(__lv2ppu__)
     int      ret;
@@ -257,7 +272,7 @@ ssize_t sacd_input_read(sacd_input_t dev, int pos, int blocks, void *buffer)
 /**
  * close the SACD device and clean up.
  */
-int sacd_input_close(sacd_input_t dev)
+static int sacd_dev_input_close(sacd_input_t dev)
 {
     int ret;
 
@@ -284,7 +299,7 @@ int sacd_input_close(sacd_input_t dev)
     return ret;
 }
 
-uint32_t sacd_input_total_sectors(sacd_input_t dev)
+static uint32_t sacd_dev_input_total_sectors(sacd_input_t dev)
 {
     if (!dev)
         return 0;
@@ -301,3 +316,244 @@ uint32_t sacd_input_total_sectors(sacd_input_t dev)
     }
 #endif
 }
+
+/**
+ * initialize and open a SACD device or file.
+ */
+static sacd_input_t sacd_net_input_open(const char *target)
+{
+    ServerRequest request;
+    ServerResponse response;
+    sacd_input_t dev;
+    const char *err;
+    t_timeout tm;
+    pb_istream_t input;
+    pb_ostream_t output;
+    uint8_t zero = 0;
+
+    /* Allocate the library structure */
+    dev = (sacd_input_t) calloc(sizeof(*dev), 1);
+    if (dev == NULL)
+    {
+        fprintf(stderr, "libsacdread: Could not allocate memory.\n");
+        return NULL;
+    }
+
+    socket_open();
+
+    socket_create(&dev->fd, AF_INET, SOCK_STREAM, 0);
+    socket_setblocking(&dev->fd);
+
+    timeout_markstart(&tm); 
+    err = inet_tryconnect(&dev->fd, substr(target, 0, strchr(target, ':') - target), atoi(strchr(target, ':') + 1), &tm);
+    if (err)
+    {
+        goto error;
+    }
+    socket_setblocking(&dev->fd);
+
+    input = pb_istream_from_socket(&dev->fd);
+    output = pb_ostream_from_socket(&dev->fd);
+
+    request.type = ServerRequest_Type_DISC_OPEN;
+
+    if (!pb_encode(&output, ServerRequest_fields, &request))
+    {
+        goto error;
+    }
+
+    /* We signal the end of request with a 0 tag. */
+    pb_write(&output, &zero, 1);
+
+    if (!pb_decode(&input, ServerResponse_fields, &response))
+    {
+        goto error;
+    }
+
+    if (response.result != 0 || response.type != ServerResponse_Type_DISC_OPENED)
+    {
+        goto error;
+    }
+
+    return dev;
+
+error:
+
+    sacd_input_close(dev);
+    free(dev);
+
+    return 0;
+}
+
+/**
+ * close the SACD device and clean up.
+ */
+static int sacd_net_input_close(sacd_input_t dev)
+{
+    if (!dev)
+    {
+        return 0;
+    }
+    else
+    {
+        ServerRequest request;
+        ServerResponse response;
+        pb_istream_t input = pb_istream_from_socket(&dev->fd);
+        pb_ostream_t output = pb_ostream_from_socket(&dev->fd);
+        uint8_t zero = 0;
+
+        request.type = ServerRequest_Type_DISC_CLOSE;
+        if (!pb_encode(&output, ServerRequest_fields, &request))
+        {
+            goto error;
+        }
+
+        pb_write(&output, &zero, 1);
+
+        if (!pb_decode(&input, ServerResponse_fields, &response))
+        {
+            goto error;
+        }
+
+        if (response.result == 0 || response.type != ServerResponse_Type_DISC_CLOSED)
+        {
+            goto error;
+        }
+    }
+
+error:
+
+    socket_destroy(&dev->fd);
+    socket_close();
+    free(dev);
+
+    return 0;
+}
+
+static uint32_t sacd_net_input_total_sectors(sacd_input_t dev)
+{
+    if (!dev)
+    {
+        return 0;
+    }
+    else
+    {
+        ServerRequest request;
+        ServerResponse response;
+        pb_istream_t input = pb_istream_from_socket(&dev->fd);
+        pb_ostream_t output = pb_ostream_from_socket(&dev->fd);
+        uint8_t zero = 0;
+
+        request.type = ServerRequest_Type_DISC_SIZE;
+
+        if (!pb_encode(&output, ServerRequest_fields, &request))
+        {
+            return 0;
+        }
+
+        /* We signal the end of request with a 0 tag. */
+        pb_write(&output, &zero, 1);
+
+        if (!pb_decode(&input, ServerResponse_fields, &response))
+        {
+            return 0;
+        }
+
+        if (response.type != ServerResponse_Type_DISC_SIZE)
+        {
+            return 0;
+        }
+
+        return (uint32_t) response.result;
+    }
+}
+
+static ssize_t sacd_net_input_read(sacd_input_t dev, int pos, int blocks, void *buffer)
+{
+    if (!dev)
+    {
+        return 0;
+    }
+    else
+    {
+        ServerRequest request;
+        ServerResponse response;
+        pb_istream_t input = pb_istream_from_socket(&dev->fd);
+        pb_ostream_t output = pb_ostream_from_socket(&dev->fd);
+        uint8_t zero = 0;
+
+        request.type = ServerRequest_Type_DISC_READ;
+        request.sector_offset = pos;
+        request.sector_count = blocks;
+
+        if (!pb_encode(&output, ServerRequest_fields, &request))
+        {
+            return 0;
+        }
+
+        /* We signal the end of request with a 0 tag. */
+        pb_write(&output, &zero, 1);
+
+        response.data.bytes = buffer;
+        if (!pb_decode(&input, ServerResponse_fields, &response))
+        {
+            return 0;
+        }
+
+        if (response.type != ServerResponse_Type_DISC_READ)
+        {
+            return 0;
+        }
+
+        if (response.has_data)
+        {
+            return response.result;
+        }
+    }
+
+    return 0;
+}
+
+/**
+ * Setup read functions with either network or file access
+ */
+int sacd_input_setup(const char* path)
+{
+    int net_conn = 0;
+    {
+        // TODO: replace this F*(&^*($#^(&*#^$GLY hack to detect IP
+        int i = 0;
+        const char *c = path;
+        while ((c = strchr(c + 1, '.')))
+        {
+            if (++i == 3 && strchr(c + 1, ':'))
+            {
+                net_conn = 1;
+                break;
+            }
+        }
+    }
+
+    if (net_conn)
+    {
+        sacd_input_open = sacd_net_input_open;
+        sacd_input_close = sacd_net_input_close;
+        sacd_input_read = sacd_net_input_read;
+        sacd_input_error = sacd_dev_input_error;
+        sacd_input_authenticate  = sacd_dev_input_authenticate;
+        sacd_input_decrypt = sacd_dev_input_decrypt;
+        sacd_input_total_sectors = sacd_net_input_total_sectors;
+
+        return 1;
+    } 
+
+    sacd_input_open = sacd_dev_input_open;
+    sacd_input_close = sacd_dev_input_close;
+    sacd_input_read = sacd_dev_input_read;
+    sacd_input_error = sacd_dev_input_error;
+    sacd_input_authenticate  = sacd_dev_input_authenticate;
+    sacd_input_decrypt = sacd_dev_input_decrypt;
+    sacd_input_total_sectors = sacd_dev_input_total_sectors;
+
+    return 0;
+} 

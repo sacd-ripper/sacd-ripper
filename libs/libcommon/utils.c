@@ -35,10 +35,14 @@ char *substr(const char *pstr, int start, int numchars)
 {
     static char pnew[512];
     memset(pnew, 0, sizeof(pnew));
-    if (numchars < sizeof(pnew))
+    if (numchars < (int) sizeof(pnew))
     {
+#ifdef _WIN32
         char *wchar_type = (sizeof(wchar_t) == 2) ? "UCS-2-INTERNAL" : "UCS-4-INTERNAL";
-        wchar_t *wc = (wchar_t *) charset_convert(pstr + start, numchars, "UTF-8", wchar_type);
+#else
+        char *wchar_type = "WCHAR_T";
+#endif
+        wchar_t *wc = (wchar_t *) charset_convert((char *) pstr + start, numchars, "UTF-8", wchar_type);
         char *c = charset_convert((char *) wc, wcslen(wc) * sizeof(wchar_t), wchar_type, "UTF-8");
         strcpy(pnew, c);
         free(wc);
@@ -278,7 +282,7 @@ nil:
  * E.g.:
  *   print_hex_dump(LOG_NOTICE, "data: ", 16, 1, frame->data, frame->len, 0);
  */
-void print_hex_dump(int level, const char *prefix_str,
+void print_hex_dump(log_module_level_t level, const char *prefix_str,
                     int rowsize, int groupsize,
                     const void *buf, int len, int ascii)
 {
@@ -289,13 +293,14 @@ void print_hex_dump(int level, const char *prefix_str,
         if (rowsize != 16 && rowsize != 32)
                 rowsize = 16;
 
-        for (i = 0; i < len; i += rowsize) {
+        for (i = 0; i < len; i += rowsize)
+        {
                 linelen = min(remaining, rowsize);
                 remaining -= rowsize;
 
                 hex_dump_to_buffer(ptr + i, linelen, rowsize, groupsize,
                                    linebuf, sizeof(linebuf), ascii);
 
-                LOG(lm_main, level, ("%s%s\n", prefix_str, linebuf));
+		LOG(lm_main, level, ("%s%s\n", prefix_str, linebuf));
         }
 }

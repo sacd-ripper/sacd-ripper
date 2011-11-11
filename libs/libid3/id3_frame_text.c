@@ -61,7 +61,7 @@ char* id3_string_decode(uint8_t encoding, const char* text)
 		case ID3_ENCODING_ISO_8859_1:
 			return strdup(text);
 		case ID3_ENCODING_UTF8:
-			return charset_from_utf8(text);
+			return charset_from_utf8((char *) text);
 		case ID3_ENCODING_UTF16:
 			return convert_from_utf16((const uint8_t *) text);
 		case ID3_ENCODING_UTF16BE:

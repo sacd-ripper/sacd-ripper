@@ -63,7 +63,7 @@ static int dialog_action = 0;
 static int bd_contains_sacd_disc = -1;      // information about the current disc
 static int bd_disc_changed = -1;            // when a disc has changed this is set to zero
 static int loaded_modules = 0;
-static int output_format = 0;
+static int output_format = 6;               // default to ISO
 static int output_format_changed = 0;
 static int current_ripping_flags = 0;
 static char message_output[150];
@@ -613,6 +613,8 @@ int main(int argc, char *argv[])
 
     destroy_logging();
     unload_modules();
+
+    free(host_addr);
 
     return 0;
 }

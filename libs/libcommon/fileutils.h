@@ -20,12 +20,14 @@
  */
 
 #ifndef __FILEUTILS_H__
-#define __FILEUTILS_H__ 
+#define __FILEUTILS_H__
 
 #include <stdio.h>
 
 #ifdef _WIN32
 typedef int mode_t;
+#else
+#include <sys/stat.h>
 #endif
 
 // substitute various items into a formatted string (similar to printf)
@@ -58,6 +60,8 @@ int recursive_parent_mkdir(char* pathAndName, mode_t mode);
 void sanitize_filename(char *f);
 
 void sanitize_filepath(char *f);
+
+void get_unique_filename(char **file, const char *ext);
 
 void get_unique_dir(char *device, char **dir);
 

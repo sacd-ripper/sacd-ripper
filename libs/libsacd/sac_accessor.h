@@ -22,9 +22,7 @@
 #ifndef __SAC_ACCESSOR_H__
 #define __SAC_ACCESSOR_H__
 
-#ifndef __lv2ppu__
-#error you need the psl1ght/lv2 ppu compatible compiler!
-#endif
+#ifdef __lv2ppu__
 
 #include <ppu-types.h>
 #include <sys/spu.h>
@@ -113,6 +111,8 @@ extern int sac_exec_exit(void);
 
 #ifdef __cplusplus
 };
+#endif
+
 #endif
 
 #endif /* __SAC_ACCESSOR_H__ */

@@ -24,7 +24,6 @@
 
 #include <inttypes.h>
 #include <list.h>
-#include "config.h"
 
 #undef ATTRIBUTE_PACKED
 #undef PRAGMA_PACK_BEGIN
@@ -62,6 +61,7 @@
 #define MAX_AREA_TOC_SIZE_LSN          96
 #define MAX_LANGUAGE_COUNT             8
 #define MAX_CHANNEL_COUNT              6
+#define MAX_DST_SIZE                   (1024 * 64)
 #define SAMPLES_PER_FRAME              588
 #define FRAME_SIZE_64                 (SAMPLES_PER_FRAME * 64 / 8)
 #define SUPPORTED_VERSION_MAJOR        1
@@ -249,20 +249,20 @@ typedef struct
     char     id[8];                           // SACDText
     uint8_t  reserved[8];
     uint16_t album_title_position;
-    uint16_t album_title_phonetic_position;
     uint16_t album_artist_position;
-    uint16_t album_artist_phonetic_position;
     uint16_t album_publisher_position;
-    uint16_t album_publisher_phonetic_position;
     uint16_t album_copyright_position;
+    uint16_t album_title_phonetic_position;
+    uint16_t album_artist_phonetic_position;
+    uint16_t album_publisher_phonetic_position;
     uint16_t album_copyright_phonetic_position;
     uint16_t disc_title_position;
-    uint16_t disc_title_phonetic_position;
     uint16_t disc_artist_position;
-    uint16_t disc_artist_phonetic_position;
     uint16_t disc_publisher_position;
-    uint16_t disc_publisher_phonetic_position;
     uint16_t disc_copyright_position;
+    uint16_t disc_title_phonetic_position;
+    uint16_t disc_artist_phonetic_position;
+    uint16_t disc_publisher_phonetic_position;
     uint16_t disc_copyright_phonetic_position;
     uint8_t  data[2000];
 }
@@ -569,6 +569,19 @@ typedef struct
 }
 scarletbook_area_t;
 
+typedef struct scarletbook_audio_frame_t
+{
+    uint8_t            *data;
+    int                 size;
+    int                 started;
+
+    int                 sector_count;
+    int                 channel_count;
+
+    int                 dst_encoded;
+} 
+scarletbook_audio_frame_t;
+
 typedef struct
 {
     void                     * sacd;                                      // sacd_reader_t
@@ -582,6 +595,10 @@ typedef struct
     int                        mulch_area_idx;
     int                        area_count;
     scarletbook_area_t         area[2];
+
+    scarletbook_audio_frame_t  frame;
+    audio_sector_t             audio_sector;
+    int                        packet_info_idx;
 } 
 scarletbook_handle_t;
 

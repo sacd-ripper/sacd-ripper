@@ -47,7 +47,7 @@ OBJS		:= \
 			scarletbook.o \
 			dsdiff.o \
 			dsf.o \
-			dst_decoder.o \
+			dst_decoder_ps3.o \
             sacd_input.o \
             scarletbook_print.o \
             scarletbook_id3.o \
@@ -57,6 +57,8 @@ OBJS		:= \
             sac_accessor.o \
             ioctl.o \
             iso_writer.o \
+            sacd_ripper.pb.o \
+            sacd_pb_stream.o \
             sacd_reader.o 
 all: ppu
 

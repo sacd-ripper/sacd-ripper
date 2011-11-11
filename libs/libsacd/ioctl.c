@@ -19,9 +19,7 @@
  *
  */
 
-#ifndef __lv2ppu__
-#error you need the psl1ght/lv2 ppu compatible compiler!
-#endif
+#ifdef __lv2ppu__
 
 #include <sys/storage.h>
 #include "ioctl.h"
@@ -298,3 +296,5 @@ int ioctl_read_track(int fd, uint8_t *buffer, uint8_t track)
 
     return res;
 }
+
+#endif

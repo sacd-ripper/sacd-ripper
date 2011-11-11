@@ -38,6 +38,21 @@ extern "C" {
 scarletbook_handle_t *scarletbook_open(sacd_reader_t *, int);
 
 /**
+ * initialize scarletbook audio frames structs
+ */
+void scarletbook_frame_init(scarletbook_handle_t *handle);
+
+/**
+ * callback when a complete audio frame has been read
+ */
+typedef void (*frame_read_callback_t)(scarletbook_handle_t *handle, uint8_t* frame_data, size_t frame_size, void *userdata);
+
+/**
+ * processes scarletbook audio frames and does a callback in case it found a frame
+ */
+void scarletbook_process_frames(scarletbook_handle_t *, uint8_t *, int, int, frame_read_callback_t, void *);
+
+/**
  * scarletbook_close(ifofile);
  * Cleans up the scarletbook information. This will free all data allocated for the
  * substructures.

@@ -19,8 +19,6 @@
  *
  */
 
-#include "config.h"
-
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -62,6 +60,8 @@ static sacd_reader_t *sacd_open_image_file(const char *location)
 {
     sacd_reader_t *sacd;
     sacd_input_t  dev;
+
+    sacd_input_setup(location);
 
     dev = sacd_input_open(location);
     if (!dev)
@@ -312,7 +312,7 @@ sacd_reader_t *sacd_open(const char *ppath)
                             me->mnt_fsname,
                             me->mnt_dir);
                     auth_drive = sacd_open_image_file(me->mnt_fsname);
-                    dev_name   = _strdup(me->mnt_fsname);
+                    dev_name   = strdup(me->mnt_fsname);
                     break;
                 }
             }

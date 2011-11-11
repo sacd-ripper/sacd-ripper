@@ -460,5 +460,7 @@ int main(int argc, char *argv[])
     destroy_logging();
     unload_modules();
 
+    free(host_addr);
+
     return 0;
 }

@@ -133,6 +133,7 @@ int start_ripping_gui(int ripping_flags)
     char *albumdir, *musicfilename, *file_path = 0;
     sacd_reader_t   *sacd_reader;
     scarletbook_handle_t *handle;
+    scarletbook_output_t *output;
     msgType          dialog_type;
     int              area_idx, i, ret;
 
@@ -173,7 +174,7 @@ int start_ripping_gui(int ripping_flags)
 
             albumdir = get_album_dir(handle);
 
-            initialize_ripping();
+            output = scarletbook_output_create(handle, handle_status_update_track_callback, handle_status_update_progress_callback);
 
             if (ripping_flags & RIP_ISO)
             {
@@ -189,7 +190,7 @@ int start_ripping_gui(int ripping_flags)
                     {
                         sector_size = min(total_sectors, FAT32_SECTOR_LIMIT);
                         snprintf(musicfilename, 512, "%s.%03d", file_path, i);
-                        queue_raw_sectors_to_rip(handle, sector_offset, sector_size, musicfilename, "iso");
+                        scarletbook_output_enqueue_raw_sectors(output, sector_offset, sector_size, musicfilename, "iso");
                         sector_offset += sector_size;
                         total_sectors -= sector_size;
                     }
@@ -199,7 +200,7 @@ int start_ripping_gui(int ripping_flags)
                 else
                 {
                     file_path = make_filename(output_device, 0, albumdir, "iso");
-                    queue_raw_sectors_to_rip(handle, 0, total_sectors, file_path, "iso");
+                    scarletbook_output_enqueue_raw_sectors(output, 0, total_sectors, file_path, "iso");
                     free(file_path);
                 }
                 tmp_total_ripping_sectors = sacd_get_total_sectors(sacd_reader);
@@ -216,14 +217,16 @@ int start_ripping_gui(int ripping_flags)
                     if (ripping_flags & RIP_DSF)
                     {
                         file_path = make_filename(output_device, albumdir, musicfilename, "dsf");
-                        queue_track_to_rip(handle, area_idx, i, file_path, "dsf", 
-                            1 /* always decode to DSD */);
+                        scarletbook_output_enqueue_track(output, area_idx, i, file_path, "dsf", 
+                            1, /* always decode to DSD */
+                            0 /* gapless mode is turned off */);
                     }
                     else if (ripping_flags & RIP_DSDIFF)
                     {
                         file_path = make_filename(output_device, albumdir, musicfilename, "dff");
-                        queue_track_to_rip(handle, area_idx, i, file_path, "dsdiff", 
-                            ((ripping_flags & RIP_2CH_DST || ripping_flags & RIP_MCH_DST) ? 0 : 1));
+                        scarletbook_output_enqueue_track(output, area_idx, i, file_path, "dsdiff", 
+                            ((ripping_flags & RIP_2CH_DST || ripping_flags & RIP_MCH_DST) ? 0 : 1),
+                            0 /* gapless mode is turned off */);
                     }
 
                     tmp_total_ripping_sectors += handle->area[area_idx].area_tracklist_offset->track_length_lsn[i];
@@ -238,8 +241,7 @@ int start_ripping_gui(int ripping_flags)
                 free(file_path);
             }
 
-            init_stats(handle_status_update_track_callback, handle_status_update_progress_callback);
-            start_ripping(handle);
+            scarletbook_output_start(output);
 
             tb_freq = sysGetTimebaseFrequency();
             tb_start = __gettime(); 
@@ -261,7 +263,7 @@ int start_ripping_gui(int ripping_flags)
                 dialog_action = 0;
                 dialog_type   = MSG_DIALOG_MUTE_ON | MSG_DIALOG_DOUBLE_PROGRESSBAR;
                 msgDialogOpen2(dialog_type, message, dialog_handler, NULL, NULL);
-                while (!user_requested_exit() && dialog_action == 0 && is_ripping())
+                while (!user_requested_exit() && dialog_action == 0 && scarletbook_output_is_busy(output))
                 {
                     uint32_t tmp_stats_total_sectors_processed = sysAtomicRead(&stats_total_sectors_processed);
                     uint32_t tmp_stats_total_sectors = sysAtomicRead(&stats_total_sectors);
@@ -315,7 +317,7 @@ int start_ripping_gui(int ripping_flags)
             }
             free(albumdir);
 
-            stop_ripping(handle);
+            scarletbook_output_destroy(output);
         }
         scarletbook_close(handle);
     }

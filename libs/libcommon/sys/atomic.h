@@ -16,6 +16,8 @@
 #ifndef __SYS_ATOMIC_H__
 #define __SYS_ATOMIC_H__
 
+#ifdef __lv2ppu__
+
 #include <ppu-types.h>
 
 typedef struct { volatile u32 counter; } atomic_t; 
@@ -562,5 +564,57 @@ static inline u32 sysAtomic64AddUnless(atomic64_t *v, u64 a, u64 u)
 }
 
 #define sysAtomic64IncNotZero(v) sysAtomic64AddUnless((v), 1, 0)
+
+#elif defined __GNUC__
+
+typedef struct {
+    volatile int counter;
+} atomic_t;
+
+#define sysAtomicRead(v) ((v)->counter)
+
+#define sysAtomicSet(v,i) (((v)->counter) = (i))
+
+static inline void sysAtomicAddReturn( int i, atomic_t *v )
+{
+     (void)__sync_add_and_fetch(&v->counter, i);
+}
+
+static inline void sysAtomicSub( int i, atomic_t *v )
+{
+   (void)__sync_sub_and_fetch(&v->counter, i);
+}
+
+static inline int sysAtomicSubReturn( int i, atomic_t *v )
+{
+    return !(__sync_sub_and_fetch(&v->counter, i));
+}
+
+static inline void sysAtomicInc( atomic_t *v )
+{
+   (void)__sync_fetch_and_add(&v->counter, 1);
+}
+
+static inline void sysAtomicDec( atomic_t *v )
+{
+   (void)__sync_fetch_and_sub(&v->counter, 1);
+}
+
+static inline int sysAtomicIncAndTest( atomic_t *v )
+{
+    return !(__sync_add_and_fetch(&v->counter, 1));
+}
+
+static inline int sysAtomicAddNegative( int i, atomic_t *v )
+{
+    return (__sync_add_and_fetch(&v->counter, i) < 0);
+}
+
+static inline int sysAtomicCompareAndSwap( atomic_t *v, int oldval, int newval )
+{
+    return __sync_bool_compare_and_swap(&v->counter, oldval, newval);
+}
+
+#endif
 
 #endif /* __SYS_ATOMIC_H__ */

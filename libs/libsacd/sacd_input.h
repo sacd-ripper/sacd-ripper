@@ -48,12 +48,14 @@
 
 typedef struct sacd_input_s * sacd_input_t;
 
-extern sacd_input_t sacd_input_open(const char *);
-extern int     sacd_input_close(sacd_input_t);
-extern ssize_t sacd_input_read(sacd_input_t, int, int, void *);
-extern char    * sacd_input_error(sacd_input_t);
-extern int sacd_input_authenticate(sacd_input_t);
-extern int sacd_input_decrypt(sacd_input_t, uint8_t *, int);
-extern uint32_t sacd_input_total_sectors(sacd_input_t);
+extern sacd_input_t (*sacd_input_open)         (const char *);
+extern int          (*sacd_input_close)        (sacd_input_t);
+extern ssize_t      (*sacd_input_read)         (sacd_input_t, int, int, void *);
+extern char *       (*sacd_input_error)        (sacd_input_t);
+extern int          (*sacd_input_authenticate) (sacd_input_t);
+extern int          (*sacd_input_decrypt)      (sacd_input_t, uint8_t *, int);
+extern uint32_t     (*sacd_input_total_sectors)(sacd_input_t);
+
+int sacd_input_setup(const char *); 
 
 #endif /* SACD_INPUT_H_INCLUDED */
