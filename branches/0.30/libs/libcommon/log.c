@@ -323,7 +323,7 @@ void log_print(const char *fmt, ...)
     sysThreadGetId(&me);
     nb_tid += snprintf(line + nb_tid, sizeof(line) - nb_tid - 1, "%ld[%p]: ", me, (void *) me);
 #else
-    nb_tid += snprintf(line + nb_tid, sizeof(line) - nb_tid - 1, "%d[%p]: ", me, (void *) me);
+    nb_tid += snprintf(line + nb_tid, sizeof(line) - nb_tid - 1, "[%d]: ", me);
 #endif
 
     va_start(ap, fmt);

@@ -63,6 +63,10 @@
 #include "dst_fram.h"
 #include "dst_init.h"
 
+#ifdef __APPLE__
+#include <sys/sysctl.h>
+#endif
+
 /* -- parallel decoding -- */
 
 /* decode or write job (passed from decode list to write list) -- if seq is
