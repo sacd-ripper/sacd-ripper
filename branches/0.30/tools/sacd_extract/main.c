@@ -79,7 +79,7 @@ static int parse_options(int argc, char *argv[]) {
         "Usage: %s [options] [outfile]\n"
         "  -2, --2ch-tracks                : Export two channel tracks (default)\n"
         "  -m, --mch-tracks                : Export multi-channel tracks\n"
-        "  -p, --output-dsdiff             : output as Philips DSDIFF file (default)\n"
+        "  -p, --output-dsdiff             : output as Philips DSDIFF file\n"
         "  -s, --output-dsf                : output as Sony DSF file\n"
         "  -I, --output-iso                : output as RAW ISO\n"
         "  -c, --convert-dst               : convert DST to DSD\n"
@@ -208,7 +208,7 @@ static void init(void) {
     opts.multi_channel = 0;
     opts.output_dsf    = 0;
     opts.output_iso    = 0;
-    opts.output_dsdiff = 1;
+    opts.output_dsdiff = 0;
     opts.convert_dst   = 0;
     opts.gapless       = 0;
     opts.print         = 0;
@@ -264,82 +264,85 @@ int main(int argc, char* argv[])
                     scarletbook_print(handle);
                 }
 
-                output = scarletbook_output_create(handle, handle_status_update_track_callback, handle_status_update_progress_callback);
-
-                // select the channel area
-                area_idx = ((has_multi_channel(handle) && opts.multi_channel) || !has_two_channel(handle)) ? handle->mulch_area_idx : handle->twoch_area_idx;
-
-                albumdir = get_album_dir(handle);
-
-                if (opts.output_iso)
+                if (opts.output_dsf || opts.output_iso || opts.output_dsdiff)
                 {
-                    #define FAT32_SECTOR_LIMIT 2090000
-                    uint32_t total_sectors = sacd_get_total_sectors(sacd_reader);
+                    output = scarletbook_output_create(handle, handle_status_update_track_callback, handle_status_update_progress_callback);
+
+                    // select the channel area
+                    area_idx = ((has_multi_channel(handle) && opts.multi_channel) || !has_two_channel(handle)) ? handle->mulch_area_idx : handle->twoch_area_idx;
+
+                    albumdir = get_album_dir(handle);
+
+                    if (opts.output_iso)
+                    {
+                        #define FAT32_SECTOR_LIMIT 2090000
+                        uint32_t total_sectors = sacd_get_total_sectors(sacd_reader);
 #ifdef SECTOR_LIMIT
-                    uint32_t sector_size = FAT32_SECTOR_LIMIT;
-                    uint32_t sector_offset = 0;
-                    if (total_sectors > FAT32_SECTOR_LIMIT)
-                    {
-                        musicfilename = (char *) malloc(512);
-                        file_path = make_filename(0, 0, albumdir, "iso");
-                        for (i = 1; total_sectors != 0; i++)
+                        uint32_t sector_size = FAT32_SECTOR_LIMIT;
+                        uint32_t sector_offset = 0;
+                        if (total_sectors > FAT32_SECTOR_LIMIT)
                         {
-                            sector_size = min(total_sectors, FAT32_SECTOR_LIMIT);
-                            snprintf(musicfilename, 512, "%s.%03d", file_path, i);
-                            scarletbook_output_enqueue_raw_sectors(output, sector_offset, sector_size, musicfilename, "iso");
-                            sector_offset += sector_size;
-                            total_sectors -= sector_size;
+                            musicfilename = (char *) malloc(512);
+                            file_path = make_filename(0, 0, albumdir, "iso");
+                            for (i = 1; total_sectors != 0; i++)
+                            {
+                                sector_size = min(total_sectors, FAT32_SECTOR_LIMIT);
+                                snprintf(musicfilename, 512, "%s.%03d", file_path, i);
+                                scarletbook_output_enqueue_raw_sectors(output, sector_offset, sector_size, musicfilename, "iso");
+                                sector_offset += sector_size;
+                                total_sectors -= sector_size;
+                            }
+                            free(file_path);
+                            free(musicfilename);
                         }
-                        free(file_path);
-                        free(musicfilename);
-                    }
-                    else
+                        else
 #endif
-                    {
-                        get_unique_filename(&albumdir, "iso");
-                        file_path = make_filename(0, 0, albumdir, "iso");
-                        scarletbook_output_enqueue_raw_sectors(output, 0, total_sectors, file_path, "iso");
-                        free(file_path);
-                    }
-                }
-                else 
-                {
-                    // create the output folder
-                    get_unique_dir(0, &albumdir);
-                    recursive_mkdir(albumdir, 0666);
-
-                    // fill the queue with items to rip
-                    for (i = 0; i < handle->area[area_idx].area_toc->track_count; i++) 
-                    {
-                        musicfilename = get_music_filename(handle, area_idx, i);
-                        if (opts.output_dsf)
                         {
-                            file_path = make_filename(0, albumdir, musicfilename, "dsf");
-                            scarletbook_output_enqueue_track(output, area_idx, i, file_path, "dsf", 
-                                1, /* always decode to DSD */
-                                opts.gapless);
+                            get_unique_filename(&albumdir, "iso");
+                            file_path = make_filename(0, 0, albumdir, "iso");
+                            scarletbook_output_enqueue_raw_sectors(output, 0, total_sectors, file_path, "iso");
+                            free(file_path);
                         }
-                        else if (opts.output_dsdiff)
-                        {
-                            file_path = make_filename(0, albumdir, musicfilename, "dff");
-                            scarletbook_output_enqueue_track(output, area_idx, i, file_path, "dsdiff", 
-                                (opts.convert_dst ? 1 : handle->area[area_idx].area_toc->frame_format != FRAME_FORMAT_DST),
-                                opts.gapless);
-                        }
-
-                        free(musicfilename);
-                        free(file_path);
                     }
-                }
+                    else 
+                    {
+                        // create the output folder
+                        get_unique_dir(0, &albumdir);
+                        recursive_mkdir(albumdir, 0666);
 
-                started_processing = time(0);
-                scarletbook_output_start(output);
-                scarletbook_output_destroy(output);
+                        // fill the queue with items to rip
+                        for (i = 0; i < handle->area[area_idx].area_toc->track_count; i++) 
+                        {
+                            musicfilename = get_music_filename(handle, area_idx, i);
+                            if (opts.output_dsf)
+                            {
+                                file_path = make_filename(0, albumdir, musicfilename, "dsf");
+                                scarletbook_output_enqueue_track(output, area_idx, i, file_path, "dsf", 
+                                    1, /* always decode to DSD */
+                                    opts.gapless);
+                            }
+                            else if (opts.output_dsdiff)
+                            {
+                                file_path = make_filename(0, albumdir, musicfilename, "dff");
+                                scarletbook_output_enqueue_track(output, area_idx, i, file_path, "dsdiff", 
+                                    (opts.convert_dst ? 1 : handle->area[area_idx].area_toc->frame_format != FRAME_FORMAT_DST),
+                                    opts.gapless);
+                            }
+
+                            free(musicfilename);
+                            free(file_path);
+                        }
+                    }
+
+                    started_processing = time(0);
+                    scarletbook_output_start(output);
+                    scarletbook_output_destroy(output);
+
+                    fprintf(stdout, "\rWe are done..                                                          \n");
+                }
                 scarletbook_close(handle);
 
                 free(albumdir);
-
-                fprintf(stdout, "\rWe are done..                                                          \n");
             }
         }
 
