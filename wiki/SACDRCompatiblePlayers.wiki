@@ -86,6 +86,9 @@ Raw ISO images (SACD-R) that are burned to DVD-R can be played on several SACD p
   * Marantz SA-15S1
   * Marantz SA-7001
   * Marantz SA-7003
+  * McIntosh MCD301
+  * McIntosh MCD500
+  * McIntosh MVP881
   * NAD T535
   * Onkyo C-S5VL
   * Onkyo DV-506
