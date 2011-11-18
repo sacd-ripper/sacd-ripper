@@ -94,6 +94,7 @@ Raw ISO images (SACD-R) that are burned to DVD-R can be played on several SACD p
   * Onkyo DV-506
   * Onkyo DV-SP504
   * Onkyo DV-SP506
+  * Onkyo DV-SP1000
   * Oppo DV-983H
   * Parasound D3
   * Philips DVP-9000S
