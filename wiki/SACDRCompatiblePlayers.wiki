@@ -45,6 +45,7 @@ Raw ISO images (SACD-R) that are burned to DVD-R can be played on several SACD p
   * Cambridge Audio DVD89
   * Oppo DV-970HD
   * Oppo DV-980H
+  * Philips DVP-5500S 
   * Pioneer DV-575A 
   * Pioneer DV-578A 
   * Pioneer DV-585A 
