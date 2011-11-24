@@ -226,21 +226,6 @@ int dsdiff_create_header(scarletbook_output_format_t *ft)
         write_ptr += CEIL_ODD_NUMBER(COMPRESSION_TYPE_CHUNK_SIZE + compression_type_chunk->count);
     }
 
-    // The Absolute Start Time Chunk is optional but if used it may appear only once in the
-    // Property Chunk.
-    if (!handle->edit_master)
-    {
-        absolute_start_time_chunk_t *absolute_start_time_chunk = (absolute_start_time_chunk_t *) write_ptr;
-        area_tracklist_time_t *area_tracklist_time_start = &sb_handle->area[ft->area].area_tracklist_time->start[0];
-        absolute_start_time_chunk->chunk_id = ABSS_MARKER;
-        absolute_start_time_chunk->chunk_data_size = CALC_CHUNK_SIZE(ABSOLUTE_START_TIME_CHUNK_SIZE - CHUNK_HEADER_SIZE);
-        absolute_start_time_chunk->hours = hton16(area_tracklist_time_start->minutes / 60);
-        absolute_start_time_chunk->minutes = area_tracklist_time_start->minutes % 60;
-        absolute_start_time_chunk->seconds = area_tracklist_time_start->seconds;
-        absolute_start_time_chunk->samples = hton32(area_tracklist_time_start->frames * SAMPLES_PER_FRAME * 64);
-        write_ptr += ABSOLUTE_START_TIME_CHUNK_SIZE;
-    }
-
     // The Loudspeaker Configuration Chunk is optional but if used it may appear only once in
     // the Property Chunk.
     {
@@ -378,7 +363,7 @@ int dsdiff_create_header(scarletbook_output_format_t *ft)
         else
         {
             marker_chunk_t *marker_chunk = (marker_chunk_t *) em_ptr;
-            area_tracklist_time_t *area_tracklist_time_duration = &sb_handle->area[ft->area].area_tracklist_time->duration[0];
+            area_tracklist_time_t *area_tracklist_time_duration = &sb_handle->area[ft->area].area_tracklist_time->duration[ft->track];
             marker_chunk->chunk_id = MARK_MARKER;
             marker_chunk->chunk_data_size = CALC_CHUNK_SIZE(EDITED_MASTER_MARKER_CHUNK_SIZE - CHUNK_HEADER_SIZE);
             marker_chunk->hours = hton16(area_tracklist_time_duration->minutes / 60);
