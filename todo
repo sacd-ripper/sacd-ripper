@@ -2,6 +2,7 @@ TODO
 
 version 0.3.x
 
+    - add CUE Sheet support
     - logging
         - cleanup logging, split lm_main into multiple destinations
         - write log along each consecutive rip
