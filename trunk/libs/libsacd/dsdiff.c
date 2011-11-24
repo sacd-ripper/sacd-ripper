@@ -54,6 +54,8 @@ typedef struct
 
     size_t              frame_count;
     uint64_t            audio_data_size;
+
+    int                 edit_master;
 } 
 dsdiff_handle_t;
 
@@ -67,6 +69,48 @@ static char *get_mtoc_title_text(scarletbook_handle_t *handle)
         return master_text->disc_title;
 
     return "Unknown";
+}
+
+static uint8_t *add_marker_chunk(uint8_t *em_ptr, scarletbook_output_format_t *ft, uint64_t frame_count, uint16_t mark_type, uint16_t track_flags)
+{
+    marker_chunk_t *marker_chunk = (marker_chunk_t *) em_ptr;
+    marker_chunk->chunk_id = MARK_MARKER;
+    marker_chunk->chunk_data_size = CALC_CHUNK_SIZE(EDITED_MASTER_MARKER_CHUNK_SIZE - CHUNK_HEADER_SIZE);
+
+#if 0    
+    // TODO
+
+    /*
+        It is recommended that editing systems have a default marker offset position of -150528
+        samples (corresponding to the number of samples in 4 frames) for TrackStart and Index
+        markers.
+    */
+    if (mark_type == MARK_MARKER_TYPE_TRACKSTART)
+    {
+        frame_count -= 4;
+        marker_chunk->offset = hton32(-150528);
+    }
+#else
+    marker_chunk->offset = 0;
+#endif
+
+    {
+        int seconds = (int) (frame_count / SACD_FRAME_RATE);
+        int remainder = seconds % 3600;
+
+        marker_chunk->hours = hton16(seconds / 3600);
+        marker_chunk->minutes = remainder / 60;
+        marker_chunk->seconds = remainder % 60;
+        marker_chunk->samples = hton32((frame_count % SACD_FRAME_RATE) * SAMPLES_PER_FRAME * 64);
+    }
+    marker_chunk->mark_type = hton16(mark_type);
+    marker_chunk->mark_channel = hton16(COMT_TYPE_CHANNEL_ALL);
+    marker_chunk->track_flags = hton16(track_flags);
+    marker_chunk->count = 0;
+
+    em_ptr += EDITED_MASTER_MARKER_CHUNK_SIZE;
+
+    return em_ptr;
 }
 
 int dsdiff_create_header(scarletbook_output_format_t *ft)
@@ -184,15 +228,16 @@ int dsdiff_create_header(scarletbook_output_format_t *ft)
 
     // The Absolute Start Time Chunk is optional but if used it may appear only once in the
     // Property Chunk.
+    if (!handle->edit_master)
     {
         absolute_start_time_chunk_t *absolute_start_time_chunk = (absolute_start_time_chunk_t *) write_ptr;
-        area_tracklist_time_start_t *area_tracklist_time_start = sb_handle->area[ft->area].area_tracklist_time->start;
+        area_tracklist_time_t *area_tracklist_time_start = &sb_handle->area[ft->area].area_tracklist_time->start[0];
         absolute_start_time_chunk->chunk_id = ABSS_MARKER;
         absolute_start_time_chunk->chunk_data_size = CALC_CHUNK_SIZE(ABSOLUTE_START_TIME_CHUNK_SIZE - CHUNK_HEADER_SIZE);
         absolute_start_time_chunk->hours = hton16(area_tracklist_time_start->minutes / 60);
         absolute_start_time_chunk->minutes = area_tracklist_time_start->minutes % 60;
         absolute_start_time_chunk->seconds = area_tracklist_time_start->seconds;
-        absolute_start_time_chunk->samples = hton32(area_tracklist_time_start->frames);
+        absolute_start_time_chunk->samples = hton32(area_tracklist_time_start->frames * SAMPLES_PER_FRAME * 64);
         write_ptr += ABSOLUTE_START_TIME_CHUNK_SIZE;
     }
 
@@ -225,6 +270,7 @@ int dsdiff_create_header(scarletbook_output_format_t *ft)
 
     // we add a custom (unsupported) ID3 chunk to the PROP chunk to maintain all track information
     // within one file
+    if (!handle->edit_master)
     {
         chunk_header_t *id3_chunk;
         int            id3_chunk_size;
@@ -264,7 +310,7 @@ int dsdiff_create_header(scarletbook_output_format_t *ft)
         dst_frame_information_chunk           = (dst_frame_information_chunk_t *) write_ptr;
         dst_frame_information_chunk->chunk_id = FRTE_MARKER;
         dst_frame_information_chunk->chunk_data_size = CALC_CHUNK_SIZE(DST_FRAME_INFORMATION_CHUNK_SIZE - CHUNK_HEADER_SIZE);
-        dst_frame_information_chunk->frame_rate = hton16(75);
+        dst_frame_information_chunk->frame_rate = hton16(SACD_FRAME_RATE);
         dst_frame_information_chunk->num_frames = hton32(handle->frame_count);
 
         write_ptr += DST_FRAME_INFORMATION_CHUNK_SIZE;
@@ -273,32 +319,82 @@ int dsdiff_create_header(scarletbook_output_format_t *ft)
     // start with a new footer
     handle->footer_size = 0;
 
-    // Audiogate supports, Title and Artist information through an EM Chunk
     {
         uint8_t * em_ptr  = handle->footer + handle->footer_size;
         edited_master_information_chunk_t *edited_master_information_chunk = (edited_master_information_chunk_t *) em_ptr;
         edited_master_information_chunk->chunk_id = DIIN_MARKER;
         em_ptr += EDITED_MASTER_INFORMATION_CHUNK_SIZE;
 
+        if (handle->edit_master)
+        {
+            int track;
+            uint64_t abs_frames_start = 0, abs_frames_stop = 0;
+            marker_chunk_t *marker_chunk = (marker_chunk_t *) em_ptr;
+
+            {
+                // id is optional, but SADiE seems to require it
+                edited_master_id_chunk_t *emid_chunk = (edited_master_id_chunk_t *) em_ptr;
+                emid_chunk->chunk_id = EMID_MARKER;
+                emid_chunk->chunk_data_size = CALC_CHUNK_SIZE(EDITED_MASTER_ID_CHUNK_SIZE - CHUNK_HEADER_SIZE);
+                //strcpy(emid_chunk->emid, guid()); // TODO?, add guid functionality
+                em_ptr += EDITED_MASTER_ID_CHUNK_SIZE;
+            }
+
+            for (track = 0; track < sb_handle->area[ft->area].area_toc->track_count; track++)
+            {
+                area_tracklist_time_t *time;
+                uint16_t track_flags_stop, track_flags_start;
+
+                time = &sb_handle->area[ft->area].area_tracklist_time->start[track];
+                abs_frames_start = TIME_FRAMECOUNT(time);
+                track_flags_start = time->track_flags_tmf4 << 0 
+                    | time->track_flags_tmf1 << 1
+                    | time->track_flags_tmf2 << 2
+                    | time->track_flags_tmf3 << 3;
+
+                time = &sb_handle->area[ft->area].area_tracklist_time->duration[track];
+                abs_frames_stop = abs_frames_start + TIME_FRAMECOUNT(time);
+                track_flags_stop = time->track_flags_tmf4 << 0 
+                    | time->track_flags_tmf1 << 1
+                    | time->track_flags_tmf2 << 2
+                    | time->track_flags_tmf3 << 3;
+
+                if (track == 0)
+                {
+                    // setting the programstart to 0 always seems incorrect, but produces correct results for SADiE
+                    em_ptr = add_marker_chunk(em_ptr, ft, 0, MARK_MARKER_TYPE_PROGRAMSTART, track_flags_start);
+                }
+
+                em_ptr = add_marker_chunk(em_ptr, ft, abs_frames_start, MARK_MARKER_TYPE_TRACKSTART, track_flags_start);
+
+                if (track == sb_handle->area[ft->area].area_toc->track_count - 1 
+                 || TIME_FRAMECOUNT(&sb_handle->area[ft->area].area_tracklist_time->start[track + 1]) > abs_frames_stop)
+                {
+                    em_ptr = add_marker_chunk(em_ptr, ft, abs_frames_stop, MARK_MARKER_TYPE_TRACKSTOP, track_flags_stop);
+                }
+            }
+        }
+        // Audiogate supports, Title and Artist information through an EM Chunk
+        else
         {
             marker_chunk_t *marker_chunk = (marker_chunk_t *) em_ptr;
-            area_tracklist_time_duration_t *area_tracklist_time_duration = sb_handle->area[ft->area].area_tracklist_time->duration;
+            area_tracklist_time_t *area_tracklist_time_duration = &sb_handle->area[ft->area].area_tracklist_time->duration[0];
             marker_chunk->chunk_id = MARK_MARKER;
             marker_chunk->chunk_data_size = CALC_CHUNK_SIZE(EDITED_MASTER_MARKER_CHUNK_SIZE - CHUNK_HEADER_SIZE);
             marker_chunk->hours = hton16(area_tracklist_time_duration->minutes / 60);
             marker_chunk->minutes = area_tracklist_time_duration->minutes % 60;
             marker_chunk->seconds = area_tracklist_time_duration->seconds;
-            marker_chunk->samples = hton32(area_tracklist_time_duration->frames);
+            marker_chunk->samples = hton32(area_tracklist_time_duration->frames * SAMPLES_PER_FRAME * 64);
             marker_chunk->offset = 0;
             marker_chunk->mark_type = hton16(MARK_MARKER_TYPE_INDEX_ENTRY);
-            marker_chunk->mark_channel = 0;
+            marker_chunk->mark_channel = hton16(COMT_TYPE_CHANNEL_ALL);
             marker_chunk->track_flags = 0;
             marker_chunk->count = 0;
             em_ptr += EDITED_MASTER_MARKER_CHUNK_SIZE;
         }
 
         {
-            artist_chunk_t   *artist_chunk = (artist_chunk_t *) em_ptr;
+            artist_chunk_t *artist_chunk = (artist_chunk_t *) em_ptr;
             char *c;
 
             c = sb_handle->area[ft->area].area_track_text[ft->track].track_type_performer;
@@ -445,6 +541,13 @@ int dsdiff_create_header(scarletbook_output_format_t *ft)
     return 0;
 }
 
+int dsdiff_create_edit_master(scarletbook_output_format_t *ft)
+{
+    int ret = dsdiff_create_header(ft);
+    dsdiff_handle_t *handle = (dsdiff_handle_t *) ft->priv;
+    handle->edit_master = 1;
+    return ret;
+}
 
 int dsdiff_create(scarletbook_output_format_t *ft)
 {
@@ -519,6 +622,21 @@ scarletbook_format_handler_t const * dsdiff_format_fn(void)
         dsdiff_write_frame,
         dsdiff_close, 
         OUTPUT_FLAG_DSD | OUTPUT_FLAG_DST,
+        sizeof(dsdiff_handle_t)
+    };
+    return &handler;
+}
+
+scarletbook_format_handler_t const * dsdiff_edit_master_format_fn(void) 
+{
+    static scarletbook_format_handler_t handler = 
+    {
+        "Direct Stream Digital Interchange (Edit Master) File Format", 
+        "dsdiff_edit_master", 
+        dsdiff_create_edit_master, 
+        dsdiff_write_frame,
+        dsdiff_close, 
+        OUTPUT_FLAG_DSD | OUTPUT_FLAG_DST | OUTPUT_FLAG_EDIT_MASTER,
         sizeof(dsdiff_handle_t)
     };
     return &handler;

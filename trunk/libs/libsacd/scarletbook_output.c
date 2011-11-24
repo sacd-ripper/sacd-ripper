@@ -49,6 +49,7 @@
 #define WRITE_CACHE_SIZE 1 * 1024 * 1024
 
 extern scarletbook_format_handler_t const * dsdiff_format_fn(void);
+extern scarletbook_format_handler_t const * dsdiff_edit_master_format_fn(void);
 extern scarletbook_format_handler_t const * dsf_format_fn(void);
 extern scarletbook_format_handler_t const * iso_format_fn(void);
 
@@ -56,6 +57,7 @@ typedef const scarletbook_format_handler_t *(*sacd_output_format_fn_t)(void);
 static sacd_output_format_fn_t s_sacd_output_format_fns[] = 
 {
     dsdiff_format_fn,
+    dsdiff_edit_master_format_fn,
     dsf_format_fn,
     iso_format_fn,
     NULL
@@ -116,7 +118,7 @@ static void destroy_ripping_queue(scarletbook_output_t *output)
     }
 }
 
-int scarletbook_output_enqueue_track(scarletbook_output_t *output, int area, int track, char *file_path, char *fmt, int dsd_encoded_export, int gapless)
+int scarletbook_output_enqueue_track(scarletbook_output_t *output, int area, int track, char *file_path, char *fmt, int dsd_encoded_export)
 {
     scarletbook_format_handler_t const * handler;
     scarletbook_output_format_t * output_format_ptr;
@@ -133,32 +135,16 @@ int scarletbook_output_enqueue_track(scarletbook_output_t *output, int area, int
         output_format_ptr->channel_count = sb_handle->area[area].area_toc->channel_count;
         output_format_ptr->dst_encoded_import = sb_handle->area[area].area_toc->frame_format == FRAME_FORMAT_DST;
         output_format_ptr->dsd_encoded_export = dsd_encoded_export;
-
-        if (!gapless) 
+        if (handler->flags & OUTPUT_FLAG_EDIT_MASTER)
+        {
+            output_format_ptr->start_lsn = sb_handle->area[area].area_toc->track_start;
+            output_format_ptr->length_lsn = sb_handle->area[area].area_toc->track_end - sb_handle->area[area].area_toc->track_start + 1;
+        }
+        else
         {
             output_format_ptr->start_lsn = sb_handle->area[area].area_tracklist_offset->track_start_lsn[track];
             output_format_ptr->length_lsn = sb_handle->area[area].area_tracklist_offset->track_length_lsn[track];
         }
-        else 
-        {
-            if (track > 0) 
-            {
-                output_format_ptr->start_lsn = sb_handle->area[area].area_tracklist_offset->track_start_lsn[track];
-            }
-            else 
-            {
-                output_format_ptr->start_lsn = sb_handle->area[area].area_toc->track_start;
-            }
-            if (track < sb_handle->area[area].area_toc->track_count - 1) 
-            {
-                output_format_ptr->length_lsn = sb_handle->area[area].area_tracklist_offset->track_start_lsn[track + 1] - output_format_ptr->start_lsn + 1;
-            }
-            else 
-            {
-                output_format_ptr->length_lsn = sb_handle->area[area].area_toc->track_end - output_format_ptr->start_lsn;
-            }
-        }
-
 
         LOG(lm_main, LOG_NOTICE, ("Queuing: %s, area: %d, track %d, start_lsn: %d, length_lsn: %d, dst_encoded_import: %d, dsd_encoded_export: %d", file_path, area, track, output_format_ptr->start_lsn, output_format_ptr->length_lsn, output_format_ptr->dst_encoded_import, output_format_ptr->dsd_encoded_export));
 

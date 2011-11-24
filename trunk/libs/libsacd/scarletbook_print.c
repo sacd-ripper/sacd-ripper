@@ -194,7 +194,7 @@ void scarletbook_print_area_toc(scarletbook_handle_t *handle, int area_idx)
     int                        i;
     area_isrc_genre_t       *area_isrc_genre;
     area_tracklist_offset_t *area_tracklist_offset;
-    area_tracklist_time_t   *area_tracklist_time;
+    area_tracklist_t        *area_tracklist_time;
     scarletbook_area_t      *area = &handle->area[area_idx];
     area_toc_t              *area_toc = area->area_toc;
     area_isrc_genre   = area->area_isrc_genre;

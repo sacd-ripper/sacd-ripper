@@ -141,7 +141,7 @@ enum
 //a) channel_count = 5, the 4th and 5th channel of this Track are muted
 //b) channel_count = 6, the 5th and 6th channel of this Track are muted
 //Bit 3 TMF3_Mute Indicates whether the 3rd channel of this Track is muted
-//Bit 8..10 Extra_Use Indicates whether the 4th channel is used for an LFE loudspeaker
+//Bit 8..10 extra_use Indicates whether the 4th channel is used for an LFE loudspeaker
 
 struct chunk_header_t
 {
@@ -749,7 +749,7 @@ struct edited_master_id_chunk_t
     char emid[255];                                // unique sequence of bytes
 } ATTRIBUTE_PACKED;
 typedef struct edited_master_id_chunk_t   edited_master_id_chunk_t;
-
+#define EDITED_MASTER_ID_CHUNK_SIZE 12U
 
 // The Marker Chunk defines a marker within the sound data. It defines a type of marker, the
 // position within the sound data and a description.
@@ -837,7 +837,7 @@ struct marker_chunk_t
     //          b) channel_count = 6, the 5th and 6th channel of this Track are muted
     // Bit 3 TMF3_Mute - Indicates whether the 3rd channel of this Track is muted
     // Bit 4..7 Reserved
-    // Bit 8..10 Extra_Use - Indicates whether the 4th channel is used for an LFE loudspeaker
+    // Bit 8..10 extra_use - Indicates whether the 4th channel is used for an LFE loudspeaker
     // Bit11..15 Reserved for future expansion
     // Restrictions on the TMFn_Mute flags (n=1..4):
     // -  Value one indicates muting, value zero indicates no-muting.
@@ -852,7 +852,7 @@ struct marker_chunk_t
     // TMF4_Mute must be set to zero.
     // -  For channel_count = 6 and TMF4_Mute is equal to zero, minimal four channels are
     // available.
-    // Restrictions on the Extra_Use Flags:
+    // Restrictions on the extra_use Flags:
     // -  For channel_count = 5, the three bit values must be zero, no LFE loudspeaker
     // available.
     // -  For numChannel = 6, the three bit values must be zero (Implicit usage of the LFE
@@ -867,7 +867,7 @@ struct marker_chunk_t
     // markerText[] is the description of the marker. This text must be padded with a byte at the
     // end, if needed, to make it an even number of bytes long. This pad byte, if present, is not
     // included in count.
-    char marker_text[65535];                // description
+    char marker_text[8192];                // description
 } ATTRIBUTE_PACKED;
 typedef struct marker_chunk_t   marker_chunk_t;
 #define EDITED_MASTER_MARKER_CHUNK_SIZE 34U

@@ -54,6 +54,7 @@
  */
 #define SACD_LSN_SIZE                  2048
 #define SACD_SAMPLING_FREQUENCY        2822400
+#define SACD_FRAME_RATE                75
 
 #define START_OF_FILE_SYSTEM_AREA      0
 #define START_OF_MASTER_TOC            510
@@ -441,21 +442,6 @@ typedef struct
     uint8_t seconds;
     uint8_t frames;
 #if defined(__BIG_ENDIAN__)
-    uint8_t extra_use : 3;
-    uint8_t reserved : 5;
-#else
-    uint8_t reserved : 5;
-    uint8_t extra_use : 3;
-#endif
-}
-ATTRIBUTE_PACKED area_tracklist_time_start_t;
-
-typedef struct
-{
-    uint8_t minutes;
-    uint8_t seconds;
-    uint8_t frames;
-#if defined(__BIG_ENDIAN__)
     uint8_t track_flags_ilp : 1;
     uint8_t track_flags_tmf4 : 1;
     uint8_t track_flags_tmf3 : 1;
@@ -471,15 +457,17 @@ typedef struct
     uint8_t track_flags_ilp : 1;
 #endif
 }
-ATTRIBUTE_PACKED area_tracklist_time_duration_t;
-
-typedef struct
-{
-    char                           id[8];                           // SACDTRL2
-    area_tracklist_time_start_t    start[255];
-    area_tracklist_time_duration_t duration[255];
-} 
 ATTRIBUTE_PACKED area_tracklist_time_t;
+
+#define TIME_FRAMECOUNT(m) ((m)->minutes * 60 * SACD_FRAME_RATE + (m)->seconds * SACD_FRAME_RATE + (m)->frames)
+
+typedef struct
+{
+    char                        id[8];                           // SACDTRL2
+    area_tracklist_time_t       start[255];
+    area_tracklist_time_t       duration[255];
+} 
+ATTRIBUTE_PACKED area_tracklist_t;
 
 enum
 {
@@ -557,7 +545,7 @@ typedef struct
     uint8_t                  * area_data;
     area_toc_t               * area_toc;
     area_tracklist_offset_t  * area_tracklist_offset;
-    area_tracklist_time_t    * area_tracklist_time;
+    area_tracklist_t         * area_tracklist_time;
     area_text_t              * area_text;
     area_track_text_t          area_track_text[255];                      // max of 255 supported tracks
     area_isrc_genre_t        * area_isrc_genre;
