@@ -49,6 +49,7 @@
 #include <scarletbook_print.h>
 #include <scarletbook_helpers.h>
 #include <scarletbook_id3.h>
+#include <cuesheet.h>
 #include <endianess.h>
 #include <fileutils.h>
 #include <utils.h>
@@ -71,7 +72,8 @@ scarletbook_handle_t *handle;
 scarletbook_output_t *output;
 
 /* Parse all options. */
-static int parse_options(int argc, char *argv[]) {
+static int parse_options(int argc, char *argv[]) 
+{
     int opt; /* used for argument parsing */
     char *program_name = NULL;
 
@@ -320,6 +322,12 @@ int main(int argc, char* argv[])
                         scarletbook_output_enqueue_track(output, area_idx, 0, file_path, "dsdiff_edit_master", 
                             (opts.convert_dst ? 1 : handle->area[area_idx].area_toc->frame_format != FRAME_FORMAT_DST));
 
+                        // write cue sheet
+                        {
+                            char *cue_file_path = make_filename(0, 0, albumdir, "cue");
+                            write_cue_sheet(handle, file_path, area_idx, cue_file_path);
+                            free(cue_file_path);
+                        }
                         free(file_path);
                     }
                     else 
