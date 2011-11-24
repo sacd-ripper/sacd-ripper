@@ -218,15 +218,13 @@ int start_ripping_gui(int ripping_flags)
                     {
                         file_path = make_filename(output_device, albumdir, musicfilename, "dsf");
                         scarletbook_output_enqueue_track(output, area_idx, i, file_path, "dsf", 
-                            1, /* always decode to DSD */
-                            0 /* gapless mode is turned off */);
+                            1, /* always decode to DSD */);
                     }
                     else if (ripping_flags & RIP_DSDIFF)
                     {
                         file_path = make_filename(output_device, albumdir, musicfilename, "dff");
                         scarletbook_output_enqueue_track(output, area_idx, i, file_path, "dsdiff", 
-                            ((ripping_flags & RIP_2CH_DST || ripping_flags & RIP_MCH_DST) ? 0 : 1),
-                            0 /* gapless mode is turned off */);
+                            ((ripping_flags & RIP_2CH_DST || ripping_flags & RIP_MCH_DST) ? 0 : 1));
                     }
 
                     tmp_total_ripping_sectors += handle->area[area_idx].area_tracklist_offset->track_length_lsn[i];

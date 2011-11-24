@@ -58,10 +58,10 @@ static struct opts_s
     int            two_channel;
     int            multi_channel;
     int            output_dsf;
+    int            output_dsdiff_em;
     int            output_dsdiff;
     int            output_iso;
     int            convert_dst;
-    int            gapless;
     int            print;
     char          *input_device; /* Access method driver should use for control */
     char           output_file[512];
@@ -79,11 +79,11 @@ static int parse_options(int argc, char *argv[]) {
         "Usage: %s [options] [outfile]\n"
         "  -2, --2ch-tracks                : Export two channel tracks (default)\n"
         "  -m, --mch-tracks                : Export multi-channel tracks\n"
+        "  -e, --output-dsdiff-em          : output as Philips DSDIFF (Edit Master) file\n"
         "  -p, --output-dsdiff             : output as Philips DSDIFF file\n"
         "  -s, --output-dsf                : output as Sony DSF file\n"
         "  -I, --output-iso                : output as RAW ISO\n"
         "  -c, --convert-dst               : convert DST to DSD\n"
-        "  -g, --gapless                   : turn gapless mode on\n"
         "  -i, --input[=FILE]              : set source and determine if \"iso\" image, \n"
         "                                    device or server (ex. -i192.168.1.10:2002)\n"
         "  -P, --print                     : display disc and track information\n" 
@@ -94,19 +94,19 @@ static int parse_options(int argc, char *argv[]) {
 
     static const char usage_text[] = 
         "Usage: %s [-2|--2ch-tracks] [-m|--mch-tracks] [-p|--output-dsdiff]\n"
-        "        [-s|--output-dsf] [-I|--output-iso] [-c|--convert-dst]\n"
-        "        [-g|--gapless] [-i|--input FILE] [-P|--print]\n"
+        "        [-e|--output-dsdiff-em] [-s|--output-dsf] [-I|--output-iso]\n"
+        "        [-c|--convert-dst] [-i|--input FILE] [-P|--print]\n"
         "        [-?|--help] [--usage]\n";
 
-    static const char options_string[] = "2mpsIcgi::P?";
+    static const char options_string[] = "2mepsIci::P?";
     static const struct option options_table[] = {
         {"2ch-tracks", no_argument, NULL, '2' },
         {"mch-tracks", no_argument, NULL, 'm' },
+        {"output-dsdiff-em", no_argument, NULL, 'e'}, 
         {"output-dsdiff", no_argument, NULL, 'p'}, 
         {"output-dsf", no_argument, NULL, 's'}, 
         {"output-iso", no_argument, NULL, 'I'}, 
         {"convert-dst", no_argument, NULL, 'c'}, 
-        {"gapless", no_argument, NULL, 'g'}, 
         {"input", required_argument, NULL, 'i' },
         {"print", no_argument, NULL, 'P' },
 
@@ -126,23 +126,31 @@ static int parse_options(int argc, char *argv[]) {
         case 'm': 
             opts.multi_channel = 1; 
             break;
+        case 'e': 
+            opts.output_dsdiff_em = 1;
+            opts.output_dsdiff = 0;
+            opts.output_dsf = 0; 
+            opts.output_iso = 0;
+            break;
         case 'p': 
+            opts.output_dsdiff_em = 0; 
             opts.output_dsdiff = 1; 
             opts.output_dsf = 0; 
             opts.output_iso = 0;
             break;
         case 's': 
+            opts.output_dsdiff_em = 0; 
             opts.output_dsdiff = 0; 
             opts.output_dsf = 1; 
             opts.output_iso = 0;
             break;
         case 'I': 
+            opts.output_dsdiff_em = 0; 
             opts.output_dsdiff = 0; 
             opts.output_dsf = 0; 
             opts.output_iso = 1;
             break;
         case 'c': opts.convert_dst = 1; break;
-        case 'g': opts.gapless = 1; break;
         case 'i': opts.input_device = strdup(optarg); break;
         case 'P': opts.print = 1; break;
 
@@ -201,18 +209,18 @@ static void handle_status_update_progress_callback(uint32_t stats_total_sectors,
 }
 
 /* Initialize global variables. */
-static void init(void) {
-
+static void init(void) 
+{
     /* Default option values. */
-    opts.two_channel   = 0;
-    opts.multi_channel = 0;
-    opts.output_dsf    = 0;
-    opts.output_iso    = 0;
-    opts.output_dsdiff = 0;
-    opts.convert_dst   = 0;
-    opts.gapless       = 0;
-    opts.print         = 0;
-    opts.input_device  = "/dev/cdrom";
+    opts.two_channel        = 0;
+    opts.multi_channel      = 0;
+    opts.output_dsf         = 0;
+    opts.output_iso         = 0;
+    opts.output_dsdiff      = 0;
+    opts.output_dsdiff_em   = 0;
+    opts.convert_dst        = 0;
+    opts.print              = 0;
+    opts.input_device       = "/dev/cdrom";
 
 #ifdef _WIN32
     signal(SIGINT, handle_sigint);
@@ -264,7 +272,7 @@ int main(int argc, char* argv[])
                     scarletbook_print(handle);
                 }
 
-                if (opts.output_dsf || opts.output_iso || opts.output_dsdiff)
+                if (opts.output_dsf || opts.output_iso || opts.output_dsdiff || opts.output_dsdiff_em)
                 {
                     output = scarletbook_output_create(handle, handle_status_update_track_callback, handle_status_update_progress_callback);
 
@@ -275,9 +283,9 @@ int main(int argc, char* argv[])
 
                     if (opts.output_iso)
                     {
-                        #define FAT32_SECTOR_LIMIT 2090000
                         uint32_t total_sectors = sacd_get_total_sectors(sacd_reader);
 #ifdef SECTOR_LIMIT
+#define FAT32_SECTOR_LIMIT 2090000
                         uint32_t sector_size = FAT32_SECTOR_LIMIT;
                         uint32_t sector_offset = 0;
                         if (total_sectors > FAT32_SECTOR_LIMIT)
@@ -304,6 +312,16 @@ int main(int argc, char* argv[])
                             free(file_path);
                         }
                     }
+                    else if (opts.output_dsdiff_em)
+                    {
+                        get_unique_filename(&albumdir, "dff");
+                        file_path = make_filename(0, 0, albumdir, "dff");
+
+                        scarletbook_output_enqueue_track(output, area_idx, 0, file_path, "dsdiff_edit_master", 
+                            (opts.convert_dst ? 1 : handle->area[area_idx].area_toc->frame_format != FRAME_FORMAT_DST));
+
+                        free(file_path);
+                    }
                     else 
                     {
                         // create the output folder
@@ -318,15 +336,13 @@ int main(int argc, char* argv[])
                             {
                                 file_path = make_filename(0, albumdir, musicfilename, "dsf");
                                 scarletbook_output_enqueue_track(output, area_idx, i, file_path, "dsf", 
-                                    1, /* always decode to DSD */
-                                    opts.gapless);
+                                    1 /* always decode to DSD */);
                             }
                             else if (opts.output_dsdiff)
                             {
                                 file_path = make_filename(0, albumdir, musicfilename, "dff");
                                 scarletbook_output_enqueue_track(output, area_idx, i, file_path, "dsdiff", 
-                                    (opts.convert_dst ? 1 : handle->area[area_idx].area_toc->frame_format != FRAME_FORMAT_DST),
-                                    opts.gapless);
+                                    (opts.convert_dst ? 1 : handle->area[area_idx].area_toc->frame_format != FRAME_FORMAT_DST));
                             }
 
                             free(musicfilename);

@@ -533,8 +533,8 @@ static int scarletbook_read_area_toc(scarletbook_handle_t *handle, int area_idx)
         }
         else if (strncmp((char *) p, "SACDTRL2", 8) == 0)
         {
-            area_tracklist_time_t *tracklist;
-            tracklist = area->area_tracklist_time = (area_tracklist_time_t *) p;
+            area_tracklist_t *tracklist;
+            tracklist = area->area_tracklist_time = (area_tracklist_t *) p;
             p += SACD_LSN_SIZE;
         }
         else
@@ -567,6 +567,18 @@ static inline int get_channel_count(audio_frame_info_t *frame_info)
     else
     {
         return 2;
+    }
+}
+
+static inline void exec_read_callback(scarletbook_handle_t *handle, frame_read_callback_t frame_read_callback, void *userdata)
+{
+    if (handle->frame.started && handle->frame.size > 0 && 
+        ((handle->frame.dst_encoded && handle->frame.sector_count == 0) ||
+        (!handle->frame.dst_encoded && handle->frame.size % FRAME_SIZE_64 == 0))
+        )
+    {
+        handle->frame.started = 0;
+        frame_read_callback(handle, handle->frame.data, handle->frame.size, userdata);
     }
 }
 
@@ -623,11 +635,8 @@ void scarletbook_process_frames(scarletbook_handle_t *handle, uint8_t *read_buff
             case DATA_TYPE_AUDIO:
                 if (packet->frame_start)
                 {
-                    if (handle->frame.started) 
-                    {
-                        handle->frame.started = 0;
-                        frame_read_callback(handle, handle->frame.data, handle->frame.size, userdata);
-                    }
+                    exec_read_callback(handle, frame_read_callback, userdata);
+
                     handle->frame.size = 0;
                     handle->frame.dst_encoded = handle->audio_sector.header.dst_encoded;
                     handle->frame.sector_count = handle->audio_sector.frame[frame_info_counter].sector_count;
@@ -639,11 +648,19 @@ void scarletbook_process_frames(scarletbook_handle_t *handle, uint8_t *read_buff
                 }
                 if (handle->frame.started)
                 {
-                    memcpy(handle->frame.data + handle->frame.size, read_buffer_ptr, packet->packet_length);
-                    handle->frame.size += packet->packet_length;
-                    if (handle->frame.dst_encoded)
+                    if (handle->frame.size + packet->packet_length < MAX_DST_SIZE)
                     {
-                        handle->frame.sector_count--;
+                        memcpy(handle->frame.data + handle->frame.size, read_buffer_ptr, packet->packet_length);
+                        handle->frame.size += packet->packet_length;
+                        if (handle->frame.dst_encoded)
+                        {
+                            handle->frame.sector_count--;
+                        }
+                    }
+                    else
+                    {
+                        // buffer overflow error, try next frame..
+                        handle->frame.started = 0;
                     }
                 }
                 break;
@@ -661,10 +678,9 @@ void scarletbook_process_frames(scarletbook_handle_t *handle, uint8_t *read_buff
         read_buffer += SACD_LSN_SIZE;
     }
 
-    if (last_block && handle->frame.started && handle->frame.sector_count == 0) 
+    if (last_block) 
     {
-        handle->frame.started = 0;
-        frame_read_callback(handle, handle->frame.data, handle->frame.size, userdata);
+        exec_read_callback(handle, frame_read_callback, userdata);
     }
 
 }
