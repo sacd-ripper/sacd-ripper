@@ -1,0 +1,19 @@
+TODO
+
+version 0.3.x
+
+    - logging
+        - cleanup logging, split lm_main into multiple destinations
+        - write log along each consecutive rip
+        - write INFO,NOTICE,etc..
+        - the log should contain more information:
+          - date/time
+          - output format (ISO, mch DSDIFF (DSD), etc.)
+    - add option to embed sac_module & decoder
+    - use output_format_t.error_number for error handling
+     - catch read failures 
+        - do not stop and continue decoding and reading
+        - specify max amount of read errors
+        - skipping DST/DSD frames
+        - skip TOCs
+        - log read errors

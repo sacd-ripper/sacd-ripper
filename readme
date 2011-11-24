@@ -1,0 +1,130 @@
+
+   DISCLAIMER.  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+   CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
+   BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+   FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+   COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+   INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+   BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+   OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+   ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR
+   TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
+   USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
+   DAMAGE.
+
+--- Installation ---
+
+Make sure you have a PS3 model with SACD compatible player. For more information
+on what model specifically go to: http://ps3sacd.com/faq.html#_Toc180147566
+
+You need to install a custom firmware to be able to rip SACDs. At this time of
+writing the PS3 firmware has not been cracked for firmware 3.56 and upwards. So
+in order to install the correct firmware you'll have to make sure your firmware
+is lower or equal to 3.55. A downgrade for a firmware higher than 3.55 is NOT
+available.
+
+The custom firmware that is needed must be 3.55 and should allow patching. Most
+custom firmwares like Kmeaw, Rebug, etc.. all facilitate this. Google for 
+"kmeaw cfw" and you'll find several download links.
+
+Custom Firmware installation steps:
+
+  1: Plug a USB stick into your computer
+  2: Copy the custom firmware file that you downloaded to a USB memory
+     stick as /PS3/UPDATE/PS3UPDAT.PUP.  
+  3: Plug the USB stick into your PS3
+  4: Navigate to Settings Tab
+  5: Choose System Update
+  6: Choose Update via Storage Media
+  7: It will say it found Version 3.55
+  8: Choose OK
+  9: Accept Conditions and Follow the instructions
+ 
+If the steps above did not work for you, then you are probably on 3.55 already.
+You will have to do a recovery menu mode installation:
+
+  1: Plug a USB stick into your computer
+  2: Copy the custom firmware file that you downloaded to a USB memory
+     stick as /PS3/UPDATE/PS3UPDAT.PUP.  
+  3: Plug the USB stick into your PS3
+  4: Power down the PS3 through the menu
+  5: Now press and HOLD the power button, the system will startup and shutdown
+     again
+  6: Release the power button, then press & HOLD power again, you'll hear one
+     beep
+     followed by two consecutive beeps
+  7: Release power then follow the on-screen instructions. You're now in the
+     recovery menu
+  8: Connect the USB device and select "System Update."
+  9: Accept Conditions and Follow the instructions
+
+-- Installation Instructions --
+
+Now you've completed the firmware upgrade you are ready to install
+sacd-ripper.pkg.
+
+In order for the PS3 BluRay player to authenticate the SACD disc and to decode
+DST to DSD two SPU isoself modules will be extracted from the system. In order
+to do so you must give the SACD-Ripper the PS3 keys so it can extract them
+automatically.
+
+Get the PS3 keys from https://github.com/Mamdooh/PS3keys and put these in the
+root of an USB disc. They will be asked for during first time installation,
+after that you can remove the keys from your USB disc.
+
+-- Build Instructions --
+
+To compile you will need the psl1ght suite. If you want to compile on a windows
+environment I advice you to follow the CygWin installation as the MingW
+installation is unstable.
+
+When psl1ght has been properly setup you need to configure SACD-Ripper with the
+following commands:
+
+  1. svn checkout http://sacd-ripper.googlecode.com/svn/trunk/ sacd-ripper
+  2. cd sacd-ripper
+  3. sh configure
+  4. make
+
+SACD-Ripper should compile without errors and warnings. Once completed you 
+should have the sacd-ripper.pkg package that can be installed on your PS3.
+
+To compile the Windows scarletbook tool:
+  1. Open the Visual Studio Command prompt
+  2. Change directory to libs\libiconv
+  3. run: "nmake -f Makefile.msvc NO_NLS=1"
+  4. now you can compile using the MSVC project file
+  
+-- Information --
+
+SACD-Ripper supports the following output formats:
+
+ - 2ch DSDIFF (DSD)
+ - 2ch DSDIFF (DST) (if already DST encoded)
+ - 2ch DSF (DSD)
+ - mch DSDIFF (DSD)
+ - mch DSDIFF (DST)
+ - mch DSF (DSD)
+ - ISO (due to the 4GB FAT32 size limit on the PS3, files will be splitted when
+   larger)
+
+At this time of writing both Saracon and Audiogate do not support DST encoded
+files. Audiogate only supports 2ch files and Saracon does not support DSF
+files. Please keep that in mind before selecting your file output.
+
+There seems to be a SACD BluRay read speed limit that sets the maximum read
+speed to 2.6MB/sec, yes I agree, this is slow! But DST decoding is even
+slower.. The PS3 GameOS has 6 SPUs available for user operations. SACD-Ripper
+uses 1 SPU for decryption and the other 5!! for DST decoding. Although this
+process is quite optimal the current decoding speed has been measured to
+be 0.9MB/sec for a 2 channel rip. So for 2ch DST tracks the write speed to disc
+will be around 2.3MB/sec, for a multi-channel the write speed is a bit higher
+at 2.4MB.sec but decoding is even slower at 0.6MB/sec.
+
+Big thanks goes to to:
+
+    Graf Chokolo
+    Geoffrey Levand :-)
+    Max
+    vfalks
+    Patrick
