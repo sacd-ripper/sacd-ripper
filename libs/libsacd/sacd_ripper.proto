@@ -1,0 +1,29 @@
+import "nanopb.proto";
+
+message ServerRequest 
+{
+  enum Type 
+  {
+    DISC_OPEN = 1;
+    DISC_CLOSE = 2;
+    DISC_READ = 3;
+    DISC_SIZE = 4;
+  }
+  required Type type = 1;
+  required uint32 sector_offset = 2 [default = 0];
+  required uint32 sector_count = 3 [default = 0];
+}
+
+message ServerResponse
+{
+  enum Type 
+  {
+    DISC_OPENED = 1;
+    DISC_CLOSED = 2;
+    DISC_READ = 3;
+    DISC_SIZE = 4;
+  }
+  required Type type = 1;
+  required int64 result = 2;
+  optional bytes data = 3 [(nanopb).max_size = 1024000];
+}
