@@ -1,4 +1,4 @@
-a# CMake build file for SACD Extract
+# CMake build file for SACD Extract
 
 cmake_minimum_required(VERSION 2.6)
 project(sacd_extract C)
@@ -26,12 +26,6 @@ include_directories("../../libs/libcommon")
 include_directories("../../libs/libdstdec")
 include_directories("../../libs/libid3")
 include_directories("../../libs/libsacd")
-
-if (APPLE)
-    SET (CMAKE_OSX_ARCHITECTURES "i386;x86_64;" )
-    SET (CMAKE_OSX_SYSROOT "/Developer/SDKs/MacOSX10.6.sdk")
-    SET (CMAKE_OSX_DEPLOYMENT_TARGET "10.6")
-endif (APPLE)
 
 # Extra flags for GCC
 if (CMAKE_COMPILER_IS_GNUCC)
@@ -63,7 +57,9 @@ elseif(APPLE)
 else()
   set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIRARIES} -lpthread")
 endif()
-			
+
+
+
 file(GLOB libcommon_headers ../../libs/libcommon/*.h)
 file(GLOB libcommon_sources ../../libs/libcommon/*.c)
 source_group(libcommon FILES ${libcommon_headers} ${libcommon_sources})
