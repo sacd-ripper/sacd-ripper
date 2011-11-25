@@ -418,9 +418,13 @@ int DST_FramDSTDecode(uint8_t *DSTdata, uint8_t *MuxedDSDdata, int FrameSizeInBy
     if (D->FrameHdr.DSTCoded == 1)
     {
         ACData AC;
+#ifdef _MSC_VER
         __declspec(align(16)) int16_t  LT_ICoefI[2 * MAX_CHANNELS][16][256];
-        //__declspec(align(16)) uint16_t LT_ICoefU[2 * MAX_CHANNELS][16][256];
         __declspec(align(16)) uint8_t  LT_Status[MAX_CHANNELS][16];
+#else
+        int16_t  LT_ICoefI[2 * MAX_CHANNELS][16][256]  __attribute__ ((aligned (16)));
+        uint8_t  LT_Status[MAX_CHANNELS][16] __attribute__ ((aligned (16)));
+#endif
 
         FillTable4Bit(NrOfChannels, NrOfBitsPerCh, &D->FrameHdr.FSeg, D->FrameHdr.Filter4Bit);
         FillTable4Bit(NrOfChannels, NrOfBitsPerCh, &D->FrameHdr.PSeg, D->FrameHdr.Ptable4Bit);
