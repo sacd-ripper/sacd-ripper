@@ -388,7 +388,7 @@ static int calculate_header_and_footer(scarletbook_output_format_t *ft)
                 em_ptr = add_marker_chunk(em_ptr, ft, abs_frames_start, MARK_MARKER_TYPE_TRACKSTART, track_flags_start);
 
                 if (track == sb_handle->area[ft->area].area_toc->track_count - 1 
-                 || TIME_FRAMECOUNT(&sb_handle->area[ft->area].area_tracklist_time->start[track + 1]) > abs_frames_stop)
+                 || (uint64_t) TIME_FRAMECOUNT(&sb_handle->area[ft->area].area_tracklist_time->start[track + 1]) > abs_frames_stop)
                 {
                     em_ptr = add_marker_chunk(em_ptr, ft, abs_frames_stop, MARK_MARKER_TYPE_TRACKSTOP, track_flags_stop);
                 }
