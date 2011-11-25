@@ -181,21 +181,21 @@ static __inline int LT_ACGetPtableIndex(int16_t PredicVal, int PtableLen)
 /*                                                                         */
 /***************************************************************************/
 
-static void FillTable4Bit(int NrOfChannels, int NrOfBitsPerCh, Segment *S, int8_t Table4Bit[MAX_CHANNELS][MAX_DSDBITS_INFRAME])
+static void FillTable4Bit(int NrOfChannels, int NrOfBitsPerCh, Segment *S, char Table4Bit[MAX_CHANNELS][MAX_DSDBITS_INFRAME])
 {
     int BitNr;
     int ChNr;
     int SegNr;
     int Start;
     int End;
-    int8_t Val;
+    char Val;
 
     for (ChNr = 0; ChNr < NrOfChannels; ChNr++)
     {
-        int8_t *Table4BitCh = Table4Bit[ChNr];
+        char *Table4BitCh = Table4Bit[ChNr];
         for (SegNr = 0, Start = 0; SegNr < S->NrOfSegments[ChNr] - 1; SegNr++)
         {
-            Val = (int8_t) S->Table4Segment[ChNr][SegNr];
+            Val = (char) S->Table4Segment[ChNr][SegNr];
             End = Start + S->Resolution * 8 * S->SegmentLen[ChNr][SegNr];
             for (BitNr = Start; BitNr < End; BitNr++)
             {
@@ -204,7 +204,7 @@ static void FillTable4Bit(int NrOfChannels, int NrOfBitsPerCh, Segment *S, int8_
             Start += S->Resolution * 8 * S->SegmentLen[ChNr][SegNr];
         }
 
-        Val = (int8_t) S->Table4Segment[ChNr][SegNr];
+        Val = (char) S->Table4Segment[ChNr][SegNr];
         memset(&Table4BitCh[Start], Val, NrOfBitsPerCh - Start);
     }
 }
@@ -267,37 +267,6 @@ static void LT_InitCoefTablesI(ebunch *D, int16_t ICoefI[2 * MAX_CHANNELS][16][2
     }
 }
 
-static void LT_InitCoefTablesU(ebunch *D, uint16_t ICoefU[2 * MAX_CHANNELS][16][256])
-{
-    int FilterNr, FilterLength, TableNr, k, i, j;
-
-    for (FilterNr = 0; FilterNr < D->FrameHdr.NrOfFilters; FilterNr++)
-    {
-        FilterLength = D->FrameHdr.PredOrder[FilterNr];
-        for (TableNr = 0; TableNr < 16; TableNr++)
-        {
-            k = FilterLength - TableNr * 8;
-            if (k > 8)
-            {
-                k = 8;
-			}
-			else if (k < 0)
-			{
-                k = 0;
-            }
-            for (i = 0; i < 256; i++)
-            {
-                int cvalue = 0;
-                for (j = 0; j < k; j++)
-                {
-                    cvalue += (int16_t)(((i >> j) & 1) * 2 - 1) * D->FrameHdr.ICoefA[FilterNr][TableNr * 8 + j];
-                }
-                ICoefU[FilterNr][TableNr][i] = (uint16_t)(cvalue + (1 << SIZE_PREDCOEF) * 8);
-            }
-        }
-    }
-}
-
 static void LT_InitStatus(ebunch *D, uint8_t Status[MAX_CHANNELS][16])
 {
     int ChNr, TableNr;
@@ -309,46 +278,6 @@ static void LT_InitStatus(ebunch *D, uint8_t Status[MAX_CHANNELS][16])
             Status[ChNr][TableNr] = 0xaa;
         }
     }
-}
-
-static int16_t LT_RunFilterI(int16_t FilterTable[16][256], uint8_t ChannelStatus[16])
-{
-    int Predict;
-
-    Predict  = FilterTable[ 0][ChannelStatus[ 0]];
-    Predict += FilterTable[ 1][ChannelStatus[ 1]];
-    Predict += FilterTable[ 2][ChannelStatus[ 2]];
-    Predict += FilterTable[ 3][ChannelStatus[ 3]];
-    Predict += FilterTable[ 4][ChannelStatus[ 4]];
-    Predict += FilterTable[ 5][ChannelStatus[ 5]];
-    Predict += FilterTable[ 6][ChannelStatus[ 6]];
-    Predict += FilterTable[ 7][ChannelStatus[ 7]];
-    Predict += FilterTable[ 8][ChannelStatus[ 8]];
-    Predict += FilterTable[ 9][ChannelStatus[ 9]];
-    Predict += FilterTable[10][ChannelStatus[10]];
-    Predict += FilterTable[11][ChannelStatus[11]];
-    Predict += FilterTable[12][ChannelStatus[12]];
-    Predict += FilterTable[13][ChannelStatus[13]];
-    Predict += FilterTable[14][ChannelStatus[14]];
-    Predict += FilterTable[15][ChannelStatus[15]];
-    return (int16_t)Predict;
-}
-
-static int16_t LT_RunFilterU(uint16_t FilterTable[16][256], uint8_t ChannelStatus[16])
-{
-    uint32_t Predict32;
-    int      Predict;
-
-    Predict32  = FilterTable[ 0][ChannelStatus[ 0]] | (FilterTable[ 1][ChannelStatus[ 1]] << 16);
-    Predict32 += FilterTable[ 2][ChannelStatus[ 2]] | (FilterTable[ 3][ChannelStatus[ 3]] << 16);
-    Predict32 += FilterTable[ 4][ChannelStatus[ 4]] | (FilterTable[ 5][ChannelStatus[ 5]] << 16);
-    Predict32 += FilterTable[ 6][ChannelStatus[ 6]] | (FilterTable[ 7][ChannelStatus[ 7]] << 16);
-    Predict32 += FilterTable[ 8][ChannelStatus[ 8]] | (FilterTable[ 9][ChannelStatus[ 9]] << 16);
-    Predict32 += FilterTable[10][ChannelStatus[10]] | (FilterTable[11][ChannelStatus[11]] << 16);
-    Predict32 += FilterTable[12][ChannelStatus[12]] | (FilterTable[13][ChannelStatus[13]] << 16);
-    Predict32 += FilterTable[14][ChannelStatus[14]] | (FilterTable[15][ChannelStatus[15]] << 16);
-    Predict = (Predict32 >> 16) + (Predict32 & 0xffff);
-    return (int16_t)Predict;
 }
 
 /***************************************************************************/

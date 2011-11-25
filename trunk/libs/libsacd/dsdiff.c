@@ -349,7 +349,6 @@ static int calculate_header_and_footer(scarletbook_output_format_t *ft)
         {
             int track;
             uint64_t abs_frames_start = 0, abs_frames_stop = 0;
-            marker_chunk_t *marker_chunk = (marker_chunk_t *) em_ptr;
 
             {
                 // id is optional, but SADiE seems to require it
