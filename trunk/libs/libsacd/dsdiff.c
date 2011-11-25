@@ -331,11 +331,10 @@ static int calculate_header_and_footer(scarletbook_output_format_t *ft)
 
             sound_index_size = handle->frame_count * DST_FRAME_INDEX_SIZE + DST_SOUND_INDEX_CHUNK_SIZE;
             dst_sound_index_chunk->chunk_data_size = CALC_CHUNK_SIZE(sound_index_size - CHUNK_HEADER_SIZE);
-            dst_sound_data_chunk->chunk_data_size = CALC_CHUNK_SIZE(sound_index_size + handle->audio_data_size + DST_FRAME_INFORMATION_CHUNK_SIZE);
-
             handle->footer_size += CEIL_ODD_NUMBER(dsti_ptr - handle->footer - handle->footer_size);
         }
 
+        dst_sound_data_chunk->chunk_data_size = CALC_CHUNK_SIZE(sound_index_size + handle->audio_data_size + DST_FRAME_INFORMATION_CHUNK_SIZE);
         write_ptr += DST_FRAME_INFORMATION_CHUNK_SIZE;
     }
 
