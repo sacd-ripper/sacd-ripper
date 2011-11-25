@@ -1,7 +1,10 @@
-# CMake build file for SACD Extract
+a# CMake build file for SACD Extract
 
 cmake_minimum_required(VERSION 2.6)
 project(sacd_extract C)
+
+# Load some macros.
+SET(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules;${CMAKE_MODULE_PATH}")
 
 # Macros we'll need
 include(CheckIncludeFile)
@@ -55,7 +58,8 @@ if (MSVC)
 elseif(WIN32)
   set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIRARIES} -lpthread -lws2_32 -liconv")
 elseif(APPLE)
-  set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIRARIES} -lpthread -liconv")
+   FIND_PACKAGE(Iconv REQUIRED)
+   set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIRARIES} -lpthread ${ICONV_LIBRARIES}")
 else()
   set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIRARIES} -lpthread")
 endif()
