@@ -273,9 +273,6 @@ static int calculate_header_and_footer(scarletbook_output_format_t *ft)
     // all properties have been written, now set the property chunk size
     property_chunk->chunk_data_size = CALC_CHUNK_SIZE(write_ptr - prop_ptr - CHUNK_HEADER_SIZE);
 
-    // start with a new footer
-    handle->footer_size = 0;
-
     // Either the DSD or DST Sound Data chunk is required and may appear
     // only once in the Form DSD Chunk. The chunk must be placed after the Property Chunk.
     if (ft->dsd_encoded_export)
@@ -291,7 +288,6 @@ static int calculate_header_and_footer(scarletbook_output_format_t *ft)
     {
         dst_sound_data_chunk_t *dst_sound_data_chunk;
         dst_frame_information_chunk_t *dst_frame_information_chunk;
-        size_t sound_index_size = 0;
 
         dst_sound_data_chunk                  = (dst_sound_data_chunk_t *) write_ptr;
         dst_sound_data_chunk->chunk_id        = DST_MARKER;
@@ -304,38 +300,42 @@ static int calculate_header_and_footer(scarletbook_output_format_t *ft)
         dst_frame_information_chunk->num_frames = hton32(handle->frame_count);
         dst_frame_information_chunk->chunk_data_size = CALC_CHUNK_SIZE(DST_FRAME_INFORMATION_CHUNK_SIZE - CHUNK_HEADER_SIZE);
 
-        // DST Sound Index Chunk
-        if (handle->frame_count > 0)
+        dst_sound_data_chunk->chunk_data_size = CALC_CHUNK_SIZE(handle->audio_data_size + DST_FRAME_INFORMATION_CHUNK_SIZE);
+        write_ptr += DST_FRAME_INFORMATION_CHUNK_SIZE;
+    }
+
+    // start with a new footer
+    handle->footer_size = 0;
+
+    // DST Sound Index Chunk
+    if (!ft->dsd_encoded_export && handle->frame_count > 0)
+    {
+        size_t frame;
+        dst_sound_index_chunk_t *dst_sound_index_chunk;
+        uint8_t *dsti_ptr;
+        size_t sound_index_size = 0;
+
+        // resize the footer buffer
+        handle->footer = realloc(handle->footer, DSDFIFF_BUFFER_SIZE + handle->frame_indexes_allocated * DST_FRAME_INDEX_SIZE);
+
+        dsti_ptr = handle->footer + handle->footer_size;
+
+        dst_sound_index_chunk                 = (dst_sound_index_chunk_t *) dsti_ptr;
+        dst_sound_index_chunk->chunk_id       = DSTI_MARKER;
+
+        dsti_ptr += DST_SOUND_INDEX_CHUNK_SIZE;
+
+        for (frame = 0; frame < handle->frame_count; frame++)
         {
-            size_t frame;
-            dst_sound_index_chunk_t *dst_sound_index_chunk;
-            uint8_t *dsti_ptr;
-
-            // resize the footer buffer
-            handle->footer = realloc(handle->footer, DSDFIFF_BUFFER_SIZE + handle->frame_indexes_allocated * DST_FRAME_INDEX_SIZE);
-
-            dsti_ptr = handle->footer + handle->footer_size;
-
-            dst_sound_index_chunk                 = (dst_sound_index_chunk_t *) dsti_ptr;
-            dst_sound_index_chunk->chunk_id       = DSTI_MARKER;
-
-            dsti_ptr += DST_SOUND_INDEX_CHUNK_SIZE;
-
-            for (frame = 0; frame < handle->frame_count; frame++)
-            {
-                dst_frame_index_t *dst_frame_index = (dst_frame_index_t *) dsti_ptr;
-                dst_frame_index->length = hton32(handle->frame_indexes[frame].length);
-                dst_frame_index->offset = hton64(handle->frame_indexes[frame].offset);
-                dsti_ptr += DST_FRAME_INDEX_SIZE;
-            }
-
-            sound_index_size = handle->frame_count * DST_FRAME_INDEX_SIZE + DST_SOUND_INDEX_CHUNK_SIZE;
-            dst_sound_index_chunk->chunk_data_size = CALC_CHUNK_SIZE(sound_index_size - CHUNK_HEADER_SIZE);
-            handle->footer_size += CEIL_ODD_NUMBER(dsti_ptr - handle->footer - handle->footer_size);
+            dst_frame_index_t *dst_frame_index = (dst_frame_index_t *) dsti_ptr;
+            dst_frame_index->length = hton32(handle->frame_indexes[frame].length);
+            dst_frame_index->offset = hton64(handle->frame_indexes[frame].offset);
+            dsti_ptr += DST_FRAME_INDEX_SIZE;
         }
 
-        dst_sound_data_chunk->chunk_data_size = CALC_CHUNK_SIZE(sound_index_size + handle->audio_data_size + DST_FRAME_INFORMATION_CHUNK_SIZE);
-        write_ptr += DST_FRAME_INFORMATION_CHUNK_SIZE;
+        sound_index_size = handle->frame_count * DST_FRAME_INDEX_SIZE + DST_SOUND_INDEX_CHUNK_SIZE;
+        dst_sound_index_chunk->chunk_data_size = CALC_CHUNK_SIZE(sound_index_size - CHUNK_HEADER_SIZE);
+        handle->footer_size += CEIL_ODD_NUMBER(dsti_ptr - handle->footer - handle->footer_size);
     }
 
     // edit master information
