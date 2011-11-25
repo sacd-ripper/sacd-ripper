@@ -1,10 +1,9 @@
 
 version 0.3.2
 
-    - removed gapless support
-    - added DSDIFF Edit Master (one DSD file) support
+    - added DSDIFF Edit Master (single DSD file) support
     - added CUE Sheet support for Edit Master
     - added DST frame buffer overflow protection
-    - merged Maxims optimized FIR decoder
     - added DST frame index chunk support
-    
+    - removed gapless support (replaced by DSDIFF Edit Master)
+    - merged Maxims optimized FIR decoder
