@@ -1,3 +1,6 @@
+version 0.3.3 (bug fix release, please update if running 0.3.2)
+
+    - fixed a bug where a wrong DSDIFF header was written for edit masters
 
 version 0.3.2
 
