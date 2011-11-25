@@ -1,3 +1,7 @@
+version 0.3.4 (bug fix release, please update if running 0.3.3)
+
+    - fixed a bug where DSTI was incorrectly part of DSD chunk
+
 version 0.3.3 (bug fix release, please update if running 0.3.2)
 
     - fixed a bug where a wrong DSDIFF header was written for edit masters
