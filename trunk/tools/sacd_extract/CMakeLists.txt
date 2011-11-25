@@ -52,13 +52,12 @@ if (MSVC)
 elseif(WIN32)
   set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIRARIES} -lpthread -lws2_32 -liconv")
 elseif(APPLE)
-   FIND_PACKAGE(Iconv REQUIRED)
-   set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIRARIES} -lpthread ${ICONV_LIBRARIES}")
+  FIND_PACKAGE(Iconv REQUIRED)
+  set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIRARIES} -lpthread ${ICONV_LIBRARIES}")
+  link_directories("${ICONV_INCLUDE_BASE_DIR}/lib")
 else()
   set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIRARIES} -lpthread")
 endif()
-
-
 
 file(GLOB libcommon_headers ../../libs/libcommon/*.h)
 file(GLOB libcommon_sources ../../libs/libcommon/*.c)
