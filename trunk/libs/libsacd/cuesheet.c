@@ -115,7 +115,7 @@ int write_cue_sheet(scarletbook_handle_t *handle, const char *filename, int area
                 fprintf(fd, "      ISRC %s\n", substr(handle->area[area].area_isrc_genre->isrc[track].country_code, 0, 12));
             }
 
-            if (TIME_FRAMECOUNT(&handle->area[area].area_tracklist_time->start[track]) > prev_abs_end)
+            if ((uint64_t) TIME_FRAMECOUNT(&handle->area[area].area_tracklist_time->start[track]) > prev_abs_end)
             {
                 int prev_sec = (int) (prev_abs_end / SACD_FRAME_RATE);
 
