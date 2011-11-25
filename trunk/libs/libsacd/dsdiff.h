@@ -565,13 +565,13 @@ struct dst_frame_index_t
     uint32_t length;            // length of the sound in bytes
 } ATTRIBUTE_PACKED;
 typedef struct dst_frame_index_t   dst_frame_index_t;
-
+#define DST_FRAME_INDEX_SIZE    12U
 
 // The DST Sound Index Chunk contains indexes to the DST Frame Data Chunks.
 //
 // The DST Sound Index Chunk is recommended, and may appear only when the compression
 // type is 'DST '. Only one DST Sound Index Chunk is allowed in a Form DSD Chunk.
-struct dst_sound_index_chunk
+struct dst_sound_index_chunk_t
 {
     // chunk_id is always 'DSTI'.
     uint32_t chunk_id;                    // 'DSTI'
@@ -586,8 +586,8 @@ struct dst_sound_index_chunk
     // is an array of dst_frame_index_t structs.
     dst_frame_index_t index_data[255];           // array of index structs
 } ATTRIBUTE_PACKED;
-typedef struct dst_sound_index_chunk   dst_sound_index_chunk;
-
+typedef struct dst_sound_index_chunk_t   dst_sound_index_chunk_t;
+#define DST_SOUND_INDEX_CHUNK_SIZE    12U
 
 // The format for describing each of the comments.
 //
