@@ -43,7 +43,7 @@
 #include "scarletbook.h"
 #include "version.h"
 
-#define DSDFIFF_BUFFER_SIZE    1024 * 64
+#define DSDFIFF_BUFFER_SIZE    1024 * 8
 
 typedef struct
 {
@@ -54,6 +54,9 @@ typedef struct
 
     size_t              frame_count;
     uint64_t            audio_data_size;
+
+    dst_frame_index_t  *frame_indexes;
+    size_t              frame_indexes_allocated;
 
     int                 edit_master;
 } 
@@ -113,7 +116,7 @@ static uint8_t *add_marker_chunk(uint8_t *em_ptr, scarletbook_output_format_t *f
     return em_ptr;
 }
 
-int dsdiff_create_header(scarletbook_output_format_t *ft)
+static int calculate_header_and_footer(scarletbook_output_format_t *ft)
 {
     form_dsd_chunk_t *form_dsd_chunk;
     property_chunk_t *property_chunk;
@@ -270,6 +273,9 @@ int dsdiff_create_header(scarletbook_output_format_t *ft)
     // all properties have been written, now set the property chunk size
     property_chunk->chunk_data_size = CALC_CHUNK_SIZE(write_ptr - prop_ptr - CHUNK_HEADER_SIZE);
 
+    // start with a new footer
+    handle->footer_size = 0;
+
     // Either the DSD or DST Sound Data chunk is required and may appear
     // only once in the Form DSD Chunk. The chunk must be placed after the Property Chunk.
     if (ft->dsd_encoded_export)
@@ -285,25 +291,55 @@ int dsdiff_create_header(scarletbook_output_format_t *ft)
     {
         dst_sound_data_chunk_t *dst_sound_data_chunk;
         dst_frame_information_chunk_t *dst_frame_information_chunk;
+        size_t sound_index_size = 0;
 
         dst_sound_data_chunk                  = (dst_sound_data_chunk_t *) write_ptr;
         dst_sound_data_chunk->chunk_id        = DST_MARKER;
-        dst_sound_data_chunk->chunk_data_size = CALC_CHUNK_SIZE(handle->audio_data_size + DST_FRAME_INFORMATION_CHUNK_SIZE);
 
         write_ptr += DST_SOUND_DATA_CHUNK_SIZE;
 
         dst_frame_information_chunk           = (dst_frame_information_chunk_t *) write_ptr;
         dst_frame_information_chunk->chunk_id = FRTE_MARKER;
-        dst_frame_information_chunk->chunk_data_size = CALC_CHUNK_SIZE(DST_FRAME_INFORMATION_CHUNK_SIZE - CHUNK_HEADER_SIZE);
         dst_frame_information_chunk->frame_rate = hton16(SACD_FRAME_RATE);
         dst_frame_information_chunk->num_frames = hton32(handle->frame_count);
+        dst_frame_information_chunk->chunk_data_size = CALC_CHUNK_SIZE(DST_FRAME_INFORMATION_CHUNK_SIZE - CHUNK_HEADER_SIZE);
+
+        // DST Sound Index Chunk
+        if (handle->frame_count > 0)
+        {
+            size_t frame;
+            dst_sound_index_chunk_t *dst_sound_index_chunk;
+            uint8_t *dsti_ptr;
+
+            // resize the footer buffer
+            handle->footer = realloc(handle->footer, DSDFIFF_BUFFER_SIZE + handle->frame_indexes_allocated * DST_FRAME_INDEX_SIZE);
+
+            dsti_ptr = handle->footer + handle->footer_size;
+
+            dst_sound_index_chunk                 = (dst_sound_index_chunk_t *) dsti_ptr;
+            dst_sound_index_chunk->chunk_id       = DSTI_MARKER;
+
+            dsti_ptr += DST_SOUND_INDEX_CHUNK_SIZE;
+
+            for (frame = 0; frame < handle->frame_count; frame++)
+            {
+                dst_frame_index_t *dst_frame_index = (dst_frame_index_t *) dsti_ptr;
+                dst_frame_index->length = hton32(handle->frame_indexes[frame].length);
+                dst_frame_index->offset = hton64(handle->frame_indexes[frame].offset);
+                dsti_ptr += DST_FRAME_INDEX_SIZE;
+            }
+
+            sound_index_size = handle->frame_count * DST_FRAME_INDEX_SIZE + DST_SOUND_INDEX_CHUNK_SIZE;
+            dst_sound_index_chunk->chunk_data_size = CALC_CHUNK_SIZE(sound_index_size - CHUNK_HEADER_SIZE);
+            dst_sound_data_chunk->chunk_data_size = CALC_CHUNK_SIZE(sound_index_size + handle->audio_data_size + DST_FRAME_INFORMATION_CHUNK_SIZE);
+
+            handle->footer_size += CEIL_ODD_NUMBER(dsti_ptr - handle->footer - handle->footer_size);
+        }
 
         write_ptr += DST_FRAME_INFORMATION_CHUNK_SIZE;
     }
 
-    // start with a new footer
-    handle->footer_size = 0;
-
+    // edit master information
     {
         uint8_t * em_ptr  = handle->footer + handle->footer_size;
         edited_master_information_chunk_t *edited_master_information_chunk = (edited_master_information_chunk_t *) em_ptr;
@@ -521,22 +557,24 @@ int dsdiff_create_header(scarletbook_output_format_t *ft)
     handle->header_size = CEIL_ODD_NUMBER(write_ptr - handle->header);
     form_dsd_chunk->chunk_data_size = CALC_CHUNK_SIZE(handle->header_size + handle->footer_size + handle->audio_data_size - CHUNK_HEADER_SIZE);
 
-    fwrite(handle->header, 1, handle->header_size, ft->fd);
-
     return 0;
 }
 
 int dsdiff_create_edit_master(scarletbook_output_format_t *ft)
 {
-    int ret = dsdiff_create_header(ft);
+    int ret = calculate_header_and_footer(ft);
     dsdiff_handle_t *handle = (dsdiff_handle_t *) ft->priv;
     handle->edit_master = 1;
+    fwrite(handle->header, 1, handle->header_size, ft->fd);
     return ret;
 }
 
 int dsdiff_create(scarletbook_output_format_t *ft)
 {
-    return dsdiff_create_header(ft);
+    int ret = calculate_header_and_footer(ft);
+    dsdiff_handle_t  *handle = (dsdiff_handle_t *) ft->priv;
+    fwrite(handle->header, 1, handle->header_size, ft->fd);
+    return ret;
 }
 
 int dsdiff_close(scarletbook_output_format_t *ft)
@@ -549,13 +587,19 @@ int dsdiff_close(scarletbook_output_format_t *ft)
         fwrite(&dummy, 1, 1, ft->fd);
         handle->audio_data_size += 1;
     }
+
+    // re-calculate the header & footer
+    calculate_header_and_footer(ft);
+
+    // append the footer
     fwrite(handle->footer, 1, handle->footer_size, ft->fd);
 
-    fseek(ft->fd, 0, SEEK_SET);
-    
     // write the final header
-    dsdiff_create_header(ft);
+    fseek(ft->fd, 0, SEEK_SET);
+    fwrite(handle->header, 1, handle->header_size, ft->fd);
 
+    if (handle->frame_indexes)
+        free(handle->frame_indexes);
     if (handle->header)
         free(handle->header);
     if (handle->footer)
@@ -584,6 +628,16 @@ size_t dsdiff_write_frame(scarletbook_output_format_t *ft, const uint8_t *buf, s
         dst_frame_data_chunk.chunk_data_size = hton64(len);
         {
             size_t nrw;
+
+            if (handle->frame_count > handle->frame_indexes_allocated)
+            {
+                handle->frame_indexes_allocated += 10000;
+                handle->frame_indexes = (dst_frame_index_t *) realloc(handle->frame_indexes, handle->frame_indexes_allocated * DST_FRAME_INDEX_SIZE);
+            }
+
+            handle->frame_indexes[handle->frame_count - 1].length = len;
+            handle->frame_indexes[handle->frame_count - 1].offset = ftell(ft->fd) + DST_FRAME_DATA_CHUNK_SIZE;
+
             nrw = fwrite(&dst_frame_data_chunk, 1, DST_FRAME_DATA_CHUNK_SIZE, ft->fd);
             nrw += fwrite(buf, 1, len, ft->fd);
             if (len % 2)
