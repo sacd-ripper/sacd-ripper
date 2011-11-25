@@ -560,9 +560,10 @@ static int calculate_header_and_footer(scarletbook_output_format_t *ft)
 
 int dsdiff_create_edit_master(scarletbook_output_format_t *ft)
 {
-    int ret = calculate_header_and_footer(ft);
+    int ret;
     dsdiff_handle_t *handle = (dsdiff_handle_t *) ft->priv;
     handle->edit_master = 1;
+    ret = calculate_header_and_footer(ft);
     fwrite(handle->header, 1, handle->header_size, ft->fd);
     return ret;
 }
