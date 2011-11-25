@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <sfo>
-	<value name="APP_VER" type="string">00.33</value>
+	<value name="APP_VER" type="string">00.34</value>
 	<value name="ATTRIBUTE" type="integer">
 		0
 	</value>
