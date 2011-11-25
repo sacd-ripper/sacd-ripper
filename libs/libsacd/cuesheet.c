@@ -89,12 +89,15 @@ int write_cue_sheet(scarletbook_handle_t *handle, const char *filename, int area
         fprintf(fd, "CATALOG %s\n", substr(handle->master_toc->disc_catalog_number, 0, 16));
     }
 
-    fprintf(fd, "FILE \"%s\" DSDIFF\n", filename);
+    fprintf(fd, "FILE \"%s\" WAVE\n", filename);
     {
-        int track;
+        int track, track_count = handle->area[area].area_toc->track_count;
+        uint64_t prev_abs_end = 0;
 
-        for (track = 0; track < handle->area[area].area_toc->track_count; track++)
+        for (track = 0; track < track_count; track++)
         {
+            area_tracklist_time_t *time = &handle->area[area].area_tracklist_time->start[track];
+
             fprintf(fd, "  TRACK %02d AUDIO\n", track + 1);
             
             if (handle->area[area].area_track_text[track].track_type_title)
@@ -112,20 +115,20 @@ int write_cue_sheet(scarletbook_handle_t *handle, const char *filename, int area
                 fprintf(fd, "      ISRC %s\n", substr(handle->area[area].area_isrc_genre->isrc[track].country_code, 0, 12));
             }
 
-#if 0
-            if (track != handle->area[area].area_toc->track_count - 1 
-                || TIME_FRAMECOUNT(&handle->area[area].area_tracklist_time->start[track + 1]) > TIME_FRAMECOUNT(&handle->area[area].area_tracklist_time->start[track]))
+            if (TIME_FRAMECOUNT(&handle->area[area].area_tracklist_time->start[track]) > prev_abs_end)
             {
-                //area_tracklist_time_t *time = &handle->area[area].area_tracklist_time->start[track];
-                //fprintf(fd, "      INDEX 00 %02d:%02d:%02d\n", time->minutes, time->seconds, time->frames);
-                //fprintf(fd, "      INDEX 00 %02d:%02d:%02d\n", time->minutes, time->seconds, time->frames);
+                int prev_sec = (int) (prev_abs_end / SACD_FRAME_RATE);
+
+                fprintf(fd, "      INDEX 00 %02d:%02d:%02d\n", prev_sec / 60, (int) prev_sec % 60, (int) prev_abs_end % SACD_FRAME_RATE);
+                fprintf(fd, "      INDEX 01 %02d:%02d:%02d\n", time->minutes, time->seconds, time->frames);
             }
             else
-#endif
             {
-                area_tracklist_time_t *time = &handle->area[area].area_tracklist_time->start[track];
-                fprintf(fd, "      INDEX 00 %02d:%02d:%02d\n", time->minutes, time->seconds, time->frames);
+                fprintf(fd, "      INDEX 01 %02d:%02d:%02d\n", time->minutes, time->seconds, time->frames);
             }
+
+            prev_abs_end = TIME_FRAMECOUNT(&handle->area[area].area_tracklist_time->start[track]) + 
+                             TIME_FRAMECOUNT(&handle->area[area].area_tracklist_time->duration[track]);
         }
     }
 

@@ -43,7 +43,7 @@
 #include "scarletbook.h"
 #include "version.h"
 
-#define DSDFIFF_BUFFER_SIZE    8192
+#define DSDFIFF_BUFFER_SIZE    1024 * 64
 
 typedef struct
 {
