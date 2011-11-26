@@ -261,7 +261,7 @@ int recursive_mkdir(char* path_and_name, mode_t mode)
 #ifdef __lv2ppu__
             sysFsChmod(path_and_name, S_IFMT | 0777); 
 #elif !defined(_WIN32)
-            chmod(path_and_name, S_IRWXU | S_IRWXG | S_IROTH);
+            chmod(path_and_name, mode);
 #endif
             path_and_name[count + 1] = charReplaced;
 
@@ -283,7 +283,7 @@ int recursive_mkdir(char* path_and_name, mode_t mode)
 #ifdef __lv2ppu__
     sysFsChmod(path_and_name, S_IFMT | 0777);
 #elif !defined(_WIN32)
-    chmod(path_and_name, S_IRWXU | S_IRWXG | S_IROTH);
+    chmod(path_and_name, mode);
 #endif
     return rc;
 }

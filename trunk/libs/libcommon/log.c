@@ -264,8 +264,6 @@ int set_log_file(const char *file)
     }
 #ifdef __lv2ppu__
     sysFsChmod(file, S_IFMT | 0777); 
-#elif !defined(_WIN32)
-    chmod(file, S_IRWXU | S_IRWXG | S_IROTH);
 #endif
 
     if (log_file && log_file != stdout && log_file != stderr)
