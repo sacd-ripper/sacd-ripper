@@ -193,7 +193,7 @@ static int create_output_file(scarletbook_output_format_t *ft)
     ft->fd = fopen(ft->filename, "wb");
 #endif
     if (ft->fd == 0)
-    {
+    {   
         LOG(lm_main, LOG_ERROR, ("error creating %s, errno: %d, %s", ft->filename, errno, strerror(errno)));
         goto error;
     }
@@ -212,13 +212,8 @@ static int create_output_file(scarletbook_output_format_t *ft)
     return result;
 
 error:
-    if (ft->fd)
-    {
-        fclose(ft->fd);
-    }
-    free(ft->write_cache);
-    free(ft->priv);
-    free(ft);
+
+    // close_output_file will be called
     return -1;
 }
 

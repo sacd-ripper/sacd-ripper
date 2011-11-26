@@ -180,7 +180,7 @@ static int parse_options(int argc, char *argv[])
     return 1;
 }
 
-void handle_sigint(int sig_no)
+static void handle_sigint(int sig_no)
 {
     fwprintf(stdout, L"\rUser interrupted..                                                      \n");
     scarletbook_output_interrupt(output);
@@ -240,7 +240,7 @@ static void init(void)
 
 int main(int argc, char* argv[]) 
 {
-    char *albumdir, *musicfilename, *file_path;
+    char *albumdir = 0, *musicfilename, *file_path;
     int i, area_idx;
     sacd_reader_t *sacd_reader;
 
@@ -336,7 +336,7 @@ int main(int argc, char* argv[])
                     {
                         // create the output folder
                         get_unique_dir(0, &albumdir);
-                        recursive_mkdir(albumdir, 0666);
+                        recursive_mkdir(albumdir, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
                         // fill the queue with items to rip
                         for (i = 0; i < handle->area[area_idx].area_toc->track_count; i++) 

@@ -80,7 +80,7 @@ static const uint8_t bit_reverse_table[] =
     0x0f, 0x8f, 0x4f, 0xcf, 0x2f, 0xaf, 0x6f, 0xef, 0x1f, 0x9f, 0x5f, 0xdf, 0x3f, 0xbf, 0x7f, 0xff
 };
 
-int dsf_create_header(scarletbook_output_format_t *ft)
+static int dsf_create_header(scarletbook_output_format_t *ft)
 {
     dsd_chunk_header_t *dsd_chunk;
     uint8_t          *write_ptr;
@@ -162,12 +162,12 @@ int dsf_create_header(scarletbook_output_format_t *ft)
 }
 
 
-int dsf_create(scarletbook_output_format_t *ft)
+static int dsf_create(scarletbook_output_format_t *ft)
 {
     return dsf_create_header(ft);
 }
 
-int dsf_close(scarletbook_output_format_t *ft)
+static int dsf_close(scarletbook_output_format_t *ft)
 {
     dsf_handle_t *handle = (dsf_handle_t *) ft->priv;
 
@@ -185,7 +185,7 @@ int dsf_close(scarletbook_output_format_t *ft)
     return 0;
 }
 
-size_t dsf_write_frame(scarletbook_output_format_t *ft, const uint8_t *buf, size_t len)
+static size_t dsf_write_frame(scarletbook_output_format_t *ft, const uint8_t *buf, size_t len)
 {
     dsf_handle_t *handle = (dsf_handle_t *) ft->priv;
     const uint8_t *buf_end_ptr = buf + len;

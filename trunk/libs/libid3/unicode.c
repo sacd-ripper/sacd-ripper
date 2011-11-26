@@ -10,7 +10,7 @@
 
 #include "charset.h"
 
-size_t utf16_strlen(const unsigned char *string)
+static size_t utf16_strlen(const unsigned char *string)
 {
 	size_t len = 0;
 

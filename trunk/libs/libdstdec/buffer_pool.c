@@ -74,7 +74,7 @@ buffer_pool_space_t *buffer_pool_get_space(buffer_pool_t *pool)
 #ifdef _WIN32
     space->buf = _aligned_malloc(pool->size, 64);
 #elif __APPLE__
-    posix_memalign(space->buf, 64, pool->size);
+    posix_memalign(&space->buf, 64, pool->size);
 #else
     space->buf = memalign(64, pool->size);
 #endif
