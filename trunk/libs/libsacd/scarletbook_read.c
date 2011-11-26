@@ -23,7 +23,9 @@
 #include <stdlib.h>
 #include <inttypes.h>
 #include <string.h>
+#ifndef __APPLE__
 #include <malloc.h>
+#endif
 
 #include <charset.h>
 

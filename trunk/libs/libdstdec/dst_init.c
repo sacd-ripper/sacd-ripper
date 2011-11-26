@@ -61,7 +61,9 @@ Changes:
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
+#ifndef __APPLE__
 #include <malloc.h>
+#endif
 #if !defined(NO_SSE2) && (defined(_M_IX86) || defined(_M_X64) || defined(__i386__) || defined(__x86_64__))
 #include <emmintrin.h>
 #endif

@@ -48,7 +48,9 @@
 
 #include <stdlib.h>
 #include <assert.h>
+#ifndef __APPLE__
 #include <malloc.h>
+#endif
 #include <pthread.h>
 #include <string.h>
 #ifdef __linux__
