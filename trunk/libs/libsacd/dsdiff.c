@@ -636,7 +636,12 @@ static size_t dsdiff_write_frame(scarletbook_output_format_t *ft, const uint8_t 
             }
 
             handle->frame_indexes[handle->frame_count - 1].length = len;
-            handle->frame_indexes[handle->frame_count - 1].offset = ftell(ft->fd) + DST_FRAME_DATA_CHUNK_SIZE;
+
+#ifdef _WIN32
+            handle->frame_indexes[handle->frame_count - 1].offset = _ftelli64(ft->fd) + DST_FRAME_DATA_CHUNK_SIZE;
+#else
+            handle->frame_indexes[handle->frame_count - 1].offset = ftello64(ft->fd) + DST_FRAME_DATA_CHUNK_SIZE;
+#endif
 
             nrw = fwrite(&dst_frame_data_chunk, 1, DST_FRAME_DATA_CHUNK_SIZE, ft->fd);
             nrw += fwrite(buf, 1, len, ft->fd);
