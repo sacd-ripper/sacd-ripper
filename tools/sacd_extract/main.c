@@ -30,7 +30,9 @@
 #include <wchar.h>
 #include <locale.h>
 #include <time.h>
+#ifndef __APPLE__
 #include <malloc.h>
+#endif
 #ifdef _WIN32
 #include <io.h>
 #endif

@@ -24,7 +24,9 @@
 #include <fcntl.h>
 #include <string.h>
 #include <inttypes.h>
+#ifndef __APPLE__
 #include <malloc.h>
+#endif
 #include <errno.h>
 #include <assert.h>
 #ifdef __lv2ppu__
