@@ -336,7 +336,7 @@ int main(int argc, char* argv[])
                     {
                         // create the output folder
                         get_unique_dir(0, &albumdir);
-                        recursive_mkdir(albumdir, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+                        recursive_mkdir(albumdir, S_IRWXU | S_IRWXG | S_IROTH);
 
                         // fill the queue with items to rip
                         for (i = 0; i < handle->area[area_idx].area_toc->track_count; i++) 

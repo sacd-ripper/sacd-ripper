@@ -28,9 +28,9 @@ void init_logging()
 {
 #ifdef __lv2ppu__ 
     setenv("LOG_MODULES", "all:5", 0); //,bufsize:16384
-#elif defined(__APPLE__)
+#else
     setenv("LOG_MODULES", "all:3", 0); //,bufsize:16384
-    #endif
+#endif
     lm_main = create_log_module("main");
     log_init();
 }
