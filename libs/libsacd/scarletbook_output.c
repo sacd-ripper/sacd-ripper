@@ -190,7 +190,7 @@ static int create_output_file(scarletbook_output_format_t *ft)
     ft->fd = _wfopen(wide_filename, L"wb");
     free(wide_filename);
 #else
-    ft->fd = fopen(ft->filename, "wb");
+    ft->fd = fopen(ft->filename, "wb");	
 #endif
     if (ft->fd == 0)
     {   
@@ -200,6 +200,8 @@ static int create_output_file(scarletbook_output_format_t *ft)
 
 #ifdef __lv2ppu__
     sysFsChmod(ft->filename, S_IFMT | 0777); 
+#elif !defined(_WIN32)
+    chmod(ft->filename, S_IRWXU | S_IRWXG | S_IROTH);
 #endif
 
     ft->write_cache = malloc(WRITE_CACHE_SIZE);
