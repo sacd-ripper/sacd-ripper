@@ -556,7 +556,7 @@ static int calculate_header_and_footer(scarletbook_output_format_t *ft)
     return 0;
 }
 
-int dsdiff_create_edit_master(scarletbook_output_format_t *ft)
+static int dsdiff_create_edit_master(scarletbook_output_format_t *ft)
 {
     int ret;
     dsdiff_handle_t *handle = (dsdiff_handle_t *) ft->priv;
@@ -566,7 +566,7 @@ int dsdiff_create_edit_master(scarletbook_output_format_t *ft)
     return ret;
 }
 
-int dsdiff_create(scarletbook_output_format_t *ft)
+static int dsdiff_create(scarletbook_output_format_t *ft)
 {
     int ret = calculate_header_and_footer(ft);
     dsdiff_handle_t  *handle = (dsdiff_handle_t *) ft->priv;
@@ -574,10 +574,13 @@ int dsdiff_create(scarletbook_output_format_t *ft)
     return ret;
 }
 
-int dsdiff_close(scarletbook_output_format_t *ft)
+static int dsdiff_close(scarletbook_output_format_t *ft)
 {
     dsdiff_handle_t *handle = (dsdiff_handle_t *) ft->priv;
 
+    if (!handle)
+        return 0;
+    
     if (handle->audio_data_size % 2)
     {
         uint8_t dummy = 0;
@@ -605,7 +608,7 @@ int dsdiff_close(scarletbook_output_format_t *ft)
     return 0;
 }
 
-size_t dsdiff_write_frame(scarletbook_output_format_t *ft, const uint8_t *buf, size_t len)
+static size_t dsdiff_write_frame(scarletbook_output_format_t *ft, const uint8_t *buf, size_t len)
 {
     dsdiff_handle_t *handle = (dsdiff_handle_t *) ft->priv;
 

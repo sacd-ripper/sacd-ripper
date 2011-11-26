@@ -49,7 +49,7 @@ static const wchar_t *ucs(const char* str)
     return buf;
 }
 
-void scarletbook_print_album_text(scarletbook_handle_t *handle)
+static void scarletbook_print_album_text(scarletbook_handle_t *handle)
 {
     master_toc_t *master_toc = handle->master_toc;
     master_text_t *master_text = &handle->master_text;
@@ -74,7 +74,7 @@ void scarletbook_print_album_text(scarletbook_handle_t *handle)
         fwprintf(stdout, L"\tCopyright Phonetic: %ls\n", ucs(master_text->album_copyright_phonetic));
 }
 
-void scarletbook_print_disc_text(scarletbook_handle_t *handle)
+static void scarletbook_print_disc_text(scarletbook_handle_t *handle)
 {
     master_toc_t *master_toc = handle->master_toc;
 
@@ -99,7 +99,7 @@ void scarletbook_print_disc_text(scarletbook_handle_t *handle)
         fwprintf(stdout, L"\tCopyright Phonetic: %ls\n", ucs(master_text->disc_copyright_phonetic));
 }
 
-void scarletbook_print_master_toc(scarletbook_handle_t *handle)
+static void scarletbook_print_master_toc(scarletbook_handle_t *handle)
 {
     int          i;
     char         tmp_str[20];
@@ -151,7 +151,7 @@ void scarletbook_print_master_toc(scarletbook_handle_t *handle)
     scarletbook_print_album_text(handle);
 }
 
-void scarletbook_print_area_text(scarletbook_handle_t *handle, int area_idx)
+static void scarletbook_print_area_text(scarletbook_handle_t *handle, int area_idx)
 {
     int i;
     fwprintf(stdout, L"\tTrack list [%d]:\n", area_idx);
@@ -189,7 +189,7 @@ void scarletbook_print_area_text(scarletbook_handle_t *handle, int area_idx)
     }
 }
 
-void scarletbook_print_area_toc(scarletbook_handle_t *handle, int area_idx)
+static void scarletbook_print_area_toc(scarletbook_handle_t *handle, int area_idx)
 {
     int                        i;
     area_isrc_genre_t       *area_isrc_genre;
