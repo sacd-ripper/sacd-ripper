@@ -45,7 +45,6 @@ int write_cue_sheet(scarletbook_handle_t *handle, const char *filename, int area
     }
 #else
     fd = fopen(filename, "wb");
-    chmod(filename, 0644);	
 #endif
     if (fd == 0)
     {
