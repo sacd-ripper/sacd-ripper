@@ -30,7 +30,6 @@
 #include <charset.h>
 #include <version.h>
 #include <utils.h>
-#include <genre.dat>
 
 #include "cuesheet.h"
 
@@ -58,20 +57,16 @@ int write_cue_sheet(scarletbook_handle_t *handle, const char *filename, int area
     fputc(0xbf, fd);
     fprintf(fd, "\nREM File created by SACD Extract, version: " SACD_RIPPER_VERSION_STRING "\n");
 
+    if (handle->master_toc->disc_genre[0].genre > 0)
     {
-        const int sacd_id3_genres[] = {
-            12,  12,  40, 12, 32, 140,  2,  3,
-            98,  12,  80, 38,  7,   8, 86, 77,
-            10, 103, 104, 13, 15,  16, 17, 14,
-            37,  24, 101, 12,  0,  12, 12, 12
-        };
-
-        fprintf(fd, "REM GENRE %s\n", genre_table[sacd_id3_genres[handle->area[area].area_isrc_genre->track_genre[0].genre & 0x1f]]);
+        fprintf(fd, "REM GENRE %s\n", album_genre[handle->master_toc->disc_genre[0].genre]);
     }
 
     if (handle->master_toc->disc_date_year)
     {
-        fprintf(fd, "REM DATE %04d\n", handle->master_toc->disc_date_year);
+        fprintf(fd, "REM DATE %04d-%02d-%02d\n", handle->master_toc->disc_date_year
+                                               , handle->master_toc->disc_date_month
+                                               , handle->master_toc->disc_date_day);
     }
 
     if (handle->master_text.disc_artist)
