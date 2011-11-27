@@ -246,7 +246,7 @@ static void init(void)
 
 int main(int argc, char* argv[]) 
 {
-    char *albumdir = 0, *musicfilename, *file_path;
+    char *albumdir = 0, *musicfilename, *file_path = 0;
     int i, area_idx;
     sacd_reader_t *sacd_reader;
 
@@ -310,7 +310,6 @@ int main(int argc, char* argv[])
                                 sector_offset += sector_size;
                                 total_sectors -= sector_size;
                             }
-                            free(file_path);
                             free(musicfilename);
                         }
                         else
@@ -319,7 +318,6 @@ int main(int argc, char* argv[])
                             get_unique_filename(&albumdir, "iso");
                             file_path = make_filename(0, 0, albumdir, "iso");
                             scarletbook_output_enqueue_raw_sectors(output, 0, total_sectors, file_path, "iso");
-                            free(file_path);
                         }
                     }
                     else if (opts.output_dsdiff_em)
@@ -329,8 +327,6 @@ int main(int argc, char* argv[])
 
                         scarletbook_output_enqueue_track(output, area_idx, 0, file_path, "dsdiff_edit_master", 
                             (opts.convert_dst ? 1 : handle->area[area_idx].area_toc->frame_format != FRAME_FORMAT_DST));
-
-                        free(file_path);
                     }
                     else if (opts.output_dsf || opts.output_dsdiff)
                     {
@@ -357,6 +353,7 @@ int main(int argc, char* argv[])
 
                             free(musicfilename);
                             free(file_path);
+                            file_path = 0;
                         }
                     }
 
@@ -369,12 +366,14 @@ int main(int argc, char* argv[])
                         wchar_t *wide_filename = (wchar_t *) charset_convert(cue_file_path, strlen(cue_file_path), "UTF-8", "WCHAR_T");
 #endif
                         fwprintf(stdout, L"Exporting CUE sheet [%Ls]\n", wide_filename);
-                        file_path = make_filename(0, 0, albumdir, "dff");
+                        if (!file_path)
+                            file_path = make_filename(0, 0, albumdir, "dff");
                         write_cue_sheet(handle, file_path, area_idx, cue_file_path);
-                        free(file_path);
                         free(cue_file_path);
                         free(wide_filename);
                     }
+
+                    free(file_path);
 
                     started_processing = time(0);
                     scarletbook_output_start(output);

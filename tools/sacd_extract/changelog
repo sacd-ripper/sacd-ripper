@@ -1,3 +1,10 @@
+version 0.3.5
+
+    - added ID3 tags to Edit Master for multiple ID3 tagging
+    - added option to export individual CUE Sheets
+    - fixed DSTI table where DST Edit Master > 2GB
+    - fixed SACD to ID3 genre conversion table
+
 version 0.3.4 (bug fix release, please update if running 0.3.3)
 
     - fixed a bug where DSTI was incorrectly part of DSD chunk
