@@ -28,7 +28,6 @@
 #include <charset.h>
 
 #include "scarletbook.h"
-#include "version.h"
 
 #include <id3.h>
 #include <genre.dat>
@@ -36,11 +35,38 @@
 int scarletbook_id3_tag_render(scarletbook_handle_t *handle, uint8_t *buffer, int area, int track)
 {
     const int sacd_id3_genres[] = {
-        12,  12,  40, 12, 32, 140,  2,  3,
-        98,  12,  80, 38,  7,   8, 86, 77,
-        10, 103, 104, 13, 15,  16, 17, 14,
-        37,  24, 101, 12,  0,  12, 12, 12
-    };
+        12,     /* Not used => Other */
+        12,     /* Not defined => Other */
+        60,     /* Adult Contemporary => Top 40 */
+        40,     /* Alternative Rock => AlternRock */
+        12,     /* Children's Music => Other */
+        32,     /* Classical => Classical */
+        140,    /* Contemporary Christian => Contemporary Christian */
+        2,      /* Country => Country */
+        3,      /* Dance => Dance */
+        98,     /* Easy Listening => Easy Listening */
+        109,    /* Erotic => Porn Groove */
+        80,     /* Folk => Folk */
+        38,     /* Gospel => Gospel */
+        7,      /* Hip Hop => Hip-Hop */
+        8,      /* Jazz => Jazz */
+        86,     /* Latin => Latin */
+        77,     /* Musical => Musical */
+        10,     /* New Age => New Age */
+        103,    /* Opera => Opera */
+        104,    /* Operetta => Chamber Music */
+        13,     /* Pop Music => Pop */
+        15,     /* RAP => Rap */
+        16,     /* Reggae => Reggae */
+        17,     /* Rock Music => Rock */
+        14,     /* Rhythm & Blues => R&B */
+        37,     /* Sound Effects => Sound Clip */
+        24,     /* Sound Track => Soundtrack */
+        101,    /* Spoken Word => Speech */
+        48,     /* World Music => Ethnic */
+        0,      /* Blues => Blues */
+        12,     /* Not used => Other */
+    }; 
     struct id3_tag *tag;
     struct id3_frame *frame;
     char tmp[200];
@@ -155,9 +181,6 @@ int scarletbook_id3_tag_render(scarletbook_handle_t *handle, uint8_t *buffer, in
     snprintf(tmp, 200, "%d", track + 1);     // internally tracks start from 0
     frame = id3_add_frame(tag, ID3_TRCK);
     id3_set_text(frame, tmp);
-
-    frame = id3_add_frame(tag, ID3_TSSE);
-    id3_set_text(frame, SACD_RIPPER_VERSION_INFO);
 
     len = id3_write_tag(tag, buffer);
     id3_close(tag);
