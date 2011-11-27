@@ -65,6 +65,7 @@ static struct opts_s
     int            output_dsdiff;
     int            output_iso;
     int            convert_dst;
+    int            export_cue_sheet;
     int            print;
     char          *input_device; /* Access method driver should use for control */
     char           output_file[512];
@@ -88,6 +89,7 @@ static int parse_options(int argc, char *argv[])
         "  -s, --output-dsf                : output as Sony DSF file\n"
         "  -I, --output-iso                : output as RAW ISO\n"
         "  -c, --convert-dst               : convert DST to DSD\n"
+        "  -C, --export-cue                : Export a CUE Sheet\n"
         "  -i, --input[=FILE]              : set source and determine if \"iso\" image, \n"
         "                                    device or server (ex. -i192.168.1.10:2002)\n"
         "  -P, --print                     : display disc and track information\n" 
@@ -99,10 +101,10 @@ static int parse_options(int argc, char *argv[])
     static const char usage_text[] = 
         "Usage: %s [-2|--2ch-tracks] [-m|--mch-tracks] [-p|--output-dsdiff]\n"
         "        [-e|--output-dsdiff-em] [-s|--output-dsf] [-I|--output-iso]\n"
-        "        [-c|--convert-dst] [-i|--input FILE] [-P|--print]\n"
+        "        [-c|--convert-dst] [-C|--export-cue] [-i|--input FILE] [-P|--print]\n"
         "        [-?|--help] [--usage]\n";
 
-    static const char options_string[] = "2mepsIci::P?";
+    static const char options_string[] = "2mepsIcCi::P?";
     static const struct option options_table[] = {
         {"2ch-tracks", no_argument, NULL, '2' },
         {"mch-tracks", no_argument, NULL, 'm' },
@@ -111,6 +113,7 @@ static int parse_options(int argc, char *argv[])
         {"output-dsf", no_argument, NULL, 's'}, 
         {"output-iso", no_argument, NULL, 'I'}, 
         {"convert-dst", no_argument, NULL, 'c'}, 
+        {"export-cue", no_argument, NULL, 'C'}, 
         {"input", required_argument, NULL, 'i' },
         {"print", no_argument, NULL, 'P' },
 
@@ -135,6 +138,7 @@ static int parse_options(int argc, char *argv[])
             opts.output_dsdiff = 0;
             opts.output_dsf = 0; 
             opts.output_iso = 0;
+            opts.export_cue_sheet = 1;
             break;
         case 'p': 
             opts.output_dsdiff_em = 0; 
@@ -155,6 +159,7 @@ static int parse_options(int argc, char *argv[])
             opts.output_iso = 1;
             break;
         case 'c': opts.convert_dst = 1; break;
+        case 'C': opts.export_cue_sheet = 1; break;
         case 'i': opts.input_device = strdup(optarg); break;
         case 'P': opts.print = 1; break;
 
@@ -223,6 +228,7 @@ static void init(void)
     opts.output_dsdiff      = 0;
     opts.output_dsdiff_em   = 0;
     opts.convert_dst        = 0;
+    opts.export_cue_sheet   = 0;
     opts.print              = 0;
     opts.input_device       = "/dev/cdrom";
 
@@ -276,7 +282,7 @@ int main(int argc, char* argv[])
                     scarletbook_print(handle);
                 }
 
-                if (opts.output_dsf || opts.output_iso || opts.output_dsdiff || opts.output_dsdiff_em)
+                if (opts.output_dsf || opts.output_iso || opts.output_dsdiff || opts.output_dsdiff_em || opts.export_cue_sheet)
                 {
                     output = scarletbook_output_create(handle, handle_status_update_track_callback, handle_status_update_progress_callback);
 
@@ -324,15 +330,9 @@ int main(int argc, char* argv[])
                         scarletbook_output_enqueue_track(output, area_idx, 0, file_path, "dsdiff_edit_master", 
                             (opts.convert_dst ? 1 : handle->area[area_idx].area_toc->frame_format != FRAME_FORMAT_DST));
 
-                        // write cue sheet
-                        {
-                            char *cue_file_path = make_filename(0, 0, albumdir, "cue");
-                            write_cue_sheet(handle, file_path, area_idx, cue_file_path);
-                            free(cue_file_path);
-                        }
                         free(file_path);
                     }
-                    else 
+                    else if (opts.output_dsf || opts.output_dsdiff)
                     {
                         // create the output folder
                         get_unique_dir(0, &albumdir);
@@ -358,6 +358,22 @@ int main(int argc, char* argv[])
                             free(musicfilename);
                             free(file_path);
                         }
+                    }
+
+                    if (opts.export_cue_sheet)
+                    {
+                        char *cue_file_path = make_filename(0, 0, albumdir, "cue");
+#ifdef _WIN32
+                        wchar_t *wide_filename = (wchar_t *) charset_convert(cue_file_path, strlen(cue_file_path), "UTF-8", sizeof(wchar_t) == 2 ? "UCS-2-INTERNAL" : "UCS-4-INTERNAL");
+#else
+                        wchar_t *wide_filename = (wchar_t *) charset_convert(cue_file_path, strlen(cue_file_path), "UTF-8", "WCHAR_T");
+#endif
+                        fwprintf(stdout, L"Exporting CUE sheet [%Ls]\n", wide_filename);
+                        file_path = make_filename(0, 0, albumdir, "dff");
+                        write_cue_sheet(handle, file_path, area_idx, cue_file_path);
+                        free(file_path);
+                        free(cue_file_path);
+                        free(wide_filename);
                     }
 
                     started_processing = time(0);
