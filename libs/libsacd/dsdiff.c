@@ -74,9 +74,8 @@ static char *get_mtoc_title_text(scarletbook_handle_t *handle)
     return "Unknown";
 }
 
-static uint8_t *add_marker_chunk(uint8_t *em_ptr, scarletbook_output_format_t *ft, uint64_t frame_count, uint16_t mark_type, int track, uint16_t track_flags)
+static uint8_t *add_marker_chunk(uint8_t *em_ptr, scarletbook_output_format_t *ft, uint64_t frame_count, uint16_t mark_type, uint16_t track_flags)
 {
-    int id3_chunk_size = 0;
     marker_chunk_t *marker_chunk = (marker_chunk_t *) em_ptr;
     int seconds = (int) (frame_count / SACD_FRAME_RATE);
     int remainder = seconds % 3600;
@@ -90,15 +89,10 @@ static uint8_t *add_marker_chunk(uint8_t *em_ptr, scarletbook_output_format_t *f
     marker_chunk->mark_type = hton16(mark_type);
     marker_chunk->mark_channel = hton16(COMT_TYPE_CHANNEL_ALL);
     marker_chunk->track_flags = hton16(track_flags);
+    marker_chunk->count = 0;
 
-    if (mark_type == MARK_MARKER_TYPE_TRACKSTART)
-    {
-        id3_chunk_size = scarletbook_id3_tag_render(ft->sb_handle, marker_chunk->marker_text, ft->area, track);
-    }
-    marker_chunk->count = hton32(id3_chunk_size);
-
-    marker_chunk->chunk_data_size = CALC_CHUNK_SIZE(id3_chunk_size + EDITED_MASTER_MARKER_CHUNK_SIZE - CHUNK_HEADER_SIZE);
-    em_ptr += CEIL_ODD_NUMBER(id3_chunk_size + EDITED_MASTER_MARKER_CHUNK_SIZE);
+    marker_chunk->chunk_data_size = CALC_CHUNK_SIZE(EDITED_MASTER_MARKER_CHUNK_SIZE - CHUNK_HEADER_SIZE);
+    em_ptr += CEIL_ODD_NUMBER(EDITED_MASTER_MARKER_CHUNK_SIZE);
 
     return em_ptr;
 }
@@ -352,15 +346,15 @@ static int calculate_header_and_footer(scarletbook_output_format_t *ft)
                 if (track == 0)
                 {
                     // setting the programstart to 0 always seems incorrect, but produces correct results for SADiE
-                    em_ptr = add_marker_chunk(em_ptr, ft, 0, MARK_MARKER_TYPE_PROGRAMSTART, track, track_flags_start);
+                    em_ptr = add_marker_chunk(em_ptr, ft, 0, MARK_MARKER_TYPE_PROGRAMSTART, track_flags_start);
                 }
 
-                em_ptr = add_marker_chunk(em_ptr, ft, abs_frames_start, MARK_MARKER_TYPE_TRACKSTART, track, track_flags_start);
+                em_ptr = add_marker_chunk(em_ptr, ft, abs_frames_start, MARK_MARKER_TYPE_TRACKSTART, track_flags_start);
 
                 if (track == sb_handle->area[ft->area].area_toc->track_count - 1 
                  || (uint64_t) TIME_FRAMECOUNT(&sb_handle->area[ft->area].area_tracklist_time->start[track + 1]) > abs_frames_stop)
                 {
-                    em_ptr = add_marker_chunk(em_ptr, ft, abs_frames_stop, MARK_MARKER_TYPE_TRACKSTOP, track, track_flags_stop);
+                    em_ptr = add_marker_chunk(em_ptr, ft, abs_frames_stop, MARK_MARKER_TYPE_TRACKSTOP, track_flags_stop);
                 }
             }
         }
@@ -527,7 +521,26 @@ static int calculate_header_and_footer(scarletbook_output_format_t *ft)
 
     // we add a custom (unsupported) ID3 chunk to maintain all track information
     // within one file
-    if (!handle->edit_master)
+    if (handle->edit_master)
+    {
+        int track;
+
+        for (track = 0; track < sb_handle->area[ft->area].area_toc->track_count; track++)
+        {
+            chunk_header_t *id3_chunk;
+            int            id3_chunk_size;
+            uint8_t          * id3_ptr  = handle->footer + handle->footer_size;
+            id3_chunk                  = (chunk_header_t *) id3_ptr;
+            id3_chunk->chunk_id        = MAKE_MARKER('I', 'D', '3', ' ');
+            id3_chunk_size             = scarletbook_id3_tag_render(sb_handle, id3_ptr + CHUNK_HEADER_SIZE, ft->area, track);
+            id3_chunk->chunk_data_size = CALC_CHUNK_SIZE(id3_chunk_size);
+
+            id3_ptr += CEIL_ODD_NUMBER(CHUNK_HEADER_SIZE + id3_chunk_size);
+
+            handle->footer_size += CEIL_ODD_NUMBER(id3_ptr - handle->footer - handle->footer_size);
+        }
+    }
+    else
     {
         chunk_header_t *id3_chunk;
         int            id3_chunk_size;
