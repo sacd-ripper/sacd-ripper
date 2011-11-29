@@ -9,8 +9,8 @@
 #define CHARSET_H_INCLUDED
 
 char* charset_get_current(void);
-char* charset_convert(char *string, size_t insize, char *from, char *to);
-char* charset_to_utf8(char *string);
-char* charset_from_utf8(char *string);
+char* charset_convert(const char *string, size_t insize, const char *from, const char *to);
+char* charset_to_utf8(const char *string);
+char* charset_from_utf8(const char *string);
 
 #endif  /* CHARSET_H_INCLUDED */
