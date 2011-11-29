@@ -73,5 +73,6 @@ Changes:
 /*============================================================================*/
 
 int DST_FramDSTDecode(uint8_t *DSTdata, uint8_t *MuxedDSDdata, int FrameSizeInBytes, int FrameCnt, ebunch *D);
+const char *DST_GetErrorMessage(int error);
 
 #endif  /* __DST_FRAM_H_INCLUDED */

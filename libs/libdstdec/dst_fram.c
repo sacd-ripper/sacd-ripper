@@ -251,9 +251,9 @@ static void LT_InitCoefTablesI(ebunch *D, int16_t ICoefI[2 * MAX_CHANNELS][16][2
             if (k > 8)
             {
                 k = 8;
-			}
-			else if (k < 0)
-			{
+            }
+            else if (k < 0)
+            {
                 k = 0;
             }
             for (i = 0; i < 256; i++)
@@ -331,7 +331,7 @@ static void LT_InitStatus(ebunch *D, uint8_t Status[MAX_CHANNELS][16])
 
 int DST_FramDSTDecode(uint8_t *DSTdata, uint8_t *MuxedDSDdata, int FrameSizeInBytes, int FrameCnt, ebunch *D)
 {
-    int       retval = 0;
+    int       error;
     int       BitNr;
     int       ChNr;
     uint8_t   ACError;
@@ -344,9 +344,9 @@ int DST_FramDSTDecode(uint8_t *DSTdata, uint8_t *MuxedDSDdata, int FrameSizeInBy
     D->FrameHdr.CalcNrOfBits  = D->FrameHdr.CalcNrOfBytes * 8;
 
     /* unpack DST frame: segmentation, mapping, arithmatic data */
-    UnpackDSTframe(D, DSTdata, MuxedDSDdata);
+    error = UnpackDSTframe(D, DSTdata, MuxedDSDdata);
 
-    if (D->FrameHdr.DSTCoded == 1)
+    if (error == DSTErr_NoError && D->FrameHdr.DSTCoded == 1)
     {
         ACData AC;
 #ifdef _MSC_VER
@@ -419,11 +419,42 @@ int DST_FramDSTDecode(uint8_t *DSTdata, uint8_t *MuxedDSDdata, int FrameSizeInBy
         LT_ACDecodeBit_Flush(&AC, &ACError, 0, D->AData, D->ADataLen);
 
         if (ACError != 1)
-        {
-            fprintf(stderr, "ERROR: Arithmetic decoding error!\n");
-            retval = 1;
-        }
+            error = DSTErr_ArithmeticDecoder;
     }
 
-    return retval;
+    if (error != DSTErr_NoError)
+    {
+        /* Clear the frame output - set to DSD silence */
+        memset(MuxedDSDdata, 0x55, (NrOfBitsPerCh * NrOfChannels) / 8);
+    }
+
+    return error;
+}
+
+static const char *DST_ErrorMessages[] =
+{
+    "",
+    "A negative number of bits allocated",
+    "Too many segments for this channel",
+    "Invalid segment resolution",
+    "Invalid segment length",
+    "Too many tables for this frame",
+    "Invalid table number for segment",
+    "Mapping can't be the same for all channels",
+    "Not same number of segments for filters and Ptables",
+    "Invalid coefficient coding method",
+    "Filter coefficient out of range",
+    "Invalid Ptable coding method",
+    "Ptable entry out of range",
+    "Illegal stuffing pattern",
+    "Illegal arithmetic code",
+    "Arithmetic decoding error",
+};
+
+const char *DST_GetErrorMessage(int error)
+{
+    if (error >= 0 && error < DSTErr_MaxError)
+        return DST_ErrorMessages[error];
+
+    return "Unknown";
 }

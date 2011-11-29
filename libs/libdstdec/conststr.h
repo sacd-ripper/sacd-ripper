@@ -146,4 +146,25 @@ Changes:
 #define MAX_DSDBITS_INFRAME (588 * 64)
 #define MAXNROF_SEGS 8            /* max nr of segments per channel for filters or Ptables */
 
+enum DST_ErrorCodes
+{
+    DSTErr_NoError = 0,
+    DSTErr_NegativeBitAllocation,
+    DSTErr_TooManySegments,
+    DSTErr_InvalidSegmentResolution,
+    DSTErr_InvalidSegmentLength,
+    DSTErr_TooManyTables,
+    DSTErr_InvalidTableNumber,
+    DSTErr_InvalidChannelMapping,
+    DSTErr_SegmentNumberMismatch,
+    DSTErr_InvalidCoefficientCoding,
+    DSTErr_InvalidCoefficientRange,
+    DSTErr_InvalidPtableCoding,
+    DSTErr_InvalidPtableRange,
+    DSTErr_InvalidStuffingPattern,
+    DSTErr_InvalidArithmeticCode,
+    DSTErr_ArithmeticDecoder,
+    DSTErr_MaxError,
+};
+
 #endif  /* __CONSTSTR_H_INCLUDED */

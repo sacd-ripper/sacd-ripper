@@ -91,7 +91,6 @@ typedef struct
     int     Fsample44;                                          /* Sample frequency 64, 128, 256              */
     int     PredOrder[2 * MAX_CHANNELS];                        /* Prediction order used for this frame       */
     int     PtableLen[2 * MAX_CHANNELS];                        /* Nr of Ptable entries used for this frame   */
- /* float   **FCoefA; */                                        /* Floating point FIR coefficients            */
     int16_t **ICoefA;                                           /* Integer coefs for actual coding            */
     int     DSTCoded;                                           /* 1=DST coded is put in DST stream,          */
                                                                 /* 0=DSD is put in DST stream                 */
