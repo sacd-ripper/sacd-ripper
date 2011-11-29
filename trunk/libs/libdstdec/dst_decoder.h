@@ -26,8 +26,9 @@
 
 typedef struct dst_decoder_s dst_decoder_t;
 typedef void (*frame_decoded_callback_t)(uint8_t* frame_data, size_t frame_size, void *userdata);
+typedef void (*frame_error_callback_t)(int frame_count, int frame_error_code, const char *frame_error_message, void *userdata);
 
-dst_decoder_t* dst_decoder_create(int channel_count, frame_decoded_callback_t frame_decoded_callback, void *userdata);
+dst_decoder_t* dst_decoder_create(int channel_count, frame_decoded_callback_t frame_decoded_callback, frame_error_callback_t frame_error_callback, void *userdata);
 void dst_decoder_destroy(dst_decoder_t *dst_decoder);
 void dst_decoder_decode(dst_decoder_t *dst_decoder, uint8_t* frame_data, size_t frame_size);
 

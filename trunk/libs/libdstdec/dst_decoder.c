@@ -77,6 +77,7 @@
 typedef struct job_t
 {
     long seq;                                 /* sequence number */
+    int error;                                /* an error code (eg. DST decoding error) */
     int more;                                 /* true if this is not the last chunk */
     buffer_pool_space_t *in;                  /* input DST data to decode */
     buffer_pool_space_t *out;                 /* resulting DSD decoded data */
@@ -110,6 +111,7 @@ struct dst_decoder_s
     thread *writeth;
 
     frame_decoded_callback_t frame_decoded_callback;
+    frame_error_callback_t frame_error_callback;
     void *userdata;
 };
 
@@ -158,6 +160,7 @@ static void finish_decoding_jobs(dst_decoder_t *dst_decoder)
 
     /* command all of the extant decode threads to return */
     possess(dst_decoder->decode_have);
+    job.error = 0;
     job.seq = -1;
     job.next = NULL;
     dst_decoder->decode_head = &job;
@@ -218,7 +221,12 @@ static void decode_thread(void *userdata)
         if (job->more)
         {
             job->out = buffer_pool_get_space(&dst_decoder->out_pool);
-            DST_FramDSTDecode(job->in->buf, job->out->buf, job->in->len, job->seq, &D); 
+
+            /* Save the error for later, so that the write_thread can output them in DST frame order */
+            job->error = DST_FramDSTDecode(job->in->buf, job->out->buf, job->in->len, job->seq, &D); 
+            if (job->error != DSTErr_NoError)
+                LOG(lm_main, LOG_ERROR, ("ERROR: %s on frame: %d", DST_GetErrorMessage(job->error), D.FrameHdr.FrameNr));
+
             job->out->len = (size_t)(MAX_DSDBITS_INFRAME / 8 * dst_decoder->channel_count);
             buffer_pool_drop_space(job->in);
 
@@ -274,6 +282,10 @@ static void write_thread(void *userdata)
         dst_decoder->write_head = job->next;
         twist(dst_decoder->write_first, TO, dst_decoder->write_head == NULL ? -1 : dst_decoder->write_head->seq);
 
+        /* report any error */
+        if (job->error != 0 && dst_decoder->frame_error_callback)
+            dst_decoder->frame_error_callback(job->seq, job->error, DST_GetErrorMessage(job->error), dst_decoder->userdata);
+
         more = job->more;
 
         if (more)
@@ -307,6 +319,7 @@ static void finish_write_job(dst_decoder_t *dst_decoder)
     job = malloc(sizeof(job_t));
     if (job == NULL)
         exit(1);
+    job->error = 0;
     job->seq = dst_decoder->sequence;
     job->in = 0;
     job->out = 0;
@@ -332,7 +345,7 @@ static void finish_write_job(dst_decoder_t *dst_decoder)
     dst_decoder->writeth = NULL;
 }
 
-dst_decoder_t* dst_decoder_create(int channel_count, frame_decoded_callback_t frame_decoded_callback, void *userdata)
+dst_decoder_t* dst_decoder_create(int channel_count, frame_decoded_callback_t frame_decoded_callback, frame_error_callback_t frame_error_callback, void *userdata)
 {
     dst_decoder_t *dst_decoder = (dst_decoder_t*) calloc(sizeof(dst_decoder_t), 1);
 
@@ -344,8 +357,9 @@ dst_decoder_t* dst_decoder_create(int channel_count, frame_decoded_callback_t fr
     dst_decoder->channel_count = channel_count;
     dst_decoder->userdata = userdata;
     dst_decoder->frame_decoded_callback = frame_decoded_callback;
+    dst_decoder->frame_error_callback = frame_error_callback;
     dst_decoder->procs = processor_count();
-    
+
     /* if first time or after an option change, setup the job lists */
     setup_decoding_jobs(dst_decoder);
 
@@ -371,6 +385,7 @@ void dst_decoder_decode(dst_decoder_t *dst_decoder, uint8_t* frame_data, size_t 
     job = malloc(sizeof(job_t));
     if (job == NULL)
         exit(1);
+    job->error = 0;
     job->seq = dst_decoder->sequence;
     job->in = buffer_pool_get_space(&dst_decoder->in_pool);
     memcpy(job->in->buf, frame_data, frame_size);

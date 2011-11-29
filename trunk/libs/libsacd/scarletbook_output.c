@@ -89,6 +89,8 @@ struct scarletbook_output_s
     stats_progress_callback_t stats_progress_callback;
     stats_track_callback_t stats_track_callback;
 
+    fwprintf_callback_t fwprintf_callback;
+
     scarletbook_handle_t *sb_handle;
 };
 
@@ -130,6 +132,7 @@ int scarletbook_output_enqueue_track(scarletbook_output_t *output, int area, int
     {
         output_format_ptr = calloc(sizeof(scarletbook_output_format_t), 1);
         output_format_ptr->sb_handle = sb_handle;
+        output_format_ptr->cb_fwprintf = output->fwprintf_callback;
         output_format_ptr->area = area;
         output_format_ptr->track = track;
         output_format_ptr->handler = *handler;
@@ -167,6 +170,7 @@ int scarletbook_output_enqueue_raw_sectors(scarletbook_output_t *output, int sta
     {
         output_format_ptr = calloc(sizeof(scarletbook_output_format_t), 1);
         output_format_ptr->sb_handle = sb_handle;
+        output_format_ptr->cb_fwprintf = output->fwprintf_callback;
         output_format_ptr->handler = *handler;
         output_format_ptr->filename = strdup(file_path);
         output_format_ptr->start_lsn = start_lsn;
@@ -267,6 +271,18 @@ static void frame_decoded_callback(uint8_t* frame_data, size_t frame_size, void 
     write_block(ft, frame_data, frame_size);
 }
 
+static void frame_error_callback(int frame_count, int frame_error_code, const char *frame_error_message, void *userdata)
+{
+    scarletbook_output_format_t *ft = (scarletbook_output_format_t *) userdata;
+#ifdef _WIN32
+    wchar_t *wide_errormessage = (wchar_t *) charset_convert(frame_error_message, strlen(frame_error_message), "UTF-8", sizeof(wchar_t) == 2 ? "UCS-2-INTERNAL" : "UCS-4-INTERNAL");
+#else
+    wchar_t *wide_errormessage = (wchar_t *) charset_convert(frame_error_message, strlen(frame_error_message), "UTF-8", "WCHAR_T");
+#endif
+    ft->cb_fwprintf(stderr, L"\nERROR %ls in frame: %d\n", wide_errormessage, frame_count);
+    free(wide_errormessage);
+}
+
 static void frame_read_callback(scarletbook_handle_t *handle, uint8_t* frame_data, size_t frame_size, void *userdata)
 {
     scarletbook_output_format_t *ft = (scarletbook_output_format_t *) userdata;
@@ -304,7 +320,7 @@ static void *processing_thread(void *arg)
 
         if (ft->dsd_encoded_export && ft->dst_encoded_import)
         {
-            ft->dst_decoder = dst_decoder_create(ft->channel_count, frame_decoded_callback, ft);
+            ft->dst_decoder = dst_decoder_create(ft->channel_count, frame_decoded_callback, frame_error_callback, ft);
         }
 
         output->stats_current_file_total_sectors = ft->length_lsn;
@@ -483,7 +499,7 @@ static void *processing_thread(void *arg)
 #endif
 }
 
-scarletbook_output_t *scarletbook_output_create(scarletbook_handle_t *handle, stats_track_callback_t cb_track, stats_progress_callback_t cb_progress)
+scarletbook_output_t *scarletbook_output_create(scarletbook_handle_t *handle, stats_track_callback_t cb_track, stats_progress_callback_t cb_progress, fwprintf_callback_t cb_fwprintf)
 {
     scarletbook_output_t *output = (scarletbook_output_t *) calloc(1, sizeof(scarletbook_output_t));
 
@@ -492,6 +508,7 @@ scarletbook_output_t *scarletbook_output_create(scarletbook_handle_t *handle, st
     output->sb_handle = handle;
     output->stats_track_callback = cb_track;
     output->stats_progress_callback = cb_progress;
+    output->fwprintf_callback = cb_fwprintf;
 
     return output;
 }

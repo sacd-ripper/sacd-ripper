@@ -55,6 +55,7 @@
 #include <endianess.h>
 #include <fileutils.h>
 #include <utils.h>
+#include <yarn.h>
 
 static struct opts_s
 {
@@ -185,9 +186,29 @@ static int parse_options(int argc, char *argv[])
     return 1;
 }
 
+static lock *g_fwprintf_lock = 0;
+
+static int safe_fwprintf(FILE *stream, const wchar_t *format, ...)
+{
+    int retval;
+    va_list arglist;
+
+    possess(g_fwprintf_lock);
+
+    va_start(arglist, format);
+    retval = vfwprintf(stream, format, arglist);
+    va_end(arglist);
+
+    fflush(stream);
+
+    release(g_fwprintf_lock);
+
+    return retval;
+}
+
 static void handle_sigint(int sig_no)
 {
-    fwprintf(stdout, L"\rUser interrupted..                                                      \n");
+    safe_fwprintf(stdout, L"\rUser interrupted..                                                      \n");
     scarletbook_output_interrupt(output);
 }
 
@@ -198,8 +219,7 @@ static void handle_status_update_track_callback(char *filename, int current_trac
 #else
     wchar_t *wide_filename = (wchar_t *) charset_convert(filename, strlen(filename), "UTF-8", "WCHAR_T");
 #endif
-    fwprintf(stdout, L"\rProcessing [%ls] (%d/%d)..\n", wide_filename, current_track, total_tracks);
-    fflush(stdout);
+    safe_fwprintf(stdout, L"\rProcessing [%ls] (%d/%d)..\n", wide_filename, current_track, total_tracks);
     free(wide_filename);
 }
 
@@ -208,13 +228,12 @@ static time_t started_processing;
 static void handle_status_update_progress_callback(uint32_t stats_total_sectors, uint32_t stats_total_sectors_processed,
                                  uint32_t stats_current_file_total_sectors, uint32_t stats_current_file_sectors_processed)
 {
-    fwprintf(stdout, L"\rCompleted: %d%% (%.1fMB), Total: %d%% (%.1fMB) at %.2fMB/sec", (stats_current_file_sectors_processed*100/stats_current_file_total_sectors), 
+    safe_fwprintf(stdout, L"\rCompleted: %d%% (%.1fMB), Total: %d%% (%.1fMB) at %.2fMB/sec", (stats_current_file_sectors_processed*100/stats_current_file_total_sectors), 
                                              ((float)((double) stats_current_file_sectors_processed * SACD_LSN_SIZE / 1048576.00)),
                                              (stats_total_sectors_processed * 100 / stats_total_sectors),
                                              ((float)((double) stats_current_file_total_sectors * SACD_LSN_SIZE / 1048576.00)),
                                              (float)((double) stats_total_sectors_processed * SACD_LSN_SIZE / 1048576.00) / (float)(time(0) - started_processing)
                                              );
-    fflush(stdout);
 }
 
 /* Initialize global variables. */
@@ -242,7 +261,8 @@ static void init(void)
 #endif
 
     init_logging();
-} 
+    g_fwprintf_lock = new_lock(0);
+}
 
 int main(int argc, char* argv[]) 
 {
@@ -262,7 +282,7 @@ int main(int argc, char* argv[])
         if (fwide(stdout, 1) < 0)
         {
             fprintf(stderr, "ERROR: Output not set to wide.\n");
-        }    
+        }
 
         // default to 2 channel
         if (opts.two_channel == 0 && opts.multi_channel == 0) 
@@ -284,7 +304,7 @@ int main(int argc, char* argv[])
 
                 if (opts.output_dsf || opts.output_iso || opts.output_dsdiff || opts.output_dsdiff_em || opts.export_cue_sheet)
                 {
-                    output = scarletbook_output_create(handle, handle_status_update_track_callback, handle_status_update_progress_callback);
+                    output = scarletbook_output_create(handle, handle_status_update_track_callback, handle_status_update_progress_callback, safe_fwprintf);
 
                     // select the channel area
                     area_idx = ((has_multi_channel(handle) && opts.multi_channel) || !has_two_channel(handle)) ? handle->mulch_area_idx : handle->twoch_area_idx;
@@ -398,6 +418,7 @@ int main(int argc, char* argv[])
         }
     }
 
+    free_lock(g_fwprintf_lock);
     destroy_logging();
 
 #ifdef PTW32_STATIC_LIB
