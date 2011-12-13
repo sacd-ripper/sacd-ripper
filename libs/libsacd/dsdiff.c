@@ -644,6 +644,8 @@ static size_t dsdiff_write_frame(scarletbook_output_format_t *ft, const uint8_t 
 
 #ifdef _WIN32
             handle->frame_indexes[handle->frame_count - 1].offset = _ftelli64(ft->fd) + DST_FRAME_DATA_CHUNK_SIZE;
+#elif defined(__lv2ppu__)
+            handle->frame_indexes[handle->frame_count - 1].offset = ftello(ft->fd) + DST_FRAME_DATA_CHUNK_SIZE;
 #else
             handle->frame_indexes[handle->frame_count - 1].offset = ftello64(ft->fd) + DST_FRAME_DATA_CHUNK_SIZE;
 #endif

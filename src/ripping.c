@@ -218,7 +218,7 @@ int start_ripping_gui(int ripping_flags)
                     {
                         file_path = make_filename(output_device, albumdir, musicfilename, "dsf");
                         scarletbook_output_enqueue_track(output, area_idx, i, file_path, "dsf", 
-                            1, /* always decode to DSD */);
+                            1 /* always decode to DSD */);
                     }
                     else if (ripping_flags & RIP_DSDIFF)
                     {
