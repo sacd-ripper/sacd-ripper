@@ -128,6 +128,10 @@ static void handle_status_update_progress_callback(uint32_t total_sectors, uint3
     sysAtomicSet(&stats_current_file_sectors_processed, current_file_sectors_processed);
 }
 
+static int safe_fwprintf(FILE *stream, const wchar_t *format, ...)
+{
+    return 0;
+} 
 int start_ripping_gui(int ripping_flags)
 {
     char *albumdir, *musicfilename, *file_path = 0;
@@ -174,7 +178,7 @@ int start_ripping_gui(int ripping_flags)
 
             albumdir = get_album_dir(handle);
 
-            output = scarletbook_output_create(handle, handle_status_update_track_callback, handle_status_update_progress_callback);
+            output = scarletbook_output_create(handle, handle_status_update_track_callback, handle_status_update_progress_callback, safe_fwprintf);
 
             if (ripping_flags & RIP_ISO)
             {
