@@ -462,6 +462,7 @@ void main_loop(void)
     }
     else if (dialog_action == 2)
     {
+#if 0        
         output_format++;
 
         // max of 7 output options
@@ -469,6 +470,7 @@ void main_loop(void)
         {
             output_format = 0;
         }
+#endif
 
         // is the current selection valid?
         validate_output_format();

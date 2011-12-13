@@ -22,7 +22,7 @@
 #ifdef __lv2ppu__
 
 // If you remove the following line, it will compile but the DST decoded output from SACD Ripper will be incorrect!!
-#error the PS3 SACD Ripper code is currently broken in the trunk. For now I advice you to use the SACD Daemon in combination with sacd_extract.
+//#error the PS3 SACD Ripper code is currently broken in the trunk. For now I advice you to use the SACD Daemon in combination with sacd_extract.
 
 #include <sys/spu.h>
 #include <sys/event_queue.h>
