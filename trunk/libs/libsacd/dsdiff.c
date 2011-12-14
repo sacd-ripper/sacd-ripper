@@ -575,7 +575,7 @@ static int dsdiff_create(scarletbook_output_format_t *ft)
 {
     int ret = calculate_header_and_footer(ft);
     dsdiff_handle_t  *handle = (dsdiff_handle_t *) ft->priv;
-    fwrite(handle->header, 1, handle->header_size, ft->fd);
+    fwrite(handle->header, 1, handle->header_size, ft->fd); 
     return ret;
 }
 
@@ -644,7 +644,7 @@ static size_t dsdiff_write_frame(scarletbook_output_format_t *ft, const uint8_t 
 
 #ifdef _WIN32
             handle->frame_indexes[handle->frame_count - 1].offset = _ftelli64(ft->fd) + DST_FRAME_DATA_CHUNK_SIZE;
-#elif defined(__lv2ppu__)
+#elif defined(__lv2ppu__) || defined(__APPLE__)
             handle->frame_indexes[handle->frame_count - 1].offset = ftello(ft->fd) + DST_FRAME_DATA_CHUNK_SIZE;
 #else
             handle->frame_indexes[handle->frame_count - 1].offset = ftello64(ft->fd) + DST_FRAME_DATA_CHUNK_SIZE;
