@@ -476,10 +476,11 @@ static ssize_t sacd_net_input_read(sacd_input_t dev, int pos, int blocks, void *
     }
     else
     {
+        uint8_t output_buf[16];
         ServerRequest request;
         ServerResponse response;
+        pb_ostream_t output = pb_ostream_from_buffer(output_buf, sizeof(output_buf));
         pb_istream_t input = pb_istream_from_socket(&dev->fd);
-        pb_ostream_t output = pb_ostream_from_socket(&dev->fd);
         uint8_t zero = 0;
 
         request.type = ServerRequest_Type_DISC_READ;
@@ -493,6 +494,16 @@ static ssize_t sacd_net_input_read(sacd_input_t dev, int pos, int blocks, void *
 
         /* We signal the end of request with a 0 tag. */
         pb_write(&output, &zero, 1);
+
+        // write the output buffer to the opened socket
+        {
+            bool ret;
+            size_t written; 
+            ret = (socket_send(&dev->fd, (char *) output_buf, output.bytes_written, &written, 0, 0) == IO_DONE && written == output.bytes_written); 
+
+            if (!ret)
+                return 0;
+        }
 
         response.data.bytes = buffer;
         if (!pb_decode(&input, ServerResponse_fields, &response))
