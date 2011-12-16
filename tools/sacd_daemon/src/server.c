@@ -59,8 +59,9 @@ static void client_thread(void *userdata)
     ServerRequest request;
     ServerResponse response;
     uint8_t zero = 0;
+    uint8_t *output_buf = (uint8_t *) malloc(MAX_PROCESSING_BLOCK_SIZE * SACD_LSN_SIZE + 1024);
     pb_istream_t input = pb_istream_from_socket(client);
-    pb_ostream_t output = pb_ostream_from_socket(client);
+    pb_ostream_t output = pb_ostream_from_buffer(output_buf, MAX_PROCESSING_BLOCK_SIZE * SACD_LSN_SIZE + 1024);
     sacd_reader_t   *sacd_reader = 0;
     scarletbook_handle_t *handle = 0;
     int non_encrypted_disc = 0;
@@ -200,6 +201,9 @@ static void client_thread(void *userdata)
             break;
         }
 
+        // reset output stream
+        output = pb_ostream_from_buffer(output_buf, MAX_PROCESSING_BLOCK_SIZE * SACD_LSN_SIZE + 1024);
+        
         if (!pb_encode(&output, ServerResponse_fields, &response))
         {
             break;
@@ -207,6 +211,16 @@ static void client_thread(void *userdata)
     
         /* We signal the end of a request with a 0 tag. */
         pb_write(&output, &zero, 1);
+        
+        // write the output buffer to the opened socket
+        {
+            bool ret;
+            size_t written; 
+            ret = (socket_send(client, (char *) output_buf, output.bytes_written, &written, 0, 0) == IO_DONE && written == output.bytes_written);
+
+            if (!ret)
+                break;
+        }
     
         if (request.type == ServerRequest_Type_DISC_CLOSE)
         {
@@ -221,6 +235,7 @@ static void client_thread(void *userdata)
         sacd_close(sacd_reader);
     
     free(response.data.bytes);
+    free(output_buf);
 	
 	closesocket((int) *client);
 	client_connected = 0;
