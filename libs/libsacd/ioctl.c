@@ -28,15 +28,14 @@ int ioctl_eject(int fd)
 {
     int                         res;
     struct lv2_atapi_cmnd_block atapi_cmnd;
-    static uint8_t              buffer[256];
-    memset(buffer, 0, sizeof(buffer));
 
-    sys_storage_init_atapi_cmnd(&atapi_cmnd, 0, ATAPI_PIO_DATA_OUT_PROTO, ATAPI_DIR_WRITE);
+    sys_storage_init_atapi_cmnd(&atapi_cmnd, 0, ATAPI_NON_DATA_PROTO, ATAPI_DIR_WRITE);
 
     atapi_cmnd.pkt[0] = GPCMD_START_STOP_UNIT;
+    atapi_cmnd.pkt[1] = 1;
     atapi_cmnd.pkt[4] = 0x02;     /* eject */
 
-    res = sys_storage_send_atapi_command(fd, &atapi_cmnd, buffer);
+    res = sys_storage_send_atapi_command(fd, &atapi_cmnd, 0);
 
     return res;
 }
