@@ -27,6 +27,12 @@ int    output_device_changed = -1;
 char   *output_device        = 0;
 double output_device_space   = 0;
 uint64_t output_device_sectors   = 0;
+static int old_devices = 0;
+
+void reset_output_devices(void)
+{
+    old_devices = 0;
+}
 
 int poll_output_devices(void)
 {
@@ -35,7 +41,6 @@ int poll_output_devices(void)
         "/dev_usb004", "/dev_usb005", "/dev_usb006", "/dev_usb007",
         "/dev_cf",     "/dev_sd",     "/dev_ms"
     };
-    static int        old_devices;
     uint32_t          current_devices      = 0;
     char              *largest_device      = 0;
     double            largest_device_space = 0;

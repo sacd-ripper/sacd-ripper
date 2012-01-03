@@ -34,6 +34,7 @@ extern int    output_device_changed;
 extern uint64_t output_device_sectors;
 
 int poll_output_devices(void);
+void reset_output_devices(void);
 
 #ifdef __cplusplus
 }

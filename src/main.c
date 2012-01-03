@@ -514,6 +514,8 @@ void main_loop(void)
     {
         start_ripping_gui(output_format_options[output_format]);
 
+        reset_output_devices();
+
         // action is handled
         dialog_action = 0;
     }
