@@ -50,6 +50,7 @@ extern "C" {
 #define GPCMD_READ_TOC_PMA_ATIP                0x43
 #define GPCMD_REPORT_KEY                       0xa4
 #define GPCMD_SEND_KEY                         0xa3
+#define GPCMD_START_STOP_UNIT                  0x1b
 
 #define LV2_STORAGE_SEND_ATAPI_COMMAND         (1)
 
