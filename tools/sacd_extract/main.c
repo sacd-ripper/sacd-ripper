@@ -385,7 +385,7 @@ int main(int argc, char* argv[])
 #else
                         wchar_t *wide_filename = (wchar_t *) charset_convert(cue_file_path, strlen(cue_file_path), "UTF-8", "WCHAR_T");
 #endif
-                        fwprintf(stdout, L"Exporting CUE sheet [%Ls]\n", wide_filename);
+                        fwprintf(stdout, L"Exporting CUE sheet [%ls]\n", wide_filename);
                         if (!file_path)
                             file_path = make_filename(0, 0, albumdir, "dff");
                         write_cue_sheet(handle, file_path, area_idx, cue_file_path);

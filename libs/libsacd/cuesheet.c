@@ -44,7 +44,7 @@ int write_cue_sheet(scarletbook_handle_t *handle, const char *filename, int area
         free(wide_filename);
     }
 #else
-    fd = fopen(filename, "wb");
+    fd = fopen(cue_filename, "wb");
 #endif
     if (fd == 0)
     {
