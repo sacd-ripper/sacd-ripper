@@ -31,6 +31,7 @@
 extern "C" {
 #endif
 
+extern int ioctl_eject(int fd);
 extern int ioctl_init(int fd, uint8_t *buffer);
 extern int ioctl_enable_encryption(int fd, uint8_t *buffer, uint32_t lba);
 extern int ioctl_get_configuration(int fd, uint8_t *buffer);

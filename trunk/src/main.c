@@ -38,6 +38,9 @@
 #include <sys/thread.h> 
 #include <sys/spu.h> 
 
+#include <net/net.h>
+#include <net/netctl.h> 
+
 #include <sys/storage.h>
 #include <ioctl.h>
 #include <patch-utils.h>
@@ -52,9 +55,11 @@
 #include "exit_handler.h"
 #include "install.h"
 #include "output_device.h"
+#include "server.h"
 #include "ripping.h"
 
 #include <logging.h>
+#include <version.h>
 
 #define MAX_PHYSICAL_SPU               6
 #define MAX_RAW_SPU                    1
@@ -278,6 +283,58 @@ static void bd_insert_disc_callback(uint32_t disc_type, char *title_id)
     }
 }
 
+void server_loop(void)
+{
+    int client_connected;
+    msgType              dialog_type;
+    char                 *message = (char *) malloc(512);
+
+    // did the disc change?
+    if (bd_contains_sacd_disc && bd_disc_changed)
+    {
+        bd_contains_sacd_disc = 0;
+    }
+    
+    // by default we have no user controls
+    dialog_type = (MSG_DIALOG_NORMAL | MSG_DIALOG_DISABLE_CANCEL_ON);
+
+    if (!bd_contains_sacd_disc)
+    {
+    	union net_ctl_info info;
+    	
+    	if(netCtlGetInfo(NET_CTL_INFO_IP_ADDRESS, &info) == 0)
+    	{
+       		sprintf(message, "              SACD Daemon %s\n\n"
+       		                 "Status: Active\n"
+       		                 "IP Address: %s (port 2002)\n"
+       		                 "Client: %s\n"
+       		                 "Disc: %s",
+    			SACD_RIPPER_VERSION_STRING, info.ip_address, 
+    			(is_client_connected() ? "connected" : "none"),
+    			(bd_disc_changed == -1 ? "empty" : "inserted"));
+    	}
+    	else
+    	{
+    		sprintf(message, "No active network connection was detected.\n\nPress OK to refresh.");
+            dialog_type |= MSG_DIALOG_BTN_TYPE_OK;
+    	} 
+    }
+
+    msgDialogOpen2(dialog_type, message, dialog_handler, NULL, NULL);
+
+    dialog_action         = 0;
+    bd_disc_changed       = 0;
+    client_connected      = is_client_connected();
+    while (!dialog_action && !user_requested_exit() && bd_disc_changed == 0 && client_connected == is_client_connected())
+    {
+        sysUtilCheckCallback();
+        flip();
+    }
+    msgDialogAbort();
+
+    free(message);
+}
+
 void main_loop(void)
 {
     msgType              dialog_type;
@@ -498,15 +555,36 @@ void show_version(void)
     msgDialogAbort();
 }
 
+int user_select_server_mode(void)
+{
+	msgType dialog_type = (MSG_DIALOG_NORMAL | MSG_DIALOG_BTN_TYPE_YESNO | MSG_DIALOG_DISABLE_CANCEL_ON);
+	msgDialogOpen2(dialog_type, "Would you like to run in server mode?", dialog_handler, NULL, NULL);
+    msgDialogClose(5000.0f);
+
+    dialog_action = 0;
+    while (!dialog_action && !user_requested_exit())
+    {
+        sysUtilCheckCallback();
+        flip();
+    }
+    msgDialogAbort();
+    
+    return dialog_action != 2;
+}
+
 int main(int argc, char *argv[])
 {
-    int     ret;
+    int     ret, server_mode;
     void    *host_addr = memalign(1024 * 1024, HOST_SIZE);
     msgType dialog_type;
+	sys_ppu_thread_t id; // start server thread
 
     load_modules();
 
     init_logging();
+
+	netInitialize();
+	netCtlInit(); 
 
     // Initialize SPUs
     LOG(lm_main, LOG_DEBUG, ("Initializing SPUs\n"));
@@ -592,19 +670,60 @@ int main(int argc, char *argv[])
     sys_storage_reset_bd();
     sys_storage_authenticate_bd();
 
+    // eject current disc
+    {
+        int fd;
+        ret = sys_storage_open(BD_DEVICE, &fd);
+        if (ret == 0)
+        {
+            ioctl_eject(fd);
+            sys_storage_close(fd);
+        }
+    }
+
     ret = sysDiscRegisterDiscChangeCallback(&bd_eject_disc_callback, &bd_insert_disc_callback);
 
     // poll for an output_device
     poll_output_devices();
 
-    while (1)
-    {
-        // main loop
-        main_loop();
+    server_mode = user_select_server_mode();
 
-        // break out of the loop when requested
-        if (user_requested_exit())
-            break;
+    if (user_requested_exit())
+        goto quit;
+
+    if (server_mode)
+    {
+#ifdef ENABLE_LOGGING
+        if (output_device) 
+        {
+            char file_path[100];
+            sprintf(file_path, "%s/daemon_log.txt", output_device);
+            set_log_file(file_path);
+        }
+#endif
+    	sysThreadCreate(&id, listener_thread, NULL, 1500, 0x400, 0, "listener");
+    
+        while (1)
+        {
+            // server loop
+            server_loop();
+    
+            // break out of the loop when requested
+            if (user_requested_exit())
+                break;
+        }
+    }
+    else
+    {
+        while (1)
+        {
+            // main loop
+            main_loop();
+    
+            // break out of the loop when requested
+            if (user_requested_exit())
+                break;
+        }
     }
 
     ret = sysDiscUnregisterDiscChangeCallback();
@@ -614,6 +733,7 @@ int main(int argc, char *argv[])
     unpatch_lv1_ss_services();
 
     destroy_logging();
+	netDeinitialize();
     unload_modules();
 
     free(host_addr);

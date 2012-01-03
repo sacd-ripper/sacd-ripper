@@ -61,6 +61,7 @@ uint32_t     (*sacd_input_total_sectors)(sacd_input_t);
 struct sacd_input_s
 {
     int                 fd;
+    uint8_t            *input_buffer;
 #if defined(__lv2ppu__)
     device_info_t       device_info;
 #endif
@@ -339,6 +340,13 @@ static sacd_input_t sacd_net_input_open(const char *target)
         return NULL;
     }
 
+    dev->input_buffer = (uint8_t *) malloc(MAX_PROCESSING_BLOCK_SIZE * SACD_LSN_SIZE + 1024);
+    if (dev->input_buffer == NULL)
+    {
+        fprintf(stderr, "libsacdread: Could not allocate memory.\n");
+        goto error;
+    }
+
     socket_open();
 
     socket_create(&dev->fd, AF_INET, SOCK_STREAM, 0);
@@ -380,6 +388,7 @@ static sacd_input_t sacd_net_input_open(const char *target)
 error:
 
     sacd_input_close(dev);
+    free(dev->input_buffer);
     free(dev);
 
     return 0;
@@ -425,6 +434,10 @@ error:
 
     socket_destroy(&dev->fd);
     socket_close();
+    if (dev->input_buffer)
+    {
+        free(dev->input_buffer);
+    }
     free(dev);
 
     return 0;
@@ -505,12 +518,36 @@ static ssize_t sacd_net_input_read(sacd_input_t dev, int pos, int blocks, void *
                 return 0;
         }
 
+#if 0
+        response.data.bytes = buffer;
+        {
+            size_t got; 
+            uint8_t *buf_ptr = dev->input_buffer;
+            size_t buf_left = blocks * SACD_LSN_SIZE + 16;
+
+            input = pb_istream_from_buffer(dev->input_buffer, MAX_PROCESSING_BLOCK_SIZE * SACD_LSN_SIZE + 1024);
+
+            if (socket_recv(&dev->fd, (char *) buf_ptr, buf_left, &got, MSG_PARTIAL, 0) != IO_DONE)
+                return 0;
+
+            while(got > 0 && !pb_decode(&input, ServerResponse_fields, &response))
+            {
+                buf_ptr += got;
+                buf_left -= got;
+
+                if (socket_recv(&dev->fd, (char *) buf_ptr, buf_left, &got, MSG_PARTIAL, 0) != IO_DONE)
+                    return 0;
+
+                input = pb_istream_from_buffer(dev->input_buffer, MAX_PROCESSING_BLOCK_SIZE * SACD_LSN_SIZE + 1024);
+            }
+        }
+#else
         response.data.bytes = buffer;
         if (!pb_decode(&input, ServerResponse_fields, &response))
         {
             return 0;
         }
-
+#endif
         if (response.type != ServerResponse_Type_DISC_READ)
         {
             return 0;
