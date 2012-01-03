@@ -1,7 +1,7 @@
 /**
  * SACD Ripper - http://code.google.com/p/sacd-ripper/
  *
- * Copyright (c) 2010-2011 by respective authors.
+ * Copyright (c) 2010-2012 by respective authors.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,8 +22,8 @@
 #ifndef VERSION_H_INCLUDED
 #define VERSION_H_INCLUDED
 
-#define SACD_RIPPER_VERSION 00305
-#define SACD_RIPPER_VERSION_STRING "0.35"
+#define SACD_RIPPER_VERSION 00306
+#define SACD_RIPPER_VERSION_STRING "0.36"
 
 #define SACD_RIPPER_VERSION_REVISION (SACD_RIPPER_VERSION / 100000) 
 #define SACD_RIPPER_VERSION_MAJOR (SACD_RIPPER_VERSION / 100 % 1000) 
@@ -31,7 +31,7 @@
 
 #define SACD_RIPPER_VERSION_INFO                         \
     "SACD Ripper release " SACD_RIPPER_VERSION_STRING " " \
-    "Copyright (c) 2010-2011 by respective authors.\n\n" \
+    "Copyright (c) 2010-2012 by respective authors.\n\n" \
     "Report bugs to mr_wicked@hotmail.com\n"
 
 #endif /* VERSION_H_INCLUDED */
