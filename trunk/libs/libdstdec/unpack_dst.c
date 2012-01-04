@@ -412,13 +412,13 @@ int ReadSegmentData(StrData *SD, FrameHeader *FH)
   if (FIO_BitGetIntUnsigned(SD, 1, &FH->PSameSegAsF))
     return DSTErr_NegativeBitAllocation;
 
-  if (error = ReadTableSegmentData(SD,
+  if ((error = ReadTableSegmentData(SD,
                        FH->NrOfChannels, 
                        FH->MaxFrameLen, 
                        MAXNROF_FSEGS,
                        MIN_FSEG_LEN, 
                        &FH->FSeg, 
-                       &FH->FSameSegAllCh))
+                       &FH->FSameSegAllCh)))
   {
     return error;
   }
@@ -589,7 +589,7 @@ int ReadMappingData(StrData *SD, FrameHeader *FH)
   if (FIO_BitGetIntUnsigned(SD, 1, &FH->PSameMapAsF))
     return DSTErr_NegativeBitAllocation;
 
-  if (error = ReadTableMappingData(SD, FH->NrOfChannels, FH->MaxNrOfFilters, &FH->FSeg, &FH->NrOfFilters, &FH->FSameMapAllCh))
+  if ((error = ReadTableMappingData(SD, FH->NrOfChannels, FH->MaxNrOfFilters, &FH->FSeg, &FH->NrOfFilters, &FH->FSameMapAllCh)))
     return error;
 
   if (FH->PSameMapAsF == 1)
@@ -599,7 +599,7 @@ int ReadMappingData(StrData *SD, FrameHeader *FH)
   }
   else
   {
-    if (error = ReadTableMappingData(SD, FH->NrOfChannels, FH->MaxNrOfPtables, &FH->PSeg, &FH->NrOfPtables, &FH->PSameMapAllCh))
+    if ((error = ReadTableMappingData(SD, FH->NrOfChannels, FH->MaxNrOfPtables, &FH->PSeg, &FH->NrOfPtables, &FH->PSameMapAllCh)))
       return error;
   }
 
@@ -919,16 +919,16 @@ int UnpackDSTframe(ebunch*  D,
   {
     int error;
 
-    if (error = ReadSegmentData(&D->S, &D->FrameHdr))
+    if ((error = ReadSegmentData(&D->S, &D->FrameHdr)))
       return error;
 
-    if (error = ReadMappingData(&D->S, &D->FrameHdr))
+    if ((error = ReadMappingData(&D->S, &D->FrameHdr)))
       return error;
 
-    if (error = ReadFilterCoefSets(&D->S, D->FrameHdr.NrOfChannels, &D->FrameHdr, &D->StrFilter))
+    if ((error = ReadFilterCoefSets(&D->S, D->FrameHdr.NrOfChannels, &D->FrameHdr, &D->StrFilter)))
       return error;
 
-    if (error = ReadProbabilityTables(&D->S, &D->FrameHdr, &D->StrPtable, D->P_one))
+    if ((error = ReadProbabilityTables(&D->S, &D->FrameHdr, &D->StrPtable, D->P_one)))
       return error;
 
     D->ADataLen = D->FrameHdr.CalcNrOfBits - get_in_bitcount(&D->S);
