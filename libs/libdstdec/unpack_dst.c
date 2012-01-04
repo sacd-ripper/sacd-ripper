@@ -594,7 +594,7 @@ int ReadMappingData(StrData *SD, FrameHeader *FH)
 
   if (FH->PSameMapAsF == 1)
   {
-    if (error = CopyMappingData(FH))
+    if ((error = CopyMappingData(FH)) != 0)
       return error;
   }
   else
