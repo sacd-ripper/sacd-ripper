@@ -269,6 +269,7 @@ thread *launch(void (*probe)(void *), void *payload)
     /* create the thread and call ignition() from that thread */
     th = my_malloc(sizeof(struct thread_s));
     if ((ret = pthread_attr_init(&attr)) ||
+        (ret = pthread_attr_setstacksize(&attr, 1024 * 1024)) ||
         (ret = pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE)) ||
         (ret = pthread_create(&(th->id), &attr, ignition, capsule)) ||
         (ret = pthread_attr_destroy(&attr)))
