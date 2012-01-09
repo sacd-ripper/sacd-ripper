@@ -12,7 +12,7 @@
    USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
    DAMAGE.
 
---- Installation ---
+--- Custom Firmware Installation ---
 
 Make sure you have a PS3 model with SACD compatible player. For more information
 on what model specifically go to: http://ps3sacd.com/faq.html#_Toc180147566
@@ -24,14 +24,14 @@ is lower or equal to 3.55. A downgrade for a firmware higher than 3.55 is NOT
 available.
 
 The custom firmware that is needed must be 3.55 and should allow patching. Most
-custom firmwares like Kmeaw, Rebug, etc.. all facilitate this. Google for 
+custom firmwares like Kmeaw, Rebug, etc.. all facilitate this. Google for
 "kmeaw cfw" and you'll find several download links.
 
 Custom Firmware installation steps:
 
   1: Plug a USB stick into your computer
   2: Copy the custom firmware file that you downloaded to a USB memory
-     stick as /PS3/UPDATE/PS3UPDAT.PUP.  
+     stick as /PS3/UPDATE/PS3UPDAT.PUP. 
   3: Plug the USB stick into your PS3
   4: Navigate to Settings Tab
   5: Choose System Update
@@ -39,13 +39,13 @@ Custom Firmware installation steps:
   7: It will say it found Version 3.55
   8: Choose OK
   9: Accept Conditions and Follow the instructions
- 
+
 If the steps above did not work for you, then you are probably on 3.55 already.
 You will have to do a recovery menu mode installation:
 
   1: Plug a USB stick into your computer
   2: Copy the custom firmware file that you downloaded to a USB memory
-     stick as /PS3/UPDATE/PS3UPDAT.PUP.  
+     stick as /PS3/UPDATE/PS3UPDAT.PUP. 
   3: Plug the USB stick into your PS3
   4: Power down the PS3 through the menu
   5: Now press and HOLD the power button, the system will startup and shutdown
@@ -58,7 +58,7 @@ You will have to do a recovery menu mode installation:
   8: Connect the USB device and select "System Update."
   9: Accept Conditions and Follow the instructions
 
--- Installation Instructions --
+-- SACD Ripper Installation Instructions --
 
 Now you've completed the firmware upgrade you are ready to install
 sacd-ripper.pkg.
@@ -72,7 +72,7 @@ Get the PS3 keys from https://github.com/Mamdooh/PS3keys and put these in the
 root of an USB disc. They will be asked for during first time installation,
 after that you can remove the keys from your USB disc.
 
--- Build Instructions --
+-- SACD Ripper Build Instructions --
 
 To compile you will need the psl1ght suite. If you want to compile on a windows
 environment I advice you to follow the CygWin installation as the MingW
@@ -86,42 +86,88 @@ following commands:
   3. sh configure
   4. make
 
-SACD-Ripper should compile without errors and warnings. Once completed you 
+SACD-Ripper should compile without errors and warnings. Once completed you
 should have the sacd-ripper.pkg package that can be installed on your PS3.
 
-To compile the Windows scarletbook tool:
+-- SACD Extract Build Instructions --
+
+First you need to install the latest version of cmake: http://www.cmake.org/
+Now you can configure SACD extract using a "cmake ." followed by a "make"
+command or when you don't like the command line you can generate 
+project files for your favorite GUI (XCode, MSVC, etc..).
+
+On Windows you need pthread support and libiconv. Pthread support for windows
+can be downloaded from: http://sourceware.org/pthreads-win32/
+
+And to compile libiconv on windows you can do the following:
   1. Open the Visual Studio Command prompt
   2. Change directory to libs\libiconv
   3. run: "nmake -f Makefile.msvc NO_NLS=1"
   4. now you can compile using the MSVC project file
-  
--- Information --
 
-SACD-Ripper supports the following output formats:
+-- SACD Ripper/Extract Usage Instructions --
 
- - 2ch DSDIFF (DSD)
- - 2ch DSDIFF (DST) (if already DST encoded)
- - 2ch DSF (DSD)
- - mch DSDIFF (DSD)
- - mch DSDIFF (DST)
- - mch DSF (DSD)
- - ISO (due to the 4GB FAT32 size limit on the PS3, files will be splitted when
-   larger)
+From version 0.3.6 and upwards SACD Ripper has two modes of operation:
 
-At this time of writing both Saracon and Audiogate do not support DST encoded
-files. Audiogate only supports 2ch files and Saracon does not support DSF
-files. Please keep that in mind before selecting your file output.
+  1. Daemon mode (selected by default if you don't make a selection within 5
+     seconds after booting SACD Ripper).
+  2. ISO extraction mode (the previous versions of SACD Ripper allowed you to
+     extract DSDIFF, DSF directly, but this feature has been removed in favor 
+     of local extraction using SACD Extract).
 
-There seems to be a SACD BluRay read speed limit that sets the maximum read
-speed to 2.6MB/sec, yes I agree, this is slow! But DST decoding is even
-slower.. The PS3 GameOS has 6 SPUs available for user operations. SACD-Ripper
-uses 1 SPU for decryption and the other 5!! for DST decoding. Although this
-process is quite optimal the current decoding speed has been measured to
-be 0.9MB/sec for a 2 channel rip. So for 2ch DST tracks the write speed to disc
-will be around 2.3MB/sec, for a multi-channel the write speed is a bit higher
-at 2.4MB.sec but decoding is even slower at 0.6MB/sec.
+SACD Extract (available on Windows, Linux, OS X) allows you to extract
+individual tracks from ISO files when operated in file mode or from the SACD 
+Ripper when operated in Daemon mode.
 
-Big thanks goes to to:
+The following options are available for the sacd_extract commandline tool:
+
+Usage: sacd_extract [options] [outfile]
+  -2, --2ch-tracks                : Export two channel tracks (default)
+  -m, --mch-tracks                : Export multi-channel tracks
+  -e, --output-dsdiff-em          : output as Philips DSDIFF (Edit Master) file
+  -p, --output-dsdiff             : output as Philips DSDIFF file
+  -s, --output-dsf                : output as Sony DSF file
+  -I, --output-iso                : output as RAW ISO
+  -c, --convert-dst               : convert DST to DSD
+  -C, --export-cue                : Export a CUE Sheet
+  -i, --input[=FILE]              : set source and determine if "iso" image,
+                                    device or server (ex. -i192.168.1.10:2002)
+  -P, --print                     : display disc and track information
+
+Help options:
+  -?, --help                      : Show this help message
+  --usage                         : Display brief usage message
+ 
+Usage examples:
+
+Extract all stereo tracks to multiple DSDIFF files and convert all DSD to DSD:
+
+$ sacd_extract -2 -p -c -i"Foo_Bar_RIP.ISO"
+
+Extract all multi channel tracks from the given ISO to multiple DSF files and 
+convert all DST to DSD:
+
+$ sacd_extract -2 -s -i"Foo_Bar_RIP.ISO"
+
+Extract a single DSDIFF/DSD Multi-Channel Edit Master track from the given ISO
+and convert all DST to DSD:
+
+$ sacd_extract -m -e -c -i"Foo_Bar_RIP.ISO"
+
+Extract a single ISO file from the SACD Ripper Daemon (IP address and Port is
+displayed on startup):
+
+$ sacd_extract -I -i192.168.1.10:2002
+
+Extract all multi channel tracks from the SACD Ripper Daemon (IP address and
+Port is displayed on startup) to multiple DSDIFF files and keep the DST format:
+
+$ sacd_extract -m -p -i192.168.1.10:2002
+
+
+-- Thank you! --
+
+A big thank you goes to:
 
     Graf Chokolo
     Geoffrey Levand :-)
