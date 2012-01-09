@@ -1,3 +1,17 @@
+version 0.3.6
+
+    SACD Ripper
+        - merged SACD Daemon into SACD Ripper
+        - added disc ejection on startup
+        - network speed improvement
+        - fixed issue where USB remaining size was wrong after ripping
+
+    SACD Extract
+        - network speed improvement
+        - added native OS X support
+        - gapless is on by default for individual tracks
+        - fixed issue where CUE export wrote to wrong filename
+
 version 0.3.5
 
     - added ID3 tags to Edit Master for multiple ID3 tagging
