@@ -1,12 +1,4 @@
 version 0.3.6
-
-    SACD Ripper
-        - merged SACD Daemon into SACD Ripper
-        - added disc ejection on startup
-        - network speed improvement
-        - fixed issue where USB remaining size was wrong after ripping
-
-    SACD Extract
         - network speed improvement
         - added native OS X support
         - gapless is on by default for individual tracks
