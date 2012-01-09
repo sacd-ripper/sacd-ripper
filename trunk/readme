@@ -152,7 +152,7 @@ Help options:
  
 Usage examples:
 
-Extract all stereo tracks to multiple DSDIFF files and convert all DSD to DSD:
+Extract all stereo tracks to multiple DSDIFF files and convert all DST to DSD:
 
 $ sacd_extract -2 -p -c -i"Foo_Bar_RIP.ISO"
 
@@ -167,7 +167,8 @@ and convert all DST to DSD:
 $ sacd_extract -m -e -c -i"Foo_Bar_RIP.ISO"
 
 Extract a single ISO file from the SACD Ripper Daemon (IP address and Port is
-displayed on startup):
+displayed on startup). You can use SACD Extract again on the ISO file to extract
+the DSD data (see the three examples above):
 
 $ sacd_extract -I -i192.168.1.10:2002
 
@@ -175,6 +176,11 @@ Extract all multi channel tracks from the SACD Ripper Daemon (IP address and
 Port is displayed on startup) to multiple DSDIFF files and keep the DST format:
 
 $ sacd_extract -m -p -i192.168.1.10:2002
+
+Generate a sacd_log.txt file that contains the ISRC codes which should/could
+be used for ISO verification.
+
+$ sacd_extract -P -i192.168.1.10:2002 >sacd_log.txt
 
 
 -- Thank you! --
