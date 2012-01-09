@@ -51,6 +51,7 @@ elseif(WIN32)
 elseif(APPLE)
   set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIRARIES} -liconv -lpthread")
 else()
+  add_definitions(-D_FILE_OFFSET_BITS=64)
   set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIRARIES} -lpthread")
 endif()
 
