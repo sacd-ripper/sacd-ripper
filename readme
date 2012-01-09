@@ -12,6 +12,16 @@
    USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
    DAMAGE.
 
+-- SACD Ripper PS3 installation --
+
+There are three main steps to install the PS3 SACD Ripper:
+
+  1. Install a custom firmware (see instructions below) that allows patching
+     and the installation of custom applications.
+  2. Download or Compile the sacd-ripper.pkg file and install this on your PS3
+  3. Download the PS3 keys and use this on first time installation (see 
+     instructions below)
+
 --- Custom Firmware Installation ---
 
 Make sure you have a PS3 model with SACD compatible player. For more information
@@ -61,7 +71,9 @@ You will have to do a recovery menu mode installation:
 -- SACD Ripper Installation Instructions --
 
 Now you've completed the firmware upgrade you are ready to install
-sacd-ripper.pkg.
+sacd-ripper.pkg. You may compile the sacd-ripper.pkg or you can use your
+google skills to find a pre-compiled package. (no, I will not distribute
+the sacd-ripper.pkg as that could potentially give me legal issues).
 
 In order for the PS3 BluRay player to authenticate the SACD disc and to decode
 DST to DSD two SPU isoself modules will be extracted from the system. In order
