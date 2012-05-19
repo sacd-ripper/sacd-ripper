@@ -42,9 +42,14 @@ Raw ISO images (SACD-R) that are burned to DVD-R can be played on several SACD p
 
 ==Confirmed to play after (custom) firmware update==
 
+  * BBK DV727S
   * Cambridge Audio DVD89
+  * Harman Kardon DVD47
+  * Marantz DV-7001
+  * Onkyo DV-S502E
   * Oppo DV-970HD
   * Oppo DV-980H
+  * Oppo DV-981HD
   * Philips DVP-5500S 
   * Pioneer DV-575A 
   * Pioneer DV-578A 
@@ -67,7 +72,6 @@ Raw ISO images (SACD-R) that are burned to DVD-R can be played on several SACD p
 
   * Accuphase DP-100
   * Arcam DV137
-  * BBK DV727S
   * Cambridge Audio DVD99
   * Cary DVD8
   * Denon DVD-1930
@@ -77,11 +81,9 @@ Raw ISO images (SACD-R) that are burned to DVD-R can be played on several SACD p
   * Denon DVD-3930
   * EMM Labs CDSD
   * Esoteric SZ-1s
-  * Harman/Kardon DVD 47
   * Integra DPS-6.9
   * Marantz DV-6001
   * Marantz DV-6500
-  * Marantz DV-7001
   * Marantz DV-9500
   * Marantz DV-9600
   * Marantz SA-15S1
