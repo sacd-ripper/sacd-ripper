@@ -1,8 +1,12 @@
+version 0.3.7
+    - option to allow individual dsf/dsdiff track extraction
+    - added (foobar) compatbile escaping to cuesheets
+
 version 0.3.6
-        - network speed improvement
-        - added native OS X support
-        - gapless is on by default for individual tracks
-        - fixed issue where CUE export wrote to wrong filename
+    - network speed improvement
+    - added native OS X support
+    - gapless is on by default for individual tracks
+    - fixed issue where CUE export wrote to wrong filename
 
 version 0.3.5
 
