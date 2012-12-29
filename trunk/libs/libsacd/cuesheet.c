@@ -33,6 +33,16 @@
 
 #include "cuesheet.h"
 
+static char *cue_escape(const char *src) 
+{
+    static char ret[512];
+    char *s = str_replace(src, "\"", "\\\"");
+    strcpy(ret, s);
+    free(s);
+    trim_whitespace(ret);
+    return ret;
+}
+
 int write_cue_sheet(scarletbook_handle_t *handle, const char *filename, int area, char *cue_filename)
 {
     FILE *fd;
@@ -71,20 +81,20 @@ int write_cue_sheet(scarletbook_handle_t *handle, const char *filename, int area
 
     if (handle->master_text.disc_artist)
     {
-        fprintf(fd, "PERFORMER \"%s\"\n", handle->master_text.disc_artist);
+        fprintf(fd, "PERFORMER \"%s\"\n", cue_escape(handle->master_text.disc_artist));
     }
 
     if (handle->master_text.disc_title)
     {
-        fprintf(fd, "TITLE \"%s\"\n", handle->master_text.disc_title);
+        fprintf(fd, "TITLE \"%s\"\n", cue_escape(handle->master_text.disc_title));
     }
 
     if (strlen(handle->master_toc->disc_catalog_number) > 0)
     {
-        fprintf(fd, "CATALOG %s\n", substr(handle->master_toc->disc_catalog_number, 0, 16));
+        fprintf(fd, "CATALOG %s\n", cue_escape(substr(handle->master_toc->disc_catalog_number, 0, 16)));
     }
 
-    fprintf(fd, "FILE \"%s\" WAVE\n", filename);
+    fprintf(fd, "FILE \"%s\" WAVE\n", cue_escape(filename));
     {
         int track, track_count = handle->area[area].area_toc->track_count;
         uint64_t prev_abs_end = 0;
@@ -97,17 +107,17 @@ int write_cue_sheet(scarletbook_handle_t *handle, const char *filename, int area
             
             if (handle->area[area].area_track_text[track].track_type_title)
             {
-                fprintf(fd, "      TITLE \"%s\"\n", handle->area[area].area_track_text[track].track_type_title);
+                fprintf(fd, "      TITLE \"%s\"\n", cue_escape(handle->area[area].area_track_text[track].track_type_title));
             }
 
             if (handle->area[area].area_track_text[track].track_type_performer)
             {
-                fprintf(fd, "      PERFORMER \"%s\"\n", handle->area[area].area_track_text[track].track_type_performer);
+                fprintf(fd, "      PERFORMER \"%s\"\n", cue_escape(handle->area[area].area_track_text[track].track_type_performer));
             }
 
             if (*handle->area[area].area_isrc_genre->isrc[track].country_code)
             {
-                fprintf(fd, "      ISRC %s\n", substr(handle->area[area].area_isrc_genre->isrc[track].country_code, 0, 12));
+                fprintf(fd, "      ISRC %s\n", cue_escape(substr(handle->area[area].area_isrc_genre->isrc[track].country_code, 0, 12)));
             }
 
             if ((uint64_t) TIME_FRAMECOUNT(&handle->area[area].area_tracklist_time->start[track]) > prev_abs_end)

@@ -71,6 +71,8 @@ static struct opts_s
     int            print;
     char          *input_device; /* Access method driver should use for control */
     char           output_file[512];
+    int            select_tracks;
+    char           selected_tracks[256]; /* scarletbook is limited to 256 tracks */
 } opts;
 
 scarletbook_handle_t *handle;
@@ -89,11 +91,12 @@ static int parse_options(int argc, char *argv[])
         "  -e, --output-dsdiff-em          : output as Philips DSDIFF (Edit Master) file\n"
         "  -p, --output-dsdiff             : output as Philips DSDIFF file\n"
         "  -s, --output-dsf                : output as Sony DSF file\n"
+        "  -t, --select-track              : only output selected track(s) (ex. -t 1,5,13)\n"
         "  -I, --output-iso                : output as RAW ISO\n"
         "  -c, --convert-dst               : convert DST to DSD\n"
         "  -C, --export-cue                : Export a CUE Sheet\n"
         "  -i, --input[=FILE]              : set source and determine if \"iso\" image, \n"
-        "                                    device or server (ex. -i192.168.1.10:2002)\n"
+        "                                    device or server (ex. -i 192.168.1.10:2002)\n"
         "  -P, --print                     : display disc and track information\n" 
         "\n"
         "Help options:\n"
@@ -106,7 +109,7 @@ static int parse_options(int argc, char *argv[])
         "        [-c|--convert-dst] [-C|--export-cue] [-i|--input FILE] [-P|--print]\n"
         "        [-?|--help] [--usage]\n";
 
-    static const char options_string[] = "2mepsIcCi::P?";
+    static const char options_string[] = "2mepsIcCi:t:P?";
     static const struct option options_table[] = {
         {"2ch-tracks", no_argument, NULL, '2' },
         {"mch-tracks", no_argument, NULL, 'm' },
@@ -153,6 +156,23 @@ static int parse_options(int argc, char *argv[])
             opts.output_dsdiff = 0; 
             opts.output_dsf = 1; 
             opts.output_iso = 0;
+            break;
+        case 't': 
+            {
+                int track_nr, count = 0;
+                char *track = strtok(optarg, " ,");
+                while (track != 0)
+                {
+                    track_nr = atoi(track);
+                    track = strtok(0, " ,");
+                    if (!track_nr)
+                        continue;
+                    track_nr = (track_nr - 1) & 0xff;
+                    opts.selected_tracks[track_nr] = 1;
+                    count++;
+                }
+                opts.select_tracks = count != 0;
+            }
             break;
         case 'I': 
             opts.output_dsdiff_em = 0; 
@@ -358,6 +378,9 @@ int main(int argc, char* argv[])
                         // fill the queue with items to rip
                         for (i = 0; i < handle->area[area_idx].area_toc->track_count; i++) 
                         {
+                            if (opts.select_tracks && opts.selected_tracks[i] == 0)
+                                continue;
+
                             musicfilename = get_music_filename(handle, area_idx, i);
                             if (opts.output_dsf)
                             {
