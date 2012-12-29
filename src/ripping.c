@@ -217,7 +217,7 @@ int start_ripping_gui(int ripping_flags)
                 // fill the queue with items to rip
                 for (i = 0; i < handle->area[area_idx].area_toc->track_count; i++) 
                 {
-                    musicfilename = get_music_filename(handle, area_idx, i);
+                    musicfilename = get_music_filename(handle, area_idx, i, 0);
                     if (ripping_flags & RIP_DSF)
                     {
                         file_path = make_filename(output_device, albumdir, musicfilename, "dsf");
@@ -277,7 +277,7 @@ int start_ripping_gui(int ripping_flags)
                     {
                         memset(progress_message, 0, 64);
        
-                        musicfilename = get_music_filename(handle, area_idx, tmp_current_track - 1);
+                        musicfilename = get_music_filename(handle, area_idx, tmp_current_track - 1, 0);
                         // HACK: substr is not thread safe, but it's only used in this thread..
                         snprintf(progress_message, 63, "Track (%d/%d): [%s...]", tmp_current_track, sysAtomicRead(&stats_total_tracks), substr(musicfilename, 0, 40));
                         free(musicfilename);

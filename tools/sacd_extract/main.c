@@ -381,7 +381,8 @@ int main(int argc, char* argv[])
                             if (opts.select_tracks && opts.selected_tracks[i] == 0)
                                 continue;
 
-                            musicfilename = get_music_filename(handle, area_idx, i);
+                            musicfilename = get_music_filename(handle, area_idx, i, opts.output_file);
+
                             if (opts.output_dsf)
                             {
                                 file_path = make_filename(0, albumdir, musicfilename, "dsf");
