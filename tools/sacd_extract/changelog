@@ -1,6 +1,7 @@
 version 0.3.7
     - option to allow individual dsf/dsdiff track extraction
-    - added (foobar) compatbile escaping to cuesheets
+    - added (foobar) compatible escaping to cuesheets
+    - added user optional output filename/folder (last parameter)
 
 version 0.3.6
     - network speed improvement

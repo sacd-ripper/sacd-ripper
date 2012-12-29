@@ -330,7 +330,7 @@ int main(int argc, char* argv[])
                     // select the channel area
                     area_idx = ((has_multi_channel(handle) && opts.multi_channel) || !has_two_channel(handle)) ? handle->mulch_area_idx : handle->twoch_area_idx;
 
-                    albumdir = get_album_dir(handle);
+                    albumdir = (strlen(opts.output_file) > 0 ? strdup(opts.output_file) : get_album_dir(handle));
 
                     if (opts.output_iso)
                     {
