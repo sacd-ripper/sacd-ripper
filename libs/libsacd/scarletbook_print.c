@@ -176,7 +176,7 @@ static void scarletbook_print_area_text(scarletbook_handle_t *handle, int area_i
             fwprintf(stdout, L"\t\tComposer Phonetic[%d]: %ls\n", i, ucs(track_text->track_type_composer_phonetic));
         if (track_text->track_type_arranger)
             fwprintf(stdout, L"\t\tArranger[%d]: %ls\n", i, ucs(track_text->track_type_arranger));
-        if (track_text->track_type_composer_phonetic)
+        if (track_text->track_type_arranger_phonetic)
             fwprintf(stdout, L"\t\tArranger Phonetic[%d]: %ls\n", i, ucs(track_text->track_type_arranger_phonetic));
         if (track_text->track_type_message)
             fwprintf(stdout, L"\t\tMessage[%d]: %ls\n", i, ucs(track_text->track_type_message));

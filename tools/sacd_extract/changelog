@@ -1,9 +1,12 @@
 version 0.3.7
+
+    - fixed a bug where arranger phonetic was referenced incorrectly during print (-P)
     - option to allow individual dsf/dsdiff track extraction
     - added (foobar) compatible escaping to cuesheets
     - added user optional output filename/folder (last parameter)
 
 version 0.3.6
+
     - network speed improvement
     - added native OS X support
     - gapless is on by default for individual tracks
