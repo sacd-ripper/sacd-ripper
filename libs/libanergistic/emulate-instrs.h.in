@@ -5,6 +5,7 @@
 #define EMULATE_INSTRS_H__
 
 #include <stdio.h>
+#include <stdint.h>
 #include "config.h"
 #include "types.h"
 #include "emulate.h"

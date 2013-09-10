@@ -5,8 +5,9 @@
 #ifndef ELF_H__
 #define ELF_H__
 
+#include "emulate.h"
 #include "types.h"
 
-void elf_load(const char *path);
+void elf_load(spe_ctx_t *ctx, const char *path);
 
 #endif

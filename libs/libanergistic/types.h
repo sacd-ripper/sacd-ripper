@@ -4,25 +4,18 @@
 #ifndef TYPES_H__
 #define TYPES_H__
 
-typedef unsigned long long u64;
-typedef unsigned int u32;
-typedef unsigned short u16;
-typedef unsigned char u8;
-typedef unsigned char u1;
+#include <stdint.h>
 
-typedef signed long long s64;
-typedef signed int s32;
-typedef signed short s16;
-typedef signed char s8;
+typedef unsigned char uint1_t;
 
-static inline u8 be8(u8 *p)
+static __inline uint8_t be8(uint8_t *p)
 {
 	return *p;
 }
 
-static inline u16 be16(u8 *p)
+static __inline uint16_t be16(uint8_t *p)
 {
-	u16 a;
+	uint16_t a;
 
 	a  = p[0] << 8;
 	a |= p[1];
@@ -30,9 +23,9 @@ static inline u16 be16(u8 *p)
 	return a;
 }
 
-static inline u32 be32(u8 *p)
+static __inline uint32_t be32(uint8_t *p)
 {
-	u32 a;
+	uint32_t a;
 
 	a  = p[0] << 24;
 	a |= p[1] << 16;
@@ -42,49 +35,49 @@ static inline u32 be32(u8 *p)
 	return a;
 }
 
-static inline u64 be64(u8 *p)
+static __inline uint64_t be64(uint8_t *p)
 {
-	u32 a, b;
+	uint32_t a, b;
 
 	a = be32(p);
 	b = be32(p + 4);
 
-	return ((u64)a<<32) | b;
+	return ((uint64_t)a<<32) | b;
 }
 
-static inline void wbe16(u8 *p, u16 v)
+static __inline void wbe16(uint8_t *p, uint16_t v)
 {
 	p[0] = v >> 8;
-	p[1] = v;
+	p[1] = v & 0xff;
 }
 
-static inline void wbe32(u8 *p, u32 v)
+static __inline void wbe32(uint8_t *p, uint32_t v)
 {
 	p[0] = v >> 24;
 	p[1] = v >> 16;
 	p[2] = v >>  8;
-	p[3] = v;
+	p[3] = v & 0xff;
 }
 
-static inline void wbe64(u8 *p, u64 v)
+static __inline void wbe64(uint8_t *p, uint64_t v)
 {
-	wbe32(p + 4, v);
+	wbe32(p + 4, (uint32_t) v);
 	v >>= 32;
-	wbe32(p, v);
+	wbe32(p, (uint32_t) v);
 }
 
 
 // sign extension for immediate values inside opcodes
-static inline u32 se(u32 v, int b)
+static __inline uint32_t se(uint32_t v, int b)
 {
 	v <<= 32-b;
-	v = ((s32)v) >> (32-b);
+	v = ((int32_t)v) >> (32-b);
 	return v;
 }
 
-static inline u32 se7(u32 v) { return se(v, 7); }
-static inline u32 se10(u32 v) { return se(v, 10); }
-static inline u32 se16(u32 v) { return se(v, 16); }
-static inline u32 se18(u32 v) { return se(v, 18); }
+static __inline uint32_t se7(uint32_t v) { return se(v, 7); }
+static __inline uint32_t se10(uint32_t v) { return se(v, 10); }
+static __inline uint32_t se16(uint32_t v) { return se(v, 16); }
+static __inline uint32_t se18(uint32_t v) { return se(v, 18); }
 
 #endif

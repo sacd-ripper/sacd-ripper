@@ -5,20 +5,20 @@
 #ifndef CONFIG_H__
 #define CONFIG_H__
 
-#define DEBUG
+//#define DEBUG
 //#define DEBUG_INSTR
 //#define DEBUG_GDB
 
 //#define DEBUG_INSTR_MEM
-#define DEBUG_TRACE
+//#define DEBUG_TRACE
 
-//#define FAIL_DUMP_REGS
-//#define FAIL_DUMP_LS
+#define FAIL_DUMP_REGS
+#define FAIL_DUMP_LS
 
-//#define STOP_DUMP_REGS
-//#define STOP_DUMP_LS
+#define STOP_DUMP_REGS
+#define STOP_DUMP_LS
 
-#define	LS_SIZE	256 * 1024
+#define LS_SIZE				0x40000   /* 256K (in bytes) */ 
 #define	LSLR	(LS_SIZE - 1)
 #define DUMP_LS_NAME "ls.b"
 

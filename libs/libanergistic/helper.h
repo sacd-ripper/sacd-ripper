@@ -7,22 +7,26 @@
 
 #include "types.h"
 
-void reg2ls(u32 r, u32 addr);
-void ls2reg(u32 r, u32 addr);
-void get_mask_byte(u32 rt, u32 t);
-void get_mask_hword(u32 rt, u32 t);
-void get_mask_word(u32 rt, u32 t);
-void get_mask_dword(u32 rt, u32 t);
-void reg_to_byte(u8 *d, int r);
-void byte_to_reg(int r, const u8 *d);
-void reg_to_half(u16 *d, int r);
-void half_to_reg(int r, const u16 *d);
-void reg_to_Bits(u1 *d, int r);
-void Bits_to_reg(int r, const u1 *d);
-void reg_to_float(float *d, int r);
-void float_to_reg(int r, const float *d);
-void reg_to_double(double *d, int r);
-void double_to_reg(int r, const double *d);
+void dump_regs(spe_ctx_t *ctx);
+void dump_ls(spe_ctx_t *ctx, const char* filename);
+void fail(spe_ctx_t *ctx, const char *a, ...);
+
+void reg2ls(spe_ctx_t *ctx, uint32_t r, uint32_t addr);
+void ls2reg(spe_ctx_t *ctx, uint32_t r, uint32_t addr);
+void get_mask_byte(spe_ctx_t *ctx, uint32_t rt, uint32_t t);
+void get_mask_hword(spe_ctx_t *ctx, uint32_t rt, uint32_t t);
+void get_mask_word(spe_ctx_t *ctx, uint32_t rt, uint32_t t);
+void get_mask_dword(spe_ctx_t *ctx, uint32_t rt, uint32_t t);
+void reg_to_byte(spe_ctx_t *ctx, uint8_t *d, int r);
+void byte_to_reg(spe_ctx_t *ctx, int r, const uint8_t *d);
+void reg_to_half(spe_ctx_t *ctx, uint16_t *d, int r);
+void half_to_reg(spe_ctx_t *ctx, int r, const uint16_t *d);
+void reg_to_bits(spe_ctx_t *ctx, uint1_t *d, int r);
+void bits_to_reg(spe_ctx_t *ctx, int r, const uint1_t *d);
+void reg_to_float(spe_ctx_t *ctx, float *d, int r);
+void float_to_reg(spe_ctx_t *ctx, int r, const float *d);
+void reg_to_double(spe_ctx_t *ctx, double *d, int r);
+void double_to_reg(spe_ctx_t *ctx, int r, const double *d);
 #define rtw ctx->reg[rt]
 #define raw ctx->reg[ra]
 #define rbw ctx->reg[rb]
