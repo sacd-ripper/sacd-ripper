@@ -1,0 +1,1290 @@
+# Copyright 2010 fail0verflow <master@fail0verflow.com>
+# Licensed under the terms of the GNU GPL, version 2
+# http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
+
+# memory load/store instructions
+00110100,ri10,lqd,signed,shift4
+{
+	u32 addr = i10 + raw[0];
+
+	if (gdb_bp_r(addr) || gdb_bp_a(addr))
+		stop = 2;
+	else
+		ls2reg(rt, i10 + raw[0]);
+}
+
+00111000100,rr,lqx
+{
+	u32 addr = raw[0] + rbw[0];
+
+	if (gdb_bp_r(addr) || gdb_bp_a(addr))
+		stop = 2;
+	else
+		ls2reg(rt, addr);
+}
+
+001100001,ri16,lqa,signed,shift2
+{
+	u32 addr = i16;
+
+	if (gdb_bp_r(addr) || gdb_bp_a(addr))
+		stop = 2;
+	else
+		ls2reg(rt, i16);
+}
+
+001100111,ri16,lqr,signed,shift2
+{
+	u32 addr = ctx->pc + i16;
+
+	if (gdb_bp_r(addr) || gdb_bp_a(addr))
+		stop = 2;
+	else
+		ls2reg(rt, addr);
+}
+
+00100100,ri10,stqd,signed,shift4
+{
+	u32 addr = i10 + raw[0];
+
+	if (gdb_bp_w(addr) || gdb_bp_a(addr))
+		stop = 2;
+	else
+		reg2ls(rt, addr);
+}
+
+00101000100,rr,stqx
+{
+	u32 addr = raw[0] + rbw[0];
+
+	if (gdb_bp_w(addr) || gdb_bp_a(addr))
+		stop = 2;
+	else
+		reg2ls(rt, addr);
+}
+
+001000001,ri16,stqa,signed,shift2
+{
+	u32 addr = i16;
+
+	if (gdb_bp_w(addr) || gdb_bp_a(addr))
+		stop = 2;
+	else
+		reg2ls(rt, addr);
+}
+
+001000111,ri16,stqr,signed,shift2
+{
+	u32 addr = ctx->pc + i16;
+
+	if (gdb_bp_w(addr) || gdb_bp_a(addr))
+		stop = 2;
+	else
+		reg2ls(rt, addr);
+}
+
+00111110100,ri7,cbd,signed,byte
+{
+	int t = (raw[0] + i7) & 0xF;
+	
+	int i;
+	for (i = 0; i < 16; ++i)
+		rtb[i] = ((i == t) ? 0x03 : (i|0x10));
+}
+
+00111010100,rr,cbx,byte
+{
+	int t = (raw[0] + rbw[0]) & 0xF;
+	
+	int i;
+	for (i = 0; i < 16; ++i)
+		rtb[i] = ((i == t) ? 0x03 : (i|0x10));
+}
+
+00111110101,ri7,chd,signed,half
+{
+	int t = raw[0] + i7;
+
+	t >>= 1;
+	t &= 7;
+	
+	int i;
+	for (i = 0; i < 8; ++i)
+		rth[i] = ((i == t) ? 0x0203 : (i * 2 * 0x0101 + 0x1011));
+}
+
+00111010101,rr,chx,half
+{
+	int t = raw[0] + rbw[0];
+
+	t >>= 1;
+	t &= 7;
+	
+	int i;
+	for (i = 0; i < 8; ++i)
+		rth[i] = ((i == t) ? 0x0203 : (i * 2 * 0x0101 + 0x1011));
+}
+
+00111110110,ri7,cwd
+{
+	int t;
+
+	t = raw[0] + i7;
+	t >>= 2;
+	t &= 3;
+
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtw[i] = (i == t) ? 0x00010203 : (0x01010101 * (i * 4) + 0x10111213);
+}
+
+00111010110,rr,cwx
+{
+	int t;
+
+	t = raw[0] + rbw[0];
+	t >>= 2;
+	t &= 3;
+
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtw[i] = (i == t) ? 0x00010203 : (0x01010101 * (i * 4) + 0x10111213);
+}
+
+00111110111,ri7,cdd,signed
+{
+	int t;
+
+	t = raw[0] + i7;
+	t >>= 2;
+	t &= 2;
+
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtw[i] = (i == t) ? 0x00010203 : (i == (t + 1)) ? 0x04050607 : (0x01010101 * (i * 4) + 0x10111213);
+}
+
+00111010111,rr,cdx
+{
+	int t;
+
+	t = raw[0] + rbw[0];
+	t >>= 2;
+	t &= 2;
+
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtw[i] = (i == t) ? 0x00010203 : (i == (t + 1)) ? 0x04050607 : (0x01010101 * (i * 4) + 0x10111213);
+}
+
+
+# constant format instructions
+010000011,ri16,ilh
+{
+	u32 s;
+
+	s = (i16 << 16) | i16;
+	
+	rtw[0] = s;
+	rtw[1] = s;
+	rtw[2] = s;
+	rtw[3] = s;
+}
+
+010000010,ri16,ilhu
+{
+	u32 s;
+
+	s = (i16 << 16);
+	
+	rtw[0] = s;
+	rtw[1] = s;
+	rtw[2] = s;
+	rtw[3] = s;
+}
+
+010000001,ri16,il,signed
+{
+	rtw[0] = i16;
+	rtw[1] = i16;
+	rtw[2] = i16;
+	rtw[3] = i16;
+}
+
+0100001,ri18,ila
+{
+	
+	rtw[0] = i18;
+	rtw[1] = i18;
+	rtw[2] = i18;
+	rtw[3] = i18;
+}
+
+011000001,ri16,iohl
+{
+
+	rtw[0] |= i16; 
+	rtw[1] |= i16; 
+	rtw[2] |= i16; 
+	rtw[3] |= i16; 
+}
+
+001100101,ri16,fsmbi,byte
+{
+	int i;
+	for (i = 0; i < 16; ++i)
+		rtb[i] = (i16 & (1<<(15-i))) ? ~0 : 0;
+}
+
+
+# control instructions
+
+01111111,ri10,heqi,signed
+{
+	if (i10 == rawp)
+		stop = 1;
+}
+
+00000000000,special,stop,stop,trap
+{
+	if ((opcode & 0xFF00) == 0x2100)
+	{
+		u32 sel = be32(ctx->ls + ctx->pc + 4);
+		u32 arg = sel & 0xFFFFFF;
+		sel >>= 24;
+
+		printf("CELL SDK __send_to_ppe(0x%04x, 0x%02x, 0x%06x);\n", opcode & 0xFF, sel, arg);
+	} else
+		printf("####### stop instruction reached: %08x\n", opcode);
+}
+
+00101000000,rr,stopd,stop,trap
+{
+	printf("####### stopd instruction reached\n");
+	printf("ra: %08x %08x %08x %08x\n",
+			raw[0],
+			raw[1],
+			raw[2],
+			raw[3]);
+	printf("rb: %08x %08x %08x %08x\n",
+			rbw[0],
+			rbw[1],
+			rbw[2],
+			rbw[3]);
+	printf("rc: %08x %08x %08x %08x\n",
+			rtw[0],
+			rtw[1],
+			rtw[2],
+			rtw[3]);
+}
+
+00000000001,special,lnop
+{
+}
+
+01000000001,special,nop
+{
+}
+
+00000000010,special,sync
+{
+#ifdef DEBUG_INSTR
+	if ((opcode >> 20) & 1)
+		vdbgprintf("  sync.c\n");
+	else
+		vdbgprintf("  sync\n");
+#endif
+}
+
+00000000011,special,dsync
+{
+}
+
+00000001100,rr,mfspr
+{
+	printf("########## WARNING #################\n");
+	printf("    mfspr $%d, $%d not implemented!\n", rb, rt);
+	printf("####################################\n");
+}
+
+00100001100,rr,mtspr
+{
+	printf("########## WARNING #################\n");
+	printf("    mtspr $%d, $%d not implemented!\n", rb, rt);
+	printf("####################################\n");
+}
+
+00000001101,rr,rdch,trap
+{
+	channel_rdch(ra, rt);
+}
+
+00100001101,rr,wrch,trap
+{
+	channel_wrch(ra, rt);
+}
+
+00000001111,rr,rchcnt,trap
+{
+	int i;
+	for (i = 1; i < 4; ++i)
+		rtw[i] = 0;
+
+	rtw[0] = channel_rchcnt(ra);
+}
+
+001100000,ri16,bra,signed,shift2
+{
+	ctx->pc = i16 - 4;
+}
+
+001100100,ri16,br,signed,shift2
+{
+	ctx->pc += i16 - 4;
+}
+
+001000000,ri16,brz,signed,shift2
+{
+	if (rtw[0] == 0)
+		ctx->pc += i16 - 4;
+}
+
+001000010,ri16,brnz,signed,shift2
+{
+	if (rtw[0] != 0)
+		ctx->pc += i16 - 4;
+}
+
+00110101001,rr,bisl
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtw[i] = 0;
+	rtw[0] = ctx->pc + 4;
+	ctx->pc = raw[0] - 4;
+}
+
+001100110,ri16,brsl,signed
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtw[i] = 0;
+	rtw[0] = ctx->pc + 4;
+	ctx->pc += (i16 << 2) - 4;
+}
+001100010,ri16,brasl,signed
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtw[i] = 0;
+	rtw[0] = ctx->pc + 4;
+	ctx->pc = (i16 << 2) - 4;
+}
+00100101011,rr,bihnz,half
+{
+	if (rthp != 0)
+		ctx->pc = (raw[0] << 2) - 4;
+}
+
+00100101010,rr,bihz,half
+{
+	if (rthp == 0)
+		ctx->pc = (raw[0] << 2) - 4;
+}
+
+001000110,ri16,brhnz,half,signed
+{
+	if (rthp != 0)
+		ctx->pc += (i16 << 2) - 4;
+}
+
+001000100,ri16,brhz,half,signed
+{
+	if (rthp == 0)
+		ctx->pc += (i16 << 2) - 4;
+}
+
+00110101000,rr,bi
+{
+	ctx->pc = raw[0] - 4;
+}
+
+00100101000,rr,biz
+{
+	if(rtw[0] == 0)
+		ctx->pc = raw[0] - 4;
+}
+
+00100101001,rr,binz
+{
+	if(rtw[0] != 0)
+		ctx->pc = raw[0] - 4;
+}
+# hint for branch instructions
+00110101100,special,hbr
+{
+}
+
+0001000,ri18,hbra
+{
+}
+
+0001001,ri18,hbrr
+{
+}
+
+
+# integer and logical instructions
+00011001000,rr,ah,half
+{
+	int i;
+	for (i = 0; i < 8; ++i)
+		rth[i] = rah[i] + rbh[i];
+}
+
+00011101,ri10,ahi,signed,half
+{
+	int i;
+	for (i = 0; i < 8; ++i)
+		rth[i] = rah[i] + i10;
+}
+
+00011000000,rr,a
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+	  rtw[i] = raw[i] + rbw[i];
+}
+
+00011100,ri10,ai,signed
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtw[i] = raw[i] + i10;
+}
+
+00001001000,rr,sfh,half
+{
+	int i;
+	for (i = 0; i < 8; ++i)
+		rth[i] = rbh[i] - rah[i];
+}
+
+00001101,ri10,sfhi
+00001000000,rr,sf
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtw[i] = rbw[i] - raw[i];
+}
+
+00001100,ri10,sfi
+{
+	int imm = se10(i10);
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtw[i] = imm - raw[i];
+}
+
+01101000000,rr,addx
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtw[i] = (rtw[i]&1) + raw[i] + rbw[i];
+}
+
+00011000010,rr,cg
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtw[i] = ((raw[i] + rbw[i]) < raw[i]) ? 1 : 0;
+}
+
+01101000010,rr,cgx
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+	{
+		u64 r = raw[i] + (rtw[i]&1) + rbw[i];
+		rtw[i] = (r >> 32) & 1;
+	}
+}
+
+01101000001,rr,sfx
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtw[i] = rbw[i] - raw[i] - ((rtw[i]&1)?0:1);
+}
+
+00001000010,rr,bg
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtw[i]=raw[i]>rbw[i]?0:1;
+}
+01101000011,rr,bgx
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+	{
+		s64 res = ((u64)raw[i]) - ((u64)rbw[i]) - (u64)(rtw[i]&1);
+		rtw[i] = -(res < 0);
+	}
+}
+
+01111000100,rr,mpy
+01111001100,rr,mpyu
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtw[i] = (raw[i] & 0xFFFF) * (rbw[i] & 0xFFFF);
+}
+
+01110100,ri10,mpyi,signed
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtw[i] = (raw[i] & 0xFFFF) * i10;
+}
+
+01110101,ri10,mpyui,signed
+{
+	i10 &= 0xFFFF;
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtw[i] = (raw[i] & 0xFFFF) * i10;
+}
+
+1100,rrr,mpya
+01111000101,rr,mpyh
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtw[i] = ((raw[i] >> 16) * (rbw[i] & 0xFFFF)) << 16;
+}
+
+01111000111,rr,mpys
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtw[i] = se16(((raw[i]&0xFFFF) * (rbw[i]&0xFFFF)) >> 16);
+}
+
+01111000110,rr,mpyhh
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtw[i] = (raw[i] >> 16) * (rbw[i] >> 16);
+}
+01101000110,rr,mpyhha
+01111001110,rr,mpyhhu
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtw[i] = (raw[i] >> 16) * (rbw[i] >> 16);
+}
+
+01101001110,rr,mpyhhau
+
+01010100101,rr,clz
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+	{
+		int b;
+		for (b = 0; b < 32; ++b)
+			if (raw[i] & (1<<(31-b)))
+				break;
+		rtw[i] = b;
+	}
+}
+
+01010110100,rr,cntb
+00110110110,rr,fsmb
+00110110101,rr,fsmh
+00110110100,rr,fsm
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtw[i] = (rawp & (8>>i)) ? ~0 : 0;
+}
+
+00110110010,rr,gbb,byte
+{
+	int i;
+	for (i = 0; i < 16; ++i)
+		rtb[i] = 0;
+	for (i = 0; i < 16; ++i)
+		rtb[2 + (i / 8)] |= (rab[i]&1) << ((~i)&7);
+}
+
+00110110001,rr,gbh
+00110110000,rr,gb
+{
+	rtw[0] = ((raw[0] & 1) << 3) | ((raw[1] & 1) << 2) | ((raw[2] & 1) << 1) | (raw[3] & 1) ;
+	rtw[1] = rtw[2] = rtw[3] = 0;
+}
+
+00011010011,rr,avgb
+00001010011,rr,absdb
+01001010011,rr,sumb
+
+01010110110,rr,xsbh,byte
+{
+	int i;
+	for (i = 0; i < 16; i += 2)
+	{
+		rtb[i] = rab[i + 1] & 0x80 ? 0xFF : 0;
+		rtb[i + 1] = rab[i + 1];
+	}
+}
+
+01010101110,rr,xshw,half
+{
+	int i;
+	for (i = 0; i < 8; i += 2)
+	{
+		rth[i] = (rah[i + 1] & 0x8000) ? 0xFFFF : 0;
+		rth[i + 1] = rah[i + 1];
+	}
+}
+
+01010100110,rr,xswd
+{
+	rtw[0] = (raw[1] & 0x80000000) ? 0xFFFFFFFF : 0;
+	rtw[1] = raw[1];
+	rtw[2] = (raw[3] & 0x80000000) ? 0xFFFFFFFF : 0;
+	rtw[3] = raw[3];
+}
+
+00011000001,rr,and
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtw[i] = raw[i] & rbw[i];
+}
+
+01011000001,rr,andc
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtw[i] = raw[i] &~ rbw[i];
+}
+
+00010110,ri10,andbi,byte
+{
+	int i;
+	for (i = 0; i < 16; ++i)
+		rtb[i] = rab[i] & i10;
+}
+
+00010101,ri10,andhi,half,signed
+{
+	int i;
+	for (i = 0; i < 8; ++i)
+		rth[i] &= i10;
+}
+
+00010100,ri10,andi,signed
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtw[i] = raw[i] & i10;
+}
+
+00001000001,rr,or
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtw[i] = raw[i] | rbw[i];
+}
+
+01011001001,rr,orc
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtw[i] = raw[i] |~ rbw[i];
+}
+
+00000110,ri10,orbi
+00000101,ri10,orhi
+00000100,ri10,ori
+{
+	int imm = se10(i10);
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtw[i] = raw[i] | imm;
+}
+
+00111110000,rr,orx
+
+01001000001,rr,xor
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtw[i] = raw[i] ^ rbw[i];
+}
+
+01000110,ri10,xorbi,byte
+{
+	int i;
+	for (i = 0; i < 16; ++i)
+		rtb[i] = rab[i] ^ (i10&0xFF);
+}
+
+01000101,ri10,xorhi
+01000100,ri10,xori,signed
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtw[i] = raw[i] ^ i10;		
+}
+
+00011001001,rr,nand
+00001001001,rr,nor
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtw[i] = ~(raw[i] | rbw[i]);
+}
+
+01001001001,rr,eqv
+1000,rrr,selb
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtw[i] = (rcw[i] & rbw[i]) | ((~rcw[i]) & raw[i]);
+}
+
+1011,rrr,shufb,byte
+{
+	int i;
+	for (i = 0; i < 16; ++i)
+	{
+		if ((rcb[i] & 0xC0) == 0x80)
+			rtb[i] = 0;
+		else if ((rcb[i] & 0xE0) == 0xC0)
+			rtb[i] = 0xFF;
+		else if ((rcb[i] & 0xE0) == 0xE0)
+			rtb[i] = 0x80;
+		else
+		{
+			int b = rcb[i] & 0x1F;
+			if (rcb[i] < 16)
+				rtb[i] = rab[b];
+			else
+				rtb[i] = rbb[b-16];
+		}
+	}
+}
+
+
+# shift and rotate instruction
+00111111111,ri7,shlqbyi,byte
+{
+	i7 &= 0x1F;
+	
+	int i;
+	for (i = 0; i < 16; ++i)
+		rtb[i] = (i + i7) >= 16 ? 0 : rab[i + i7];
+}
+
+00111111100,ri7,rotqbyi,byte
+{
+	i7 &= 0x1F;
+	
+	int i;
+	for (i = 0; i < 16; ++i)
+		rtb[i] = rab[(i + i7) & 15];
+}
+
+00111111101,ri7,rotqmbyi,byte
+{
+	int shift_count = (-i7) & 0x1f;
+
+	int i;
+	for (i = 0; i < 16; ++i)
+	{
+		if (i >= shift_count)
+			rtb[i] = rab[i - shift_count];
+		else
+			rtb[i] = 0;
+	}
+}
+00111001101,rr,rotqmbybi,byte
+{
+	int i;
+	int shift_count = (0-((rbb[3])>>3)) & 0x1f;
+
+	for (i = 0; i < 16; ++i)
+	{
+		if (i >= shift_count)
+			rtb[i] = rab[i - shift_count];
+		else
+			rtb[i] = 0;
+	}
+}
+00111001111,rr,shlqbybi,byte
+{
+	int i;
+	int shift_count = ((rbb[3])>>3) & 0x1f;
+
+	for (i = 0; i < 16; ++i)
+	{
+		if ((i + shift_count) < 16)
+			rtb[i] = rab[i + shift_count];
+		else
+			rtb[i] = 0;
+	}
+}
+
+00111111001,ri7,rotqmbii,Bits
+{
+	int shift_count = (-i7) & 7;
+
+	int i;
+	for (i = 0; i < 128; ++i)
+	{
+		if (i >= shift_count)
+			rtB[i] = raB[i - shift_count];
+		else
+			rtB[i] = 0;
+	}
+}
+
+00111111000,ri7,rotqbii,Bits
+{
+	int shift_count = i7 & 7;
+
+	int i;
+	for (i = 0; i < 128; ++i)
+	{
+		rtB[i] = raB[(i + shift_count) & 127];
+	}
+}
+
+00111011011,rr,shlqbi,Bits
+{
+	int shift_count = rbwp & 7;
+
+	int i;
+	for (i = 0; i < 128; ++i)
+	{
+		if (i + shift_count < 128)
+			rtB[i] = raB[i + shift_count];
+		else
+			rtB[i] = 0;
+	}
+}
+
+00111011001,rr,rotqmbi,Bits
+{
+	int shift_count = (-rbwp) & 7;
+
+	int i;
+	for (i = 0; i < 128; ++i)
+	{
+		if (i >= shift_count)
+			rtB[i] = raB[i - shift_count];
+		else
+			rtB[i] = 0;
+	}
+}
+
+00111111011,ri7,shlqbii,Bits
+{
+	int shift_count = i7 & 7;
+
+	int i;
+	for (i = 0; i < 128; ++i)
+	{
+		if (i + shift_count < 128)
+			rtB[i] = raB[i + shift_count];
+		else
+			rtB[i] = 0;
+	}
+}
+
+00111011100,rr,rotqby,byte
+{
+	int shift = rbw[0] & 0xF;
+	
+	int i;
+	for (i = 0; i < 16; ++i)
+		rtb[i] = rab[(i + shift) & 15];
+}
+
+00111011111,rr,shlqby,byte
+{
+	int shift = rbw[0] & 0x1F;
+	
+	int i;
+	for (i = 0; i < 16; ++i)
+		rtb[i] = (i + shift) < 16 ? rab[i + shift] : 0;
+}
+
+00111011101,rr,rotqmby,byte
+{
+	u32 s = (-rbw[0]) & 0x1F;
+
+	u32 i;
+	for (i = 0; i < 16; ++i)
+		if (i >= s)
+			rtb[i] = rab[i - s];
+		else
+			rtb[i] = 0;
+}
+
+00001111001,ri7,rotmi
+{
+	int shift_count = (-i7) & 63;
+	int i;
+	for (i = 0; i < 4; ++i)
+		if (shift_count < 32)
+			rtw[i] = raw[i] >> shift_count;
+		else
+			rtw[i] = 0;
+}
+
+00001111101,ri7,rothmi,half
+{
+	int shift_count = (-i7) & 31;
+	int i;
+	for (i = 0; i < 8; ++i)
+		if (shift_count < 16)
+			rth[i] = rah[i] >> shift_count;
+		else
+			rth[i] = 0;
+}
+
+00001011001,rr,rotm
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+	{
+		int shift_count = (-rbw[i]) & 63;
+		if (shift_count < 32)
+			rtw[i] = raw[i] >> shift_count;
+		else
+			rtw[i] = 0;
+	}
+}
+
+00001111010,ri7,rotmai
+{
+	int shift_count = (-i7) & 63;
+	int i;
+	for (i = 0; i < 4; ++i)
+		if (shift_count < 32)
+			rtw[i] = ((s32)raw[i]) >> shift_count;
+		else
+			rtw[i] = ((s32)raw[i]) >> 31;
+}
+
+000001011010,rr,rotma
+{
+	int i,shift_count;
+	for (i = 0; i < 4; ++i){
+		shift_count = (-rbw[i]) & 63;
+		if (shift_count < 32)
+			rtw[i] = ((s32)raw[i]) >> shift_count;
+		else
+			rtw[i] = ((s32)raw[i]) >> 31;
+	}
+}
+
+00001111011,ri7,shli
+{
+	int i;
+	int shift_count = i7 & 0x3f;
+	for (i = 0; i < 4; ++i)
+	{
+		if (shift_count > 31)
+			rtw[i] = 0;
+		else
+			rtw[i] = raw[i] << shift_count;
+	}
+}
+
+00001011011,rr,shl
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+	{
+		int shift_count = rbw[i] & 0x3f;
+		if (shift_count > 31)
+			rtw[i] = 0;
+		else
+			rtw[i] = raw[i] << shift_count;
+	}
+}
+
+00001111000,ri7,roti
+{
+	int shift_count = i7 & 0x1F;
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtw[i] = (raw[i] << shift_count) | (raw[i] >> (32 - shift_count));
+}
+
+# compare, branch and halt instructions
+01111100,ri10,ceqi,signed
+{
+	int i;
+
+	for (i = 0; i < 4; ++i)
+		rtw[i] = -(raw[i] == i10);
+}
+
+01111101,ri10,ceqhi,signed,half
+{
+	int i;
+
+	for (i = 0; i < 8; ++i)
+		rth[i] = -(rah[i] == i10);
+}
+01111001000,rr,ceqh,half
+{
+	int i;
+
+	for (i = 0; i < 8; ++i)
+		rth[i] = -(rah[i] == rbh[i]);
+}
+
+01111000000,rr,ceq
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtw[i] = -(raw[i] == rbw[i]);
+}
+
+01011000000,rr,clgt
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtw[i] = -(raw[i] > rbw[i]);
+}
+
+01001000000,rr,cgt
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtw[i] = -(((s32)raw[i]) > ((s32)rbw[i]));
+}
+
+01111110,ri10,ceqbi,signed,byte
+{
+	int i;
+	for (i = 0; i < 16; ++i)
+		rtb[i] = -(rab[i] == (i10 & 0xFF));
+}
+
+01111010000,rr,ceqb,byte
+{
+	int i;
+	for (i = 0; i < 16; ++i)
+		rtb[i] = -(rab[i] == rbb[i]);
+}
+
+01011010000,rr,clgtb,byte
+{
+	int i;
+	for (i = 0; i < 16; ++i)
+		rtb[i] = -(rab[i] > rbb[i]);
+}
+
+01001101,ri10,cgthi,signed,half
+{
+	int i;
+	for (i = 0; i < 8; ++i)
+		rth[i] = -(((s16)rah[i]) > ((s16)i10));
+}
+
+01011100,ri10,clgti,signed
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtw[i] = -(raw[i] > i10);
+}
+
+01011101,ri10,clgthi,signed,half
+{
+	int i;
+	for (i = 0; i < 8; ++i)
+		rth[i] = -(rah[i] > i10);
+}
+01011001000,rr,clgth,half
+{
+	int i;
+	for (i = 0; i < 8; ++i)
+		rth[i] = -(rah[i] > rbh[i]);
+}
+
+01011110,ri10,clgtbi,signed,byte
+{
+	int i;
+	for (i = 0; i < 16; ++i)
+		rtb[i] = -(rab[i] > (i10&0xFF));
+}
+
+01001100,ri10,cgti,signed
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtw[i] = -(((s32)raw[i]) > ((s32)i10));
+}
+01011000100,rr,fa,float
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtf[i] = raf[i] + rbf[i];
+}
+01011000101,rr,fs,float
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtf[i] = raf[i] - rbf[i];
+}
+01011000110,rr,fm,float
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtf[i] = raf[i] * rbf[i];
+
+}
+1110,rrr,fma,float
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtf[i] = rcf[i] + (raf[i] * rbf[i]);
+}
+1111,rrr,fms,float
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtf[i] = (raf[i] * rbf[i])-rcf[i];
+}
+1101,rrr,fnms,float
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtf[i] = rcf[i] - (raf[i] * rbf[i]);
+}
+01011000010,rr,fcgt,float
+{
+	int itrue = 0xffffffff;
+	float ftrue = *(float*)&itrue;
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtf[i] = raf[i]>rbf[i]?ftrue:0.0;
+	
+}
+01111000010,rr,fceq,float
+{
+	//note: floats are not accurately modeled!
+	int i; 
+	int itrue = 0xffffffff;
+	float ftrue = *(float*)&itrue;
+	for (i = 0; i < 4; ++i)
+		rtf[i] = raf[i]==rbf[i]?ftrue:0.0;
+}
+00110111000,rr,frest,float
+{
+	int i;
+	// not quite right, but assume this is followed by a 'fi'
+	for (i = 0; i < 4; ++i)
+		rtf[i] = 1/raf[1];
+}
+00110111001,rr,frsqest,float
+{
+	int i;
+	// not quite right, but assume this is followed by a 'fi'
+	for (i = 0; i < 4; ++i)
+		rtf[i] = 1/sqrt(fabs(raf[i]));
+}
+01111010100,rr,fi,float
+{
+	int i;
+	// not quite right, but assume this was preceeded by a 'fr*est'
+	for (i = 0; i < 4; ++i)
+		rtf[i] = rbf[i];
+}
+01110111000,rr,fesd,float
+{
+	double result = raf[0];
+	float *tmp = (float*)&result;
+	rtf[0] = tmp[1];
+	rtf[1] = tmp[0];
+	result = raf[2];
+	rtf[2] = tmp[1];
+	rtf[3] = tmp[0];
+}
+01110111001,rr,frds,double
+{
+	double dtmp = rad[0];
+	float ftmp = dtmp;
+	float *ptmp = (float*)&dtmp;
+	ptmp[1] = ftmp;
+	ptmp[0] = 0.0;
+	rtd[0]=dtmp;
+
+	dtmp = rad[1]; 
+	ftmp = dtmp;
+	ptmp[0] = ftmp;
+	ptmp[1] = 0.0;
+	rtd[1] = dtmp;
+}
+
+0111011010,ri8,csflt,float
+{
+	int i;
+	for (i = 0; i < 4; ++i){
+		int val = raw[i];
+		// let's hope the x86s float HW does the right thing here...
+		rtf[i] = (float)val;
+	}
+}
+0111011000,ri8,cflts,float
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtw[i] = (int)raf[i];	
+}
+0111011001,ri8,cfltu,float
+{
+	int i;
+	for (i = 0; i < 4; ++i)
+		rtw[i] = (u32)raf[i];	
+}
+01011001110,rr,dfm,double
+{
+	rtd[0] = rad[0]*rbd[0];
+	rtd[1] = rad[1]*rbd[1];
+}
+01011001101,rr,dfs,double
+{
+	rtd[0] = rad[0]-rbd[0];
+	rtd[1] = rad[1]-rbd[1];
+}
+01011001100,rr,dfa,double
+{
+	rtd[0] = rad[0]+rbd[0];
+	rtd[1] = rad[1]+rbd[1];
+}	
+01101011101,rr,dfms,double
+{
+	rtd[0] = (rad[0]*rbd[0])-rtd[0];
+	rtd[1] = (rad[1]*rbd[1])-rtd[1];
+}
+01101011110,rr,dfnms,double
+{
+	// almost same as dfms. This is missing in SPU_ISA_1.2. See v.1.1
+	rtd[0] = (rad[0]*rbd[0])-rtd[0];
+	rtd[1] = (rad[1]*rbd[1])-rtd[1];
+}
+01101011100,rr,dfma,double
+{
+	rtd[0] = (rad[0]*rbd[0])+rtd[0];
+	rtd[1] = (rad[1]*rbd[1])+rtd[1];
+}
