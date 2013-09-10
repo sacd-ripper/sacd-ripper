@@ -1,0 +1,20 @@
+// Copyright 2010 fail0verflow <master@fail0verflow.com>
+// Licensed under the terms of the GNU GPL, version 2
+// http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
+#include "config.h"
+#include "types.h"
+#include "emulate.h"
+#include "main.h"
+#include "helper.h"
+#include "channel.h"
+#include "gdb.h"
+#include <stdio.h>
+#include <math.h>
+
+#ifndef DEBUG_INSTR
+#define vdbgprintf(...)
+#else
+#define vdbgprintf printf
+#endif
+
+###CODE###
