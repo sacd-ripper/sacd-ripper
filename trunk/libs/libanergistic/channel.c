@@ -9,246 +9,315 @@
 #include <unistd.h>
 
 #include "types.h"
-#include "main.h"
 #include "config.h"
 #include "channel.h"
 
-//Channel names.
-static char *ch_names[] = 
+#define MFC_GET_CMD 0x40
+#define MFC_PUT_CMD 0x20
+
+/// <summary>
+/// A list of all documented MFC channels
+/// </summary>
+enum mfc_channels
 {
-  "SPU_RdEventStat",        //0
-  "SPU_WrEventMask",        //1
-  "SPU_WrEventAck",         //2
-  "SPU_RdSigNotify1",       //3
-  "SPU_RdSigNotify2",       //4
-  "UNKNOWN",                //5
-  "UNKNOWN",                //6
-  "SPU_WrDec",              //7
-  "SPU_RdDec",              //8
-  "MFC_WrMSSyncReq",        //9
-  "UNKNOWN",               //10
-  "SPU_RdEventMask",       //11
-  "MFC_RdTagMask",         //12
-  "SPU_RdMachStat",        //13
-  "SPU_WrSRR0",            //14
-  "SPU_RdSRR0",            //15
-  "MFC_LSA",               //16
-  "MFC_EAH",               //17
-  "MFC_EAL",               //18
-  "MFC_Size",              //19
-  "MFC_TagID",             //20
-  "MFC_Cmd",               //21
-  "MFC_WrTagMask",         //22
-  "MFC_WrTagUpdate",       //23
-  "MFC_RdTagStat",         //24
-  "MFC_RdListStallStat",   //25
-  "MFC_WrListStallAck",    //26
-  "MFC_RdAtomicStat",      //27
-  "SPU_WrOutMbox",         //28
-  "SPU_RdInMbox",          //29
-  "SPU_WrOutIntrMbox"      //30
+    /// <summary>
+    /// Write multisource synchronization request
+    /// </summary>
+    MFC_WrMSSyncReq = 9,
+    /// <summary>
+    /// Read tag mask
+    /// </summary>
+    MFC_RdTagMask = 12,
+    /// <summary>
+    /// Write local memory address command parameter
+    /// </summary>
+    MFC_LSA = 16,
+    /// <summary>
+    /// Write high order DMA effective address command parameter
+    /// </summary>
+    MFC_EAH = 17,
+    /// <summary>
+    /// Write low order DMA effective address command parameter
+    /// </summary>
+    MFC_EAL = 18,
+    /// <summary>
+    /// Write DMA transfer size command parameter
+    /// </summary>
+    MFC_Size = 19,
+    /// <summary>
+    /// Write tag identifier command parameter
+    /// </summary>
+    MFC_TagID = 20,
+    /// <summary>
+    /// Write and enqueue DMA command with associated class ID
+    /// </summary>
+    MFC_Cmd = 21,
+    /// <summary>
+    /// Write tag mask
+    /// </summary>
+    MFC_WrTagMask = 22,
+    /// <summary>
+    /// Write request for conditional or unconditional tag status update
+    /// </summary>
+    MFC_WrTagUpdate = 23,
+    /// <summary>
+    /// Read tag status with mask applied
+    /// </summary>
+    MFC_WrTagStat = 24,
+    /// <summary>
+    /// Read DMA list stall-and-notify status
+    /// </summary>
+    MFC_RdListStallStat = 25,
+    /// <summary>
+    /// Write DMA list stall-and-notify acknowledge
+    /// </summary>
+    MFC_WrListStallAck = 26,
+    /// <summary>
+    /// Read completion status of last completed immediate MFC atomic update command (see the Synergistic Processor Unit Channels section of Cell Broadband Engine Architecture) 
+    /// </summary>
+    MFC_RdAtomicStat = 27
 };
 
-//MFC channel values.
-static u32 _MFC_LSA;
-static u32 _MFC_EAH;
-static u32 _MFC_EAL;
-static u32 _MFC_Size;
-static u32 _MFC_TagID;
-static u32 _MFC_TagMask;
-static u32 _MFC_TagStat;
-
-#define MFC_GET_CMD 0x40
-#define MFC_SNDSIG_CMD 0xA0
-
-//Endian swap.
-#define _BE(val) ((((val) & 0xff00000000000000ull) >> 56) | \
-                  (((val) & 0x00ff000000000000ull) >> 40) | \
-                  (((val) & 0x0000ff0000000000ull) >> 24) | \
-                  (((val) & 0x000000ff00000000ull) >> 8 ) | \
-                  (((val) & 0x00000000ff000000ull) << 8 ) | \
-                  (((val) & 0x0000000000ff0000ull) << 24) | \
-                  (((val) & 0x000000000000ff00ull) << 40) | \
-                  (((val) & 0x00000000000000ffull) << 56))
-
-void handle_mfc_command(u32 cmd)
+enum channels
 {
-	printf("Local address %08x, EA = %08x:%08x, Size=%08x, TagID=%08x, Cmd=%08x\n",
-		MFC_LSA, MFC_EAH, MFC_EAL, MFC_Size, MFC_TagID, cmd);
-#ifdef DEBUG_CHANNEL
-	getchar();
-#endif
-		
-	switch (cmd)
+    /// <summary>
+    /// Read event status with mask applied 
+    /// </summary>
+    SPU_RdEventStat = 0,
+    /// <summary>
+    /// Write event mask 
+    /// </summary>
+    SPU_WrEventMask = 1,
+    /// <summary>
+    /// Write end of event processing 
+    /// </summary>
+    SPU_WrEventAck = 2,
+    /// <summary>
+    /// Signal notification 1
+    /// </summary>
+    SPU_RdSigNotify1 = 3,
+    /// <summary>
+    /// Signal notification 2 
+    /// </summary>
+    SPU_RdSigNotify2 = 4,
+    /// <summary>
+    /// Write decrementer count 
+    /// </summary>
+    SPU_WrDec = 7,
+    /// <summary>
+    /// Read decrementer count
+    /// </summary>
+    SPU_RdDec = 8,
+    /// <summary>
+    /// Read event mask 
+    /// </summary>
+    SPU_RdEventMask = 11,
+    /// <summary>
+    /// Read SPU run status 
+    /// </summary>
+    SPU_RdMachStat = 13,
+    /// <summary>
+    /// Write SPU machine state save/restore register 0 (SRR0) 
+    /// </summary>
+    SPU_WrSRR0 = 14,
+    /// <summary>
+    /// Read SPU machine state save/restore register 0 (SRR0)
+    /// </summary>
+    SPU_RdSRR0 = 15,
+    /// <summary>
+    /// Write outbound mailbox contents 
+    /// </summary>
+    SPU_WrOutMbox = 28,
+    /// <summary>
+    /// Read inbound mailbox contents 
+    /// </summary>
+    SPU_RdInMbox = 29,
+    /// <summary>
+    /// Write outbound interrupt mailbox contents (interrupting PPU) 
+    /// </summary>
+    SPU_WrOutIntrMbox = 30,
+    /// <summary>
+    /// Read random number
+    /// </summary>
+    SPU_RdRand = 74,
+};
+
+void handle_mfc_command(spe_ctx_t *ctx, uint32_t cmd)
+{
+    spe_mfc_command_area_t *mfc = &ctx->mfc;
+    dbgprintf("Local address %08x, EA = %08x:%08x, Size=%08x, TagID=%08x, Cmd=%08x\n",
+		mfc->mfc_lsa, mfc->mfc_eah, mfc->mfc_eal, mfc->mfc_size_tag, mfc->mfc_class_id_cmd, cmd);
+
+    switch (cmd)
 	{
-	case MFC_PUT_CMD:
-		printf("MFC_PUT (DMA out of LS)\n");
-    {
-			FILE *fp = fopen("out.bin", "a+");
-			fwrite(ctx->ls + _MFC_LSA, sizeof(u8), _MFC_Size, fp);
-			fclose(fp);
-		}
-		break;
 	case MFC_GET_CMD:
-		printf("MFC_GET (DMA into LS)\n");
-		{
-			static int round = 0;
-			                         //module debug output address, set both to 0x0 for none
-			static u64 data0[2] = {_BE(0xbeef0110dead0000), _BE(0xbeef0220dead0000)};
-			static u64 data1[4] = {_BE(0xbeef0110dead0000), _BE(0xbeef0220dead0000), 
-			                       _BE(0x0000000200000000), _BE(0x0000000000000000)};
-			                                  //^-- 1,2,3,4 (device type/id, pscode, psid)
-			if(round == 0)
-				memcpy(ctx->ls + _MFC_LSA, &data0, _MFC_Size);
-			else if(round == 1)
-				memcpy(ctx->ls + _MFC_LSA, &data1, _MFC_Size);
-			else if(round == 2)
-			{
-				//Load EID segment.
-				printf("loading EID...");
-				FILE *fp = fopen("eid_tmp", "rb");
-				fread(ctx->ls + _MFC_LSA, sizeof(u8), _MFC_Size, fp);
-				fclose(fp);
-				printf("done\n");
-			}
-			round++;
-		}
-		break;
+		dbgprintf("MFC_GET (DMA into LS)\n");
+        memcpy(ctx->ls + mfc->mfc_lsa, (void *) mfc->mfc_eal, mfc->mfc_size_tag);
+        break;
+    case MFC_PUT_CMD:
+        dbgprintf("MFC_PUT (DMA out of LS)\n");
+        memcpy((void *) mfc->mfc_eal, ctx->ls + mfc->mfc_lsa, mfc->mfc_size_tag);
+        break;
 	default:
-		printf("unknown command\n");
+		dbgprintf("unknown command\n");
 	}
 }
 
-void handle_mfc_tag_update(u32 tag)
+void channel_wrch(spe_ctx_t *ctx, int ch, int reg)
 {
-	switch (tag)
-	{
-	case MFC_TAG_UPDATE_IMMEDIATE:
-		printf("-> MFC_TAG_UPDATE_IMMEDIATE\n");
-		_MFC_TagStat = _MFC_TagMask;
-		break;
-	case MFC_TAG_UPDATE_ANY:
-		printf("-> MFC_TAG_UPDATE_ANY\n");
-		break;
-	case MFC_TAG_UPDATE_ALL:
-		printf("-> MFC_TAG_UPDATE_ALL\n");
-		break;
-	default:
-		printf("-> UNKNOWN\n");
-		break;
-	}
-	
-	_MFC_TagStat = _MFC_TagMask;
-}
-
-void channel_wrch(int ch, int reg)
-{
-	u32 r = ctx->reg[reg][0];
-	
-	printf("CHANNEL: wrch ch%d(= %s) r%d(= 0x%08x)\n", ch, (ch <= 30 ? ch_names[ch] : "UNKNOWN"), reg, r);
-#ifdef DEBUG_CHANNEL
-	getchar();
-#endif
+    spe_mfc_command_area_t *mfc = &ctx->mfc;
+	uint32_t r = ctx->reg[reg][0];
+    dbgprintf("CHANNEL: wrch ch%d r%d\n", ch, reg);
 	
 	switch (ch)
 	{
-	case SPU_WrDec: //write decrementer
-		break;		
+    case 7:
+        break;
 	case MFC_LSA:
-		printf("MFC_LSA %08x\n", r);
-		_MFC_LSA = r;
+		dbgprintf("MFC_LSA %08x\n", r);
+		mfc->mfc_lsa = r;
 		break;
 	case MFC_EAH:
-		printf("MFC_EAH %08x\n", r);
-		_MFC_EAH = r;
+		dbgprintf("MFC_EAH %08x\n", r);
+		mfc->mfc_eah = r;
 		break;
 	case MFC_EAL:
-		printf("MFC_EAL %08x\n", r);
-		_MFC_EAL = r;
+		dbgprintf("MFC_EAL %08x\n", r);
+		mfc->mfc_eal = r;
 		break;
 	case MFC_Size:
-		printf("MFC_Size %08x\n", r);
-		_MFC_Size = r;
+		dbgprintf("MFC_Size %08x\n", r);
+		mfc->mfc_size_tag = r;
 		break;
 	case MFC_TagID:
-		printf("MFC_TagID %08x\n", r);
-		_MFC_TagID = r;
+		dbgprintf("MFC_TagID %08x\n", r);
+		mfc->mfc_class_id_cmd = r;
 		break;
 	case MFC_Cmd:
-		printf("MFC_Cmd %08x\n", r);
-		handle_mfc_command(r);
+		dbgprintf("MFC_Cmd %08x\n", r);
+		handle_mfc_command(ctx, r);
 		break;
 	case MFC_WrTagMask:
-		printf("MFC_WrTagMask %08x\n", r);
-		_MFC_TagMask = r;
+		dbgprintf("MFC_WrTagMask %08x\n", r);
+		mfc->prxy_query_mask = r;
 		break;
 	case MFC_WrTagUpdate:
-		printf("MFC_WrTagUpdate %08x\n", r);
-		handle_mfc_tag_update(r);
-		break;
+		dbgprintf("MFC_WrTagUpdate %08x\n", r);
+		mfc->prxy_tag_status = mfc->prxy_query_mask;
+        break;
 	case MFC_WrListStallAck:
-		printf("MFC_WrListStallAck %08x\n", r);
+		dbgprintf("MFC_WrListStallAck %08x\n", r);
 		break;
 	case MFC_RdAtomicStat:
-		printf("MFC_RdAtomicStat %08x\n", r);
+		dbgprintf("MFC_RdAtomicStat %08x\n", r);
 		break;
+    case SPU_WrOutMbox:
+        dbgprintf("SPU_WrOutMbox %08x\n", r);
+        //1 entry
+        if (ctx->spu_out_cnt == 1)
+        {
+            ctx->spu_out_mbox = r;
+            ctx->spu_out_cnt = 0;
+        }
+        break;
+    case SPU_WrOutIntrMbox:
+        dbgprintf("SPU_WrOutIntrMbox %08x\n", r);
+        //1 entry, ppu gets an interrupt if this one is written
+        if (ctx->spu_out_intr_cnt == 1)
+        {
+            ctx->spu_out_intr_mbox = r;
+            ctx->spu_out_intr_cnt = 0;
+        }
+        break;
 	default:
-		printf("UNKNOWN CHANNEL\n");
+		dbgprintf("UNKNOWN CHANNEL\n");
 	}
 }
 
-void channel_rdch(int ch, int reg)
+void channel_rdch(spe_ctx_t *ctx, int ch, int reg)
 {
-	u32 r = 0;
-	
-	printf("CHANNEL: rdch ch%d(= %s) r%d\n", ch, (ch <= 30 ? ch_names[ch] : "UNKNOWN"), reg);
-#ifdef DEBUG_CHANNEL
-	getchar();
-#endif
+    spe_mfc_command_area_t *mfc = &ctx->mfc;
+    uint32_t r = 0;
+	dbgprintf("CHANNEL: rdch ch%d r%d\n", ch, reg);
 	
 	switch (ch)
 	{
-	case SPU_RdDec: //read decrementer
-		break;
-	case MFC_RdTagStat:
-		r = _MFC_TagStat;
-		printf("MFC_RdTagStat %08x\n", r);
+	case MFC_WrTagStat:
+        r = mfc->prxy_tag_status;
+		dbgprintf("MFC_WrTagStat %08x\n", r);
 		break;
 	case MFC_RdAtomicStat:
-		printf("MFC_RdAtomicStat %08x\n", r);
+        //r = mfc_atomicstat;
+		dbgprintf("MFC_RdAtomicStat %08x\n", r);
 		break;
+    case SPU_RdInMbox:
+        dbgprintf("SPU_RdInMbox contains %d items\n", ctx->spu_in_cnt);
+        //4 entries, returns the oldest written
+        if (ctx->spu_in_cnt < 4)
+        {
+            r = ctx->spu_in_mbox[ctx->spu_in_rdidx]; //get oldest entry
+            dbgprintf("SPU_RdInMbox: setting to %08x\n", r);
+            ctx->spu_in_rdidx++; // next
+            ctx->spu_in_rdidx &= 3; // wrap around
+            ctx->spu_in_cnt++; //one less entry
+
+            ctx->reg[reg][0] = r;
+            ctx->reg[reg][1] = r;
+            ctx->reg[reg][2] = r;
+            ctx->reg[reg][3] = r;
+            return;
+        }
+        break;
+    case SPU_RdRand:
+        r = rand();
+        break;
+    default:
+        dbgprintf("UNKNOWN CHANNEL\n");
 	}
-	
-	//Set register
-	ctx->reg[reg][0] = r;
+    
+    ctx->reg[reg][0] = r;
 	ctx->reg[reg][1] = 0;
 	ctx->reg[reg][2] = 0;
 	ctx->reg[reg][3] = 0;
 }
 
-int channel_rchcnt(int ch)
+int channel_rchcnt(spe_ctx_t *ctx, int ch)
 {
-	u32 r = 0;
-	
-	printf("CHANNEL: rchcnt ch%d(%s)\n", ch, (ch <= 30 ? ch_names[ch] : "UNKNOWN"));
-#ifdef DEBUG_CHANNEL
-	getchar();
-#endif
-	
-	switch (ch)
+	uint32_t r = 0;
+
+    switch (ch)
 	{
 	case MFC_WrTagUpdate:
 		r = 1;
 		break;
-	case MFC_RdTagStat:
+	case MFC_WrTagStat:
 		r = 1;
-		printf("MFC_RdTagStat %08x\n", r);
+		dbgprintf("MFC_WrTagStat %08x\n", r);
 		break;
 	case MFC_RdAtomicStat:
-		printf("MFC_RdAtomicStat %08x\n", r);
+        r = 1;
+		dbgprintf("MFC_RdAtomicStat %08x\n", r);
 		break;
+    case SPU_WrOutMbox:
+        //1 entry, return 0 if full, 1 if empty (not written before)
+        r = ctx->spu_out_cnt;
+        dbgprintf("SPU_WrOutMbox %08x\n", r);
+        break;
+    case SPU_RdInMbox:
+        //4 entries, return 0 if empty? dunno
+        r = ctx->spu_in_cnt;
+        dbgprintf("SPU_RdInMbox: ");
+        break;
+    case SPU_WrOutIntrMbox:
+        //1 entry, return 0 if full, 1 if empty (not written before)
+        r = ctx->spu_out_intr_cnt;
+        dbgprintf("SPU_WrOutIntrMbox %08x\n", r);
+        break;
+    case SPU_RdRand:
+        r = 1;
+        break;
 	default:
-		printf("unknown channel %d\n", ch);
+		dbgprintf("unknown channel %d\n", ch);
 	}
 	return r;
 }

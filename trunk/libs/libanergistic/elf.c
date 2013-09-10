@@ -7,19 +7,16 @@
 #include "config.h"
 #include "types.h"
 #include "elf.h"
-#include "main.h"
+#include "helper.h"
 
 static const char elf_magic[] = {0x7f, 'E', 'L', 'F'};
-static FILE *fp;
-static u32 phdr_offset;
-static u32 n_phdrs;
 
-static void elf_load_phdr(u32 i)
+static void elf_load_phdr(spe_ctx_t *ctx, FILE *fp, uint32_t phdr_offset, uint32_t i)
 {
-	u8 phdr[0x20];
-	u32 offset;
-	u32 paddr;
-	u32 size;
+	uint8_t phdr[0x20];
+	uint32_t offset;
+	uint32_t paddr;
+	uint32_t size;
 
 	fseek(fp, phdr_offset + 0x20 * i, SEEK_SET);
 	fread(phdr, sizeof phdr, 1, fp);
@@ -36,24 +33,27 @@ static void elf_load_phdr(u32 i)
 
 	// XXX: integer overflow
 	if (offset > LS_SIZE || (offset + size) > LS_SIZE)
-		fail("phdr exceeds local storage");
+		fail(ctx, "phdr exceeds local storage");
 
 	fseek(fp, offset, SEEK_SET);
 	fread(ctx->ls + paddr, size, 1, fp);
 }
 
-void elf_load(const char *path)
+void elf_load(spe_ctx_t *ctx, const char *path)
 {
-	u8 ehdr[0x34];
-	u32 i;
+    FILE *fp;
+	uint8_t ehdr[0x34];
+	uint32_t i;
+    uint32_t phdr_offset;
+    uint32_t n_phdrs;
 
 	fp = fopen(path, "rb");
 	if (fp == NULL)
-		fail("Unable to load elf");
+		fail(ctx, "Unable to load elf");
 
 	fread(ehdr, sizeof ehdr, 1, fp);
 	if (memcmp(ehdr, elf_magic, 4))
-		fail("not a ELF file");
+		fail(ctx, "not an ELF file");
 
 	phdr_offset = be32(ehdr + 0x1c);
 	n_phdrs = be16(ehdr + 0x2c);
@@ -61,7 +61,7 @@ void elf_load(const char *path)
 	dbgprintf("elf: %u phdrs at offset 0x%08x\n", n_phdrs, phdr_offset);
 
 	for (i = 0; i < n_phdrs; i++)
-		elf_load_phdr(i);
+		elf_load_phdr(ctx, fp, phdr_offset, i);
 
 	ctx->pc = be32(ehdr + 0x18);
 	dbgprintf("elf: entry is at %08x\n", ctx->pc);
