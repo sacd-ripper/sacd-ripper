@@ -451,5 +451,6 @@ int main(int argc, char* argv[])
     pthread_win32_thread_detach_np();
 #endif
 
+    printf("\n");
     return 0;
 }
