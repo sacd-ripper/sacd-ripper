@@ -34,16 +34,22 @@
 char *substr(const char *pstr, int start, int numchars)
 {
     static char pnew[512];
+    wchar_t *wc;
+    char *wchar_type;
+    char *c;
     memset(pnew, 0, sizeof(pnew));
     if (numchars < (int) sizeof(pnew))
     {
 #ifdef _WIN32
-        char *wchar_type = (sizeof(wchar_t) == 2) ? "UCS-2-INTERNAL" : "UCS-4-INTERNAL";
+        wchar_type = (sizeof(wchar_t) == 2) ? 
+                    "UCS-2-INTERNAL" : "UCS-4-INTERNAL";
 #else
-        char *wchar_type = "WCHAR_T";
+        wchar_type = "WCHAR_T";
 #endif
-        wchar_t *wc = (wchar_t *) charset_convert((char *) pstr + start, numchars, "UTF-8", wchar_type);
-        char *c = charset_convert((char *) wc, wcslen(wc) * sizeof(wchar_t), wchar_type, "UTF-8");
+        wc = (wchar_t *) charset_convert((char *) pstr + start, 
+                numchars, "UTF-8", wchar_type);
+        c = charset_convert((char *) wc, 
+                wcslen(wc) * sizeof(wchar_t), wchar_type, "UTF-8");
         strcpy(pnew, c);
         free(wc);
         free(c);

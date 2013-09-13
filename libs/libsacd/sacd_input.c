@@ -325,8 +325,8 @@ static sacd_input_t sacd_net_input_open(const char *target)
 {
     ServerRequest request;
     ServerResponse response;
-    sacd_input_t dev;
-    const char *err;
+    sacd_input_t dev = 0;
+    const char *err = 0;
     t_timeout tm;
     pb_istream_t input;
     pb_ostream_t output;
@@ -353,20 +353,25 @@ static sacd_input_t sacd_net_input_open(const char *target)
     socket_setblocking(&dev->fd);
 
     timeout_markstart(&tm); 
-    err = inet_tryconnect(&dev->fd, substr(target, 0, strchr(target, ':') - target), atoi(strchr(target, ':') + 1), &tm);
+    err = inet_tryconnect(&dev->fd, 
+            substr(target, 0, strchr(target, ':') - target), 
+            atoi(strchr(target, ':') + 1), &tm);
     if (err)
     {
+        fprintf(stderr, "Failed to connect\n");
         goto error;
     }
     socket_setblocking(&dev->fd);
 
     input = pb_istream_from_socket(&dev->fd);
+
     output = pb_ostream_from_socket(&dev->fd);
 
     request.type = ServerRequest_Type_DISC_OPEN;
 
     if (!pb_encode(&output, ServerRequest_fields, &request))
     {
+        fprintf(stderr, "Failed to encode request\n");
         goto error;
     }
 
@@ -375,11 +380,13 @@ static sacd_input_t sacd_net_input_open(const char *target)
 
     if (!pb_decode(&input, ServerResponse_fields, &response))
     {
+        fprintf(stderr, "Failed to decode response\n");
         goto error;
     }
 
     if (response.result != 0 || response.type != ServerResponse_Type_DISC_OPENED)
     {
+        fprintf(stderr, "Response result non-zero or disc opened\n");
         goto error;
     }
 
@@ -388,8 +395,6 @@ static sacd_input_t sacd_net_input_open(const char *target)
 error:
 
     sacd_input_close(dev);
-    free(dev->input_buffer);
-    free(dev);
 
     return 0;
 }
@@ -432,14 +437,18 @@ static int sacd_net_input_close(sacd_input_t dev)
 
 error:
 
-    socket_destroy(&dev->fd);
-    socket_close();
-    if (dev->input_buffer)
+    if(dev)
     {
-        free(dev->input_buffer);
+        socket_destroy(&dev->fd);
+        socket_close();
+        if (dev->input_buffer)
+        {
+            free(dev->input_buffer);
+            dev->input_buffer = 0;
+        }
+        free(dev);
+        dev = 0;
     }
-    free(dev);
-
     return 0;
 }
 
