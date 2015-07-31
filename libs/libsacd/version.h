@@ -22,8 +22,8 @@
 #ifndef VERSION_H_INCLUDED
 #define VERSION_H_INCLUDED
 
-#define SACD_RIPPER_VERSION 00307
-#define SACD_RIPPER_VERSION_STRING "0.37"
+#define SACD_RIPPER_VERSION 00308
+#define SACD_RIPPER_VERSION_STRING "0.38"
 
 #define SACD_RIPPER_VERSION_REVISION (SACD_RIPPER_VERSION / 100000) 
 #define SACD_RIPPER_VERSION_MAJOR (SACD_RIPPER_VERSION / 100 % 1000) 
@@ -31,7 +31,7 @@
 
 #define SACD_RIPPER_VERSION_INFO                         \
     "SACD Ripper release " SACD_RIPPER_VERSION_STRING " " \
-    "Copyright (c) 2010-2012 by respective authors.\n\n" \
+    "Copyright (c) 2010-2015 by respective authors.\n\n" \
     "Report bugs to mr_wicked@hotmail.com\n"
 
 #endif /* VERSION_H_INCLUDED */
