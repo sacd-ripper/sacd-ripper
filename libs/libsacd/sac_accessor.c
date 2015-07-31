@@ -243,6 +243,9 @@ int destroy_sac_accessor(void)
         {
             sysSpuRawWriteProblemStorage(sa->id, SPU_In_MBox, EXIT_SAC_CMD);
             EIEIO;
+
+            sysSpuRawWriteProblemStorage(sa->id, SPU_In_MBox, 0);
+            EIEIO;
         }
     }
 
