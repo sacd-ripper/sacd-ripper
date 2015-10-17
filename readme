@@ -28,8 +28,8 @@ Make sure you have a PS3 model with SACD compatible player. For more information
 on what model specifically go to: http://ps3sacd.com/faq.html#_Toc180147566
 
 You need to install a custom firmware to be able to rip SACDs. At this time of
-writing the PS3 firmware has not been cracked for firmware 3.56 and upwards. So
-in order to install the correct firmware you'll have to make sure your firmware
+writing installing custom PS3 firmware isn't possible for firmware 3.56 and upwards.
+So in order to install the correct firmware you'll have to make sure your firmware
 is lower or equal to 3.55. A downgrade for a firmware higher than 3.55 is NOT
 available.
 
@@ -93,7 +93,7 @@ installation is unstable.
 When psl1ght has been properly setup you need to configure SACD-Ripper with the
 following commands:
 
-  1. svn checkout http://sacd-ripper.googlecode.com/svn/trunk/ sacd-ripper
+  1. git clone https://github.com/sacd-ripper/sacd-ripper.git
   2. cd sacd-ripper
   3. sh configure
   4. make
@@ -125,7 +125,7 @@ installations. To compile on Linux use a sequence like this:
   1.  sudo su -
   2.  Enter password if needed
   3.  cd /root
-  4.  svn checkout http://sacd-ripper.googlecode.com/svn/trunk/ sacd-ripper
+  4.  git clone https://github.com/sacd-ripper/sacd-ripper.git
   5.  cd sacd-ripper/tools/sacd_extract/
   6.  cmake .
   7.  make
