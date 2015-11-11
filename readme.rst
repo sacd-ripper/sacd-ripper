@@ -41,33 +41,33 @@ custom firmwares like Kmeaw, Rebug, etc.. all facilitate this. Google for
 
 Custom Firmware installation steps:
 
-  1. Plug a USB stick into your computer
-  2. Copy the custom firmware file that you downloaded to a USB memory
-     stick as /PS3/UPDATE/PS3UPDAT.PUP. 
-  3. Plug the USB stick into your PS3
-  4. Navigate to Settings Tab
-  5. Choose System Update
-  6. Choose Update via Storage Media
-  7. It will say it found Version 3.55
-  8. Choose OK
-  9. Accept Conditions and Follow the instructions
+1. Plug a USB stick into your computer
+2. Copy the custom firmware file that you downloaded to a USB memory
+   stick as /PS3/UPDATE/PS3UPDAT.PUP. 
+3. Plug the USB stick into your PS3
+4. Navigate to Settings Tab
+5. Choose System Update
+6. Choose Update via Storage Media
+7. It will say it found Version 3.55
+8. Choose OK
+9. Accept Conditions and Follow the instructions
 
 If the steps above did not work for you, then you are probably on 3.55 already.
 You will have to do a recovery menu mode installation:
 
-  1. Plug a USB stick into your computer
-  2. Copy the custom firmware file that you downloaded to a USB memory
-     stick as /PS3/UPDATE/PS3UPDAT.PUP. 
-  3. Plug the USB stick into your PS3
-  4. Power down the PS3 through the menu
-  5. Now press and HOLD the power button, the system will startup and shutdown
-     again
-  6. Release the power button, then press & HOLD power again, you'll hear one
-     beep followed by two consecutive beeps
-  7. Release power then follow the on-screen instructions. You're now in the
-     recovery menu
-  8. Connect the USB device and select "System Update."
-  9. Accept Conditions and Follow the instructions
+1. Plug a USB stick into your computer
+2. Copy the custom firmware file that you downloaded to a USB memory
+   stick as /PS3/UPDATE/PS3UPDAT.PUP. 
+3. Plug the USB stick into your PS3
+4. Power down the PS3 through the menu
+5. Now press and HOLD the power button, the system will startup and shutdown
+   again
+6. Release the power button, then press & HOLD power again, you'll hear one
+   beep followed by two consecutive beeps
+7. Release power then follow the on-screen instructions. You're now in the
+   recovery menu
+8. Connect the USB device and select "System Update."
+9. Accept Conditions and Follow the instructions
 
 SACD Ripper Installation Instructions
 =====================================
@@ -117,10 +117,10 @@ can be downloaded from: http://sourceware.org/pthreads-win32/
 
 And to compile libiconv on windows you can do the following:
 
-  1. Open the Visual Studio Command prompt
-  2. Change directory to libs\libiconv
-  3. run: "nmake -f Makefile.msvc NO_NLS=1"
-  4. now you can compile using the MSVC project file
+1. Open the Visual Studio Command prompt
+2. Change directory to libs\libiconv
+3. run: "nmake -f Makefile.msvc NO_NLS=1"
+4. now you can compile using the MSVC project file
 
 On Linux the program currently builds only in root's home directory.
 You do not need to manually build the libiconv program.  There is no
@@ -142,11 +142,11 @@ SACD Ripper/Extract Usage Instructions
 
 From version 0.3.6 and upwards SACD Ripper has two modes of operation:
 
-  1. Daemon mode (selected by default if you don't make a selection within 5
-     seconds after booting SACD Ripper).
-  2. ISO extraction mode (the previous versions of SACD Ripper allowed you to
-     extract DSDIFF, DSF directly, but this feature has been removed in favor 
-     of local extraction using SACD Extract).
+1. Daemon mode (selected by default if you don't make a selection within 5
+   seconds after booting SACD Ripper).
+2. ISO extraction mode (the previous versions of SACD Ripper allowed you to
+   extract DSDIFF, DSF directly, but this feature has been removed in favor 
+   of local extraction using SACD Extract).
 
 SACD Extract (available on Windows, Linux, OS X) allows you to extract
 individual tracks from ISO files when operated in file mode or from the SACD 
