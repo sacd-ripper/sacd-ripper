@@ -17,11 +17,11 @@ SACD Ripper PS3 installation
 
 There are three main steps to install the PS3 SACD Ripper:
 
-  1. Install a custom firmware (see instructions below) that allows patching
-     and the installation of custom applications.
-  2. Download or Compile the sacd-ripper.pkg file and install this on your PS3
-  3. Download the PS3 keys and use this on first time installation (see 
-     instructions below)
+1. Install a custom firmware (see instructions below) that allows patching
+   and the installation of custom applications.
+2. Download or Compile the sacd-ripper.pkg file and install this on your PS3
+3. Download the PS3 keys and use this on first time installation (see 
+   instructions below)
 
 Custom Firmware Installation
 ============================
@@ -200,7 +200,7 @@ Port is displayed on startup) to multiple DSDIFF files and keep the DST format::
     $ sacd_extract -m -p -i192.168.1.10:2002
 
 Generate a sacd_log.txt file that contains the ISRC codes which should/could
-be used for ISO verification.
+be used for ISO verification::
 
     $ sacd_extract -P -i192.168.1.10:2002 >sacd_log.txt
 
