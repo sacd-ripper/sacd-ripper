@@ -210,8 +210,8 @@ Thank you!
 
 A big thank you goes to:
 
-    Graf Chokolo
-    Geoffrey Levand :-)
-    Max
-    vfalks
-    Patrick
+* Graf Chokolo
+* Geoffrey Levand :-)
+* Max
+* vfalks
+* Patrick
