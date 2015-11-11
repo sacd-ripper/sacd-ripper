@@ -72,7 +72,7 @@ You will have to do a recovery menu mode installation:
 
 Now you've completed the firmware upgrade you are ready to install
 sacd-ripper.pkg. You may compile the sacd-ripper.pkg or you can use your
-google skills to find a pre-compiled package. (no, I will not distribute
+Google skills to find a pre-compiled package. (no, I will not distribute
 the sacd-ripper.pkg as that could potentially give me legal issues).
 
 In order for the PS3 BluRay player to authenticate the SACD disc and to decode

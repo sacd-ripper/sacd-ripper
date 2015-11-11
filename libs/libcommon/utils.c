@@ -1,5 +1,5 @@
 /**
- * SACD Ripper - http://code.google.com/write_ptr/sacd-ripper/
+ * SACD Ripper - https://github.com/sacd-ripper/
  *
  * Copyright (c) 2010-2011 by respective authors.
  *
