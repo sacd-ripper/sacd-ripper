@@ -292,8 +292,13 @@ int id3_read_frame(struct id3_tag *id3)
 	frame = calloc(sizeof(*frame), 1);
 
 	frame->fr_owner = id3;
-	/* FIXME v2.4.0 */
-	frame->fr_raw_size = buf[4] << 24 | buf[5] << 16 | buf[6] << 8 | buf[7];
+
+	/* revision 2.4 uses syncsafe frame size, so we do that, but I don't think 2.4 is fully supported */
+	if (id3->id3_version == 4)
+		frame->fr_raw_size = ID3_GET_SIZE28(buf[4], buf[5], buf[6], buf[7]);
+	else
+		frame->fr_raw_size = buf[4] << 24 | buf[5] << 16 | buf[6] << 8 | buf[7];
+
 	if (frame->fr_raw_size > 1000000)
 	{
 		free(frame);

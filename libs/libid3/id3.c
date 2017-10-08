@@ -614,8 +614,15 @@ int id3_write_tag(struct id3_tag *id3, uint8_t *buffer)
         memcpy(raw, fr->fr_desc->fd_idstr, 4);
         raw += 4;
 
-        // Add the frame size (syncsafe).
-        ID3_SET_SIZE28(fr->fr_size, raw[0], raw[1], raw[2], raw[3]);
+        // Add the frame size (version 2.4 uses syncsafe frame size, so we do that, but I don't think 2.4 is fully supported).
+        if (id3->id3_version == 4)
+            ID3_SET_SIZE28(fr->fr_size, raw[0], raw[1], raw[2], raw[3]);
+        else {
+            raw[0] = fr->fr_size >> 24;
+            raw[1] = fr->fr_size >> 16;
+            raw[2] = fr->fr_size >> 8;
+            raw[3] = fr->fr_size;
+        }
         raw += 4;
 
         // The two flagbytes.
