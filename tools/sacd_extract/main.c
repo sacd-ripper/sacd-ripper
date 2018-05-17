@@ -73,6 +73,7 @@ static struct opts_s
     char           output_file[512];
     int            select_tracks;
     char           selected_tracks[256]; /* scarletbook is limited to 256 tracks */
+    int            dsf_nopad; 
 } opts;
 
 scarletbook_handle_t *handle;
@@ -91,6 +92,7 @@ static int parse_options(int argc, char *argv[])
         "  -e, --output-dsdiff-em          : output as Philips DSDIFF (Edit Master) file\n"
         "  -p, --output-dsdiff             : output as Philips DSDIFF file\n"
         "  -s, --output-dsf                : output as Sony DSF file\n"
+        "  -z, --dsf-nopad                 : Do not zero pad DSF (cannot be used with -t)\n"
         "  -t, --select-track              : only output selected track(s) (ex. -t 1,5,13)\n"
         "  -I, --output-iso                : output as RAW ISO\n"
         "  -c, --convert-dst               : convert DST to DSD\n"
@@ -105,17 +107,18 @@ static int parse_options(int argc, char *argv[])
 
     static const char usage_text[] = 
         "Usage: %s [-2|--2ch-tracks] [-m|--mch-tracks] [-p|--output-dsdiff]\n"
-        "        [-e|--output-dsdiff-em] [-s|--output-dsf] [-I|--output-iso]\n"
+        "        [-e|--output-dsdiff-em] [-s|--output-dsf] [-z|--dsf-nopad] [-I|--output-iso]\n"
         "        [-c|--convert-dst] [-C|--export-cue] [-i|--input FILE] [-P|--print]\n"
         "        [-?|--help] [--usage]\n";
 
-    static const char options_string[] = "2mepsIcCi:t:P?";
+    static const char options_string[] = "2mepszIcCi:t:P?";
     static const struct option options_table[] = {
         {"2ch-tracks", no_argument, NULL, '2' },
         {"mch-tracks", no_argument, NULL, 'm' },
         {"output-dsdiff-em", no_argument, NULL, 'e'}, 
         {"output-dsdiff", no_argument, NULL, 'p'}, 
         {"output-dsf", no_argument, NULL, 's'}, 
+        {"dsf-nopad", no_argument, NULL, 'z'}, 
         {"output-iso", no_argument, NULL, 'I'}, 
         {"convert-dst", no_argument, NULL, 'c'}, 
         {"export-cue", no_argument, NULL, 'C'}, 
@@ -173,6 +176,9 @@ static int parse_options(int argc, char *argv[])
                 }
                 opts.select_tracks = count != 0;
             }
+            break;
+        case 'z':
+            opts.dsf_nopad = 1;
             break;
         case 'I': 
             opts.output_dsdiff_em = 0; 
@@ -271,6 +277,7 @@ static void init(void)
     opts.export_cue_sheet   = 0;
     opts.print              = 0;
     opts.input_device       = "/dev/cdrom";
+    opts.dsf_nopad              = 0;
 
 #ifdef _WIN32
     signal(SIGINT, handle_sigint);
@@ -367,7 +374,7 @@ int main(int argc, char* argv[])
                         file_path = make_filename(0, 0, albumdir, "dff");
 
                         scarletbook_output_enqueue_track(output, area_idx, 0, file_path, "dsdiff_edit_master", 
-                            (opts.convert_dst ? 1 : handle->area[area_idx].area_toc->frame_format != FRAME_FORMAT_DST));
+                            (opts.convert_dst ? 1 : handle->area[area_idx].area_toc->frame_format != FRAME_FORMAT_DST), 0);
                     }
                     else if (opts.output_dsf || opts.output_dsdiff)
                     {
@@ -387,13 +394,13 @@ int main(int argc, char* argv[])
                             {
                                 file_path = make_filename(0, albumdir, musicfilename, "dsf");
                                 scarletbook_output_enqueue_track(output, area_idx, i, file_path, "dsf", 
-                                    1 /* always decode to DSD */);
+                                    1 /* always decode to DSD */, opts.dsf_nopad && !opts.select_tracks);
                             }
                             else if (opts.output_dsdiff)
                             {
                                 file_path = make_filename(0, albumdir, musicfilename, "dff");
                                 scarletbook_output_enqueue_track(output, area_idx, i, file_path, "dsdiff", 
-                                    (opts.convert_dst ? 1 : handle->area[area_idx].area_toc->frame_format != FRAME_FORMAT_DST));
+                                    (opts.convert_dst ? 1 : handle->area[area_idx].area_toc->frame_format != FRAME_FORMAT_DST), 0);
                             }
 
                             free(musicfilename);
