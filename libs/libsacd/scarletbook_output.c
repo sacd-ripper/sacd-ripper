@@ -122,7 +122,7 @@ static void destroy_ripping_queue(scarletbook_output_t *output)
     }
 }
 
-int scarletbook_output_enqueue_track(scarletbook_output_t *output, int area, int track, char *file_path, char *fmt, int dsd_encoded_export)
+int scarletbook_output_enqueue_track(scarletbook_output_t *output, int area, int track, char *file_path, char *fmt, int dsd_encoded_export, int dsf_nopad)
 {
     scarletbook_format_handler_t const * handler;
     scarletbook_output_format_t * output_format_ptr;
@@ -140,6 +140,7 @@ int scarletbook_output_enqueue_track(scarletbook_output_t *output, int area, int
         output_format_ptr->channel_count = sb_handle->area[area].area_toc->channel_count;
         output_format_ptr->dst_encoded_import = sb_handle->area[area].area_toc->frame_format == FRAME_FORMAT_DST;
         output_format_ptr->dsd_encoded_export = dsd_encoded_export;
+        output_format_ptr->dsf_nopad = dsf_nopad;
         if (handler->flags & OUTPUT_FLAG_EDIT_MASTER)
         {
             output_format_ptr->start_lsn = sb_handle->area[area].area_toc->track_start;

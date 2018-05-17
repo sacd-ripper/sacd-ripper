@@ -28,7 +28,7 @@ include_directories("../../libs/libsacd")
 if (CMAKE_COMPILER_IS_GNUCC)
   add_definitions(
       -pipe
-      -Wall -Wextra -Wcast-align -Wpointer-arith
+      -Wall -Wextra -Wcast-align -Wpointer-arith -O3
       -Wno-unused-parameter -msse2)
 endif (CMAKE_COMPILER_IS_GNUCC)
 
