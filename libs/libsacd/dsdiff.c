@@ -19,6 +19,8 @@
  *
  */
 
+#define _FILE_OFFSET_BITS 64
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
@@ -43,7 +45,7 @@
 #include "scarletbook.h"
 #include "version.h"
 
-#define DSDFIFF_BUFFER_SIZE    1024 * 16
+#define DSDFIFF_BUFFER_SIZE    (1024 * 128)
 
 typedef struct
 {
