@@ -352,6 +352,7 @@ int id3_set_encoding(struct id3_frame *, int8_t);
 char *id3_get_text(struct id3_frame *);
 char *id3_get_comment(struct id3_frame *);
 int id3_set_comment(struct id3_frame *, char *, char *);
+int id3_set_text__performer(struct id3_frame *, char *);
 char *id3_get_text_desc(struct id3_frame *);
 int id3_get_text_number(struct id3_frame *);
 int id3_set_text(struct id3_frame *, char *);
