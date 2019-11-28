@@ -47,15 +47,16 @@ int write_cue_sheet(scarletbook_handle_t *handle, const char *filename, int area
 {
     FILE *fd;
 
-#ifdef _WIN32
-    {
-        wchar_t *wide_filename = (wchar_t *) charset_convert(cue_filename, strlen(cue_filename), "UTF-8", "UCS-2-INTERNAL");
-        fd = _wfopen(wide_filename, L"wb");
-        free(wide_filename);
-    }
-#else
+#if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
+
+    wchar_t *wide_filename;    
+	wide_filename = (wchar_t *)charset_convert(cue_filename, strlen(cue_filename),"UTF-8",  "UCS-2-INTERNAL" );
+    fd = _wfopen(wide_filename, L"wb");
+    free(wide_filename);
+#else		
     fd = fopen(cue_filename, "wb");
 #endif
+
     if (fd == 0)
     {
         return -1;
@@ -77,6 +78,11 @@ int write_cue_sheet(scarletbook_handle_t *handle, const char *filename, int area
         fprintf(fd, "REM DATE %04d-%02d-%02d\n", handle->master_toc->disc_date_year
                                                , handle->master_toc->disc_date_month
                                                , handle->master_toc->disc_date_day);
+    }
+
+    if (handle->master_toc->album_set_size > 1) // Set of discs album
+    {
+        fprintf(fd, "REM DISC %d / %d\n", handle->master_toc->album_sequence_number, handle->master_toc->album_set_size);
     }
 
     if (handle->master_text.disc_artist)
