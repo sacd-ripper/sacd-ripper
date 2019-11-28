@@ -24,7 +24,7 @@
 
 #include <stdio.h>
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__MINGW32__)
 typedef int mode_t;
 #else
 #include <sys/stat.h>
@@ -63,6 +63,9 @@ void sanitize_filepath(char *f);
 
 void get_unique_filename(char **file, const char *ext);
 
+char * get_unique_path(char *dir, char *file, const char *ext);
+
 void get_unique_dir(char *device, char **dir);
+int stat_wrap(const char *pathname, struct stat *buf);
 
 #endif
