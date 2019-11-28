@@ -32,7 +32,7 @@
 #ifdef __lv2ppu__
 #include <sys/file.h>
 #include <sys/thread.h>
-#elif defined(WIN32)
+#elif defined(WIN32) || defined(_WIN32)
 #include <io.h>
 #endif
 #ifndef __lv2ppu__
@@ -96,14 +96,15 @@ struct scarletbook_output_s
 
 static scarletbook_format_handler_t const * find_output_format(char const * name)
 {
-    int i;
-    for (i = 0; s_sacd_output_format_fns[i]; ++i) 
+    int i=0;
+    while (s_sacd_output_format_fns[i] != NULL)
     {
         scarletbook_format_handler_t const * handler = s_sacd_output_format_fns[i]();
         if (!strcasecmp(handler->name, name)) 
         {
             return handler;
         }
+        i++;
     }
     return NULL;
 } 
@@ -203,14 +204,14 @@ static int create_output_file(scarletbook_output_format_t *ft)
 {
     int result;
 
-#ifdef _WIN32
+#if defined(WIN32) || defined(_WIN32)
     wchar_t *wide_filename = (wchar_t *) charset_convert(ft->filename, strlen(ft->filename), "UTF-8", "UCS-2-INTERNAL");
     ft->fd = _wfopen(wide_filename, L"wb");
     free(wide_filename);
 #else
     ft->fd = fopen(ft->filename, "wb");	
 #endif
-    if (ft->fd == 0)
+    if (ft->fd == NULL)
     {   
         LOG(lm_main, LOG_ERROR, ("error creating %s, errno: %d, %s", ft->filename, errno, strerror(errno)));
         goto error;
@@ -288,13 +289,8 @@ static void frame_decoded_callback(uint8_t* frame_data, size_t frame_size, void 
 static void frame_error_callback(int frame_count, int frame_error_code, const char *frame_error_message, void *userdata)
 {
     scarletbook_output_format_t *ft = (scarletbook_output_format_t *) userdata;
-#ifdef _WIN32
-    wchar_t *wide_errormessage = (wchar_t *) charset_convert(frame_error_message, strlen(frame_error_message), "UTF-8", sizeof(wchar_t) == 2 ? "UCS-2-INTERNAL" : "UCS-4-INTERNAL");
-#else
-    wchar_t *wide_errormessage = (wchar_t *) charset_convert(frame_error_message, strlen(frame_error_message), "UTF-8", "WCHAR_T");
-#endif
-    ft->cb_fwprintf(stderr, L"\nERROR %ls in frame: %d\n", wide_errormessage, frame_count);
-    free(wide_errormessage);
+
+    ft->cb_fwprintf(stderr, L"\n ERROR %s in frame: %d\n", frame_error_message, frame_count);
 }
 
 static void frame_read_callback(scarletbook_handle_t *handle, uint8_t* frame_data, size_t frame_size, void *userdata)
@@ -320,7 +316,7 @@ static void *processing_thread(void *arg)
     scarletbook_output_t *output = (scarletbook_output_t *) arg;
     scarletbook_handle_t *handle = output->sb_handle;
     struct list_head * node_ptr;
-    scarletbook_output_format_t * ft;
+    scarletbook_output_format_t *ft = NULL;
     int non_encrypted_disc = 0;
     int checked_for_non_encrypted_disc = 0;
 
@@ -350,7 +346,7 @@ static void *processing_thread(void *arg)
 
         if (create_output_file(ft) == 0)
         {
-            uint32_t block_size, end_lsn;
+            uint32_t block_size=0, end_lsn=0, blocks_readed = 0;
             uint32_t encrypted_start_1 = 0;
             uint32_t encrypted_start_2 = 0;
             uint32_t encrypted_end_1 = 0;
@@ -408,8 +404,18 @@ static void *processing_thread(void *arg)
                     block_size = min(end_lsn - ft->current_lsn, block_size);
 
                     // read some blocks
-                    block_size = (uint32_t) sacd_read_block_raw(ft->sb_handle->sacd, ft->current_lsn, block_size, output->read_buffer);
+                    blocks_readed = sacd_read_block_raw(ft->sb_handle->sacd, ft->current_lsn, block_size, output->read_buffer);
 
+                    if (blocks_readed == 0)
+                    {
+
+                        output->fwprintf_callback(stdout, L"\n \n Error:blocks_readed =0, current_lsn:%d, end_lsn:%d, block_size:%d \n", ft->current_lsn, end_lsn, block_size);
+                        LOG(lm_main, LOG_ERROR, ("Error:blocks_readed = 0, current_lsn:%d, end_lsn:%d, block_size:%d", ft->current_lsn, end_lsn, block_size));                        
+                        sysAtomicSet(&output->stop_processing, 1);
+                    }
+
+                    block_size=blocks_readed;
+                    
                     ft->current_lsn += block_size;
                     output->stats_total_sectors_processed += block_size;
                     output->stats_current_file_sectors_processed += block_size;
@@ -463,8 +469,9 @@ static void *processing_thread(void *arg)
 
         if (sysAtomicRead(&output->stop_processing) == 1)
         {
+            output->fwprintf_callback(stdout, L"\n ...stop processing\n");
             // make a copy of the filename
-            char *file_to_remove = strdup(ft->filename);
+            //char *file_to_remove = strdup(ft->filename);
 
             sysAtomicSet(&output->processing, 0);
 
@@ -477,14 +484,15 @@ static void *processing_thread(void *arg)
 
             // remove the file being worked on
 #ifdef __lv2ppu__
-            if (sysFsUnlink(file_to_remove) != 0)
+           // if (sysFsUnlink(file_to_remove) != 0)
 #else
-            if (remove(file_to_remove) != 0)
+           // if (remove(file_to_remove) != 0)
 #endif
-            {
-                LOG(lm_main, LOG_ERROR, ("user cancelled, error removing: %s, [%s]", file_to_remove, strerror(errno)));
-            }
-            free(file_to_remove);
+            //{
+            //    LOG(lm_main, LOG_ERROR, ("user cancelled, error removing: %s, [%s]", file_to_remove, strerror(errno)));
+            //}
+
+            //free(file_to_remove);
 
             destroy_ripping_queue(output);
 #ifdef __lv2ppu__
