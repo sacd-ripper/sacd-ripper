@@ -70,9 +70,9 @@ scarletbook_handle_t *scarletbook_open(sacd_reader_t *sacd, int title)
         return NULL;
 
 #ifdef __lv2ppu__
-    sb->frame.data = (uint8_t *) memalign(128, MAX_DST_SIZE);
+    sb->frame.data = (uint8_t *) memalign(128, MAX_DST_SIZE);  // (1024 * 64)
 #else
-    sb->frame.data = (uint8_t *) malloc(MAX_DST_SIZE);
+    sb->frame.data = (uint8_t *) malloc(MAX_DST_SIZE);			//(1024 * 64)
 #endif
 
     if (!sb->frame.data)
@@ -82,17 +82,17 @@ scarletbook_handle_t *scarletbook_open(sacd_reader_t *sacd, int title)
     sb->twoch_area_idx = -1;
     sb->mulch_area_idx = -1;
 
-    if (!scarletbook_read_master_toc(sb))
+    if (scarletbook_read_master_toc(sb)==0)
     {
         fprintf(stderr, "libsacdread: Can't read Master TOC.\n");
         scarletbook_close(sb);
         return NULL;
     }
 
-    if (sb->master_toc->area_1_toc_1_start)
+    if (sb->master_toc->area_1_toc_1_start > 0)
     {
         sb->area[sb->area_count].area_data = malloc(sb->master_toc->area_1_toc_size * SACD_LSN_SIZE);
-        if (!sb->area[sb->area_count].area_data)
+        if (sb->area[sb->area_count].area_data == NULL)
         {
             scarletbook_close(sb);
             return 0;
@@ -112,7 +112,7 @@ scarletbook_handle_t *scarletbook_open(sacd_reader_t *sacd, int title)
                 ++sb->area_count;
         }
     }
-    if (sb->master_toc->area_2_toc_1_start)
+    if (sb->master_toc->area_2_toc_1_start > 0)
     {
         sb->area[sb->area_count].area_data = malloc(sb->master_toc->area_2_toc_size * SACD_LSN_SIZE);
         if (!sb->area[sb->area_count].area_data)
@@ -306,7 +306,7 @@ static int scarletbook_read_master_toc(scarletbook_handle_t *handle)
         // we only use the first SACDText entry
         if (i == 0)
         {
-            char *current_charset = (char *) character_set[handle->master_toc->locales[i].character_set & 0x07];
+            char *current_charset = (char *)character_set[handle->master_toc->locales[i].character_set & 0x07];
 
             if (master_text->album_title_position)
                 handle->master_text.album_title = charset_convert((char *) master_text + master_text->album_title_position, strlen((char *) master_text + master_text->album_title_position), current_charset, "UTF-8");
@@ -395,7 +395,7 @@ static int scarletbook_read_area_toc(scarletbook_handle_t *handle, int area_idx)
     CHECK_ZERO(area_toc->reserved09);
     CHECK_ZERO(area_toc->reserved10);
 
-    current_charset = (char *) character_set[area->area_toc->languages[sacd_text_idx].character_set & 0x07];
+    current_charset = (char *)character_set[area->area_toc->languages[sacd_text_idx].character_set & 0x07];
 
     if (area_toc->copyright_offset)
         area->description_phonetic = charset_convert((char *) area_toc + area_toc->copyright_offset, strlen((char *) area_toc + area_toc->copyright_offset), current_charset, "UTF-8");
@@ -535,8 +535,9 @@ static int scarletbook_read_area_toc(scarletbook_handle_t *handle, int area_idx)
         }
         else if (strncmp((char *) p, "SACDTRL2", 8) == 0)
         {
-            area_tracklist_t *tracklist;
-            tracklist = area->area_tracklist_time = (area_tracklist_t *) p;
+            //area_tracklist_t *tracklist;
+            area->area_tracklist_time = (area_tracklist_t *) p;
+            //tracklist = area->area_tracklist_time;
             p += SACD_LSN_SIZE;
         }
         else
