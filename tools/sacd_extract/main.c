@@ -34,7 +34,7 @@
 #ifndef __APPLE__
 #include <malloc.h>
 #endif
-#ifdef _WIN32
+#if defined(WIN32) || defined(_WIN32)
 #include <io.h>
 #endif
 
@@ -57,6 +57,15 @@
 #include <fileutils.h>
 #include <utils.h>
 #include <yarn.h>
+
+
+#if defined(WIN32) || defined(_WIN32)
+
+#define CHAR2WCHAR(dst, src) dst = (wchar_t *)charset_convert(src, strlen(src), "UTF-8", "UCS-2-INTERNAL")
+#else
+
+#define CHAR2WCHAR(dst, src) dst = (wchar_t *)charset_convert(src, strlen(src), "UTF-8", "WCHAR_T") 
+#endif
 
 static struct opts_s
 {
@@ -235,12 +244,10 @@ static void handle_sigint(int sig_no)
 
 static void handle_status_update_track_callback(char *filename, int current_track, int total_tracks)
 {
-#ifdef _WIN32
-    wchar_t *wide_filename = (wchar_t *) charset_convert(filename, strlen(filename), "UTF-8", sizeof(wchar_t) == 2 ? "UCS-2-INTERNAL" : "UCS-4-INTERNAL");
-#else
-    wchar_t *wide_filename = (wchar_t *) charset_convert(filename, strlen(filename), "UTF-8", "WCHAR_T");
-#endif
-    safe_fwprintf(stdout, L"\rProcessing [%ls] (%d/%d)..\n", wide_filename, current_track, total_tracks);
+    wchar_t *wide_filename;
+
+    CHAR2WCHAR(wide_filename, filename);
+    safe_fwprintf(stdout, L"\nProcessing [%ls] (%d/%d)..\n", wide_filename, current_track, total_tracks);
     free(wide_filename);
 }
 
@@ -249,12 +256,30 @@ static time_t started_processing;
 static void handle_status_update_progress_callback(uint32_t stats_total_sectors, uint32_t stats_total_sectors_processed,
                                  uint32_t stats_current_file_total_sectors, uint32_t stats_current_file_sectors_processed)
 {
-    safe_fwprintf(stdout, L"\rCompleted: %d%% (%.1fMB), Total: %d%% (%.1fMB) at %.2fMB/sec", (stats_current_file_sectors_processed*100/stats_current_file_total_sectors), 
-                                             ((float)((double) stats_current_file_sectors_processed * SACD_LSN_SIZE / 1048576.00)),
-                                             (stats_total_sectors_processed * 100 / stats_total_sectors),
-                                             ((float)((double) stats_current_file_total_sectors * SACD_LSN_SIZE / 1048576.00)),
-                                             (float)((double) stats_total_sectors_processed * SACD_LSN_SIZE / 1048576.00) / (float)(time(0) - started_processing)
-                                             );
+    // safe_fwprintf(stdout, L"\rCompleted: %d%% (%.1fMB), Total: %d%% (%.1fMB) at %.2fMB/sec", (stats_current_file_sectors_processed*100/stats_current_file_total_sectors), 
+    //                                          ((float)((double) stats_current_file_sectors_processed * SACD_LSN_SIZE / 1048576.00)),
+    //                                          (stats_total_sectors_processed * 100 / stats_total_sectors),
+    //                                          ((float)((double) stats_current_file_total_sectors * SACD_LSN_SIZE / 1048576.00)),
+    //                                          (float)((double) stats_total_sectors_processed * SACD_LSN_SIZE / 1048576.00) / (float)(time(0) - started_processing)
+    //                                          );
+    if (stats_current_file_total_sectors == stats_total_sectors) // no need to print both stats because is one file  (ISO or DFF)
+    {
+        safe_fwprintf(stdout, L"\rCompleted: %d%% (file sectors processed: %d / total sectors:%d)",
+                    (stats_current_file_sectors_processed * 100 / stats_current_file_total_sectors),
+                    stats_current_file_sectors_processed,
+                    stats_current_file_total_sectors);
+    }
+    else
+    {
+        safe_fwprintf(stdout, L"\rCompleted: %d%% (file sectors processed: %d / total sectors:%d), Total: %d%% (total sectors processed: %d / total sectors: %d)",
+                    (stats_current_file_sectors_processed * 100 / stats_current_file_total_sectors),
+                    stats_current_file_sectors_processed,
+                    stats_current_file_total_sectors,
+                    (stats_total_sectors_processed * 100 / stats_total_sectors),
+                    stats_total_sectors_processed,
+                    stats_total_sectors);
+    }
+
 }
 
 /* Initialize global variables. */
@@ -272,7 +297,7 @@ static void init(void)
     opts.print              = 0;
     opts.input_device       = "/dev/cdrom";
 
-#ifdef _WIN32
+#if defined(WIN32) || defined(_WIN32)
     signal(SIGINT, handle_sigint);
 #else
     struct sigaction sa;
@@ -285,7 +310,32 @@ static void init(void)
     g_fwprintf_lock = new_lock(0);
 }
 
-int main(int argc, char* argv[]) 
+#if defined(WIN32) || defined(_WIN32)
+/*  Convert wide argv to UTF8   */
+/*  only for Windows           */
+
+char ** convert_wargv_to_UTF8(int argc,wchar_t *wargv[])
+{
+    int i;
+
+    char **argv = malloc((argc + 1) * sizeof(*argv));
+
+    for (i = 0; i < argc; i++)
+    {
+        argv[i] = (char *)charset_convert((char *)wargv[i], wcslen((const wchar_t *)wargv[i]) * sizeof(wchar_t), "UCS-2-INTERNAL", "UTF-8");
+    }
+         
+    argv[i] = NULL;
+    return argv;
+}
+
+#endif
+
+#if defined(WIN32) || defined(_WIN32)
+    int wmain(int argc, wchar_t *wargv[])      
+#else
+    int main(int argc, char *argv[])
+#endif
 {
     char *albumdir = 0, *musicfilename, *file_path = 0;
     int i, area_idx;
@@ -297,7 +347,13 @@ int main(int argc, char* argv[])
 #endif
 
     init();
-    if (parse_options(argc, argv)) 
+   
+#if defined(WIN32) || defined(_WIN32)
+    char **argvw_utf8 = convert_wargv_to_UTF8(argc,wargv);
+    if (parse_options(argc, argvw_utf8))
+#else
+    if (parse_options(argc, argv))
+#endif
     {
         setlocale(LC_ALL, "");
         if (fwide(stdout, 1) < 0)
@@ -312,7 +368,7 @@ int main(int argc, char* argv[])
         }
 
         sacd_reader = sacd_open(opts.input_device);
-        if (sacd_reader) 
+        if (sacd_reader != NULL) 
         {
 
             handle = scarletbook_open(sacd_reader, 0);
@@ -358,6 +414,12 @@ int main(int argc, char* argv[])
                         {
                             get_unique_filename(&albumdir, "iso");
                             file_path = make_filename(0, 0, albumdir, "iso");
+
+                            wchar_t *wide_filename;
+                            CHAR2WCHAR(wide_filename, file_path);
+                            fwprintf(stdout, L"\n ISO output in file: %ls\n", wide_filename);
+                            free(wide_filename);
+
                             scarletbook_output_enqueue_raw_sectors(output, 0, total_sectors, file_path, "iso");
                         }
                     }
@@ -365,6 +427,11 @@ int main(int argc, char* argv[])
                     {
                         get_unique_filename(&albumdir, "dff");
                         file_path = make_filename(0, 0, albumdir, "dff");
+
+                        wchar_t *wide_filename;
+                        CHAR2WCHAR(wide_filename, file_path);
+                        fwprintf(stdout, L"\n DFF output in file: %ls\n", wide_filename);
+                        free(wide_filename);
 
                         scarletbook_output_enqueue_track(output, area_idx, 0, file_path, "dsdiff_edit_master", 
                             (opts.convert_dst ? 1 : handle->area[area_idx].area_toc->frame_format != FRAME_FORMAT_DST));
@@ -374,6 +441,20 @@ int main(int argc, char* argv[])
                         // create the output folder
                         get_unique_dir(0, &albumdir);
                         recursive_mkdir(albumdir, 0774);
+
+                        wchar_t *wide_folder;
+                        CHAR2WCHAR(wide_folder, albumdir);
+                        if (opts.output_dsf)
+                        {
+
+                            fwprintf(stdout, L"\n DSF output in folder: %ls\n", wide_folder);
+                        }
+                        else
+                        {
+
+                            fwprintf(stdout, L"\n DSDIFF output in folder: %ls\n", wide_folder);
+                        }
+                        free(wide_folder);
 
                         // fill the queue with items to rip
                         for (i = 0; i < handle->area[area_idx].area_toc->track_count; i++) 
@@ -405,17 +486,19 @@ int main(int argc, char* argv[])
                     if (opts.export_cue_sheet)
                     {
                         char *cue_file_path = make_filename(0, 0, albumdir, "cue");
-#ifdef _WIN32
-                        wchar_t *wide_filename = (wchar_t *) charset_convert(cue_file_path, strlen(cue_file_path), "UTF-8", sizeof(wchar_t) == 2 ? "UCS-2-INTERNAL" : "UCS-4-INTERNAL");
-#else
-                        wchar_t *wide_filename = (wchar_t *) charset_convert(cue_file_path, strlen(cue_file_path), "UTF-8", "WCHAR_T");
-#endif
-                        fwprintf(stdout, L"Exporting CUE sheet [%ls]\n", wide_filename);
+
+                        wchar_t *wide_filename;
+                        CHAR2WCHAR(wide_filename, cue_file_path);
+                        fwprintf(stdout, L"Exporting CUE sheet: [%ls] \n", wide_filename);
+                        free(wide_filename);
+
                         if (!file_path)
                             file_path = make_filename(0, 0, albumdir, "dff");
+
+
                         write_cue_sheet(handle, file_path, area_idx, cue_file_path);
                         free(cue_file_path);
-                        free(wide_filename);
+                        
                     }
 
                     free(file_path);
@@ -452,5 +535,15 @@ int main(int argc, char* argv[])
 #endif
 
     printf("\n");
+	
+#if defined(WIN32) || defined(_WIN32)
+     for (int t=0; t < argc;t++)
+	 {
+		 free(argvw_utf8[t]);		 
+	 }
+	 free(argvw_utf8);
+	 
+#endif
+	
     return 0;
 }
