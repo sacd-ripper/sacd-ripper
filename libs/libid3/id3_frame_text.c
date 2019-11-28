@@ -408,3 +408,42 @@ int id3_set_comment(struct id3_frame *frame, char* description, char *comment)
 
 	return 0;
 }
+
+/*
+ * Function id3_set_text__performer (frame, text)
+ *
+ *    Set text for the description:PREFORMER of indicated frame (only ISO-8859-1 is currently
+ *    supported).  Return 0 upon success, or -1 if an error occured.
+ *
+ */
+int id3_set_text__performer(struct id3_frame *frame, char *text)
+{
+	// Type check
+	if (frame->fr_desc->fd_idstr[0] != 'T')
+		return -1;
+
+	// Release memory occupied by previous data.
+
+	id3_frame_clear_data(frame);
+
+	// Allocate memory for new data.
+
+	frame->fr_raw_size = strlen("PERFORMER") + strlen(text) + 2;
+	frame->fr_raw_data = calloc(frame->fr_raw_size + 1, sizeof(uint8_t));
+
+	// Copy contents.
+
+	*(int8_t *)frame->fr_raw_data = ID3_ENCODING_ISO_8859_1;
+
+	memcpy((char *)frame->fr_raw_data + 1, (char *)"PERFORMER", strlen("PERFORMER"));
+	memcpy((char *)frame->fr_raw_data + 1 + strlen("PERFORMER") +1, text, strlen(text));
+
+	frame->fr_altered = 1;
+	frame->fr_owner->id3_altered = 1;
+
+	frame->fr_data = frame->fr_raw_data;
+	frame->fr_size = frame->fr_raw_size;
+
+	return 0;
+}
+
