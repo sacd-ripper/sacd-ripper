@@ -29,11 +29,30 @@
 #include <errno.h>
 #include <stdarg.h>
 #include <unistd.h>
+#include <wchar.h>
 
 #include "logging.h"
 #include "fileutils.h"
 #include "charset.h"
 #include "utils.h"
+
+int stat_wrap(const char *pathname, struct stat *buf)
+{
+    int ret;
+
+#if defined(__MINGW32__) || defined(WIN32) || defined(_WIN32)
+    // Note buf is not in _stat type so buf is untouched.
+    wchar_t *w_pathname;
+    struct _stat buffer;
+
+    w_pathname = (wchar_t *)charset_convert(pathname, strlen(pathname), "UTF-8", "UCS-2-INTERNAL");
+    ret = _wstat(w_pathname, &buffer);
+    free(w_pathname);
+#else
+    ret = stat(pathname, buf);
+#endif
+    return ret;
+}
 
 // construct a filename from various parts
 //
@@ -44,7 +63,7 @@
 //
 // NOTE: caller must free the returned string!
 // NOTE: any of the parameters may be NULL to be omitted
-char * make_filename(const char * path, const char * dir, const char * file, const char * extension)
+char *make_filename(const char *path, const char *dir, const char *file, const char *extension)
 {
     int  len   = 1;
     char * ret = NULL;
@@ -75,7 +94,11 @@ char * make_filename(const char * path, const char * dir, const char * file, con
     {
         strncpy(&ret[pos], path, strlen(path));
         pos     += strlen(path);
+#if defined(WIN32) || defined(_WIN32)
+        ret[pos] = '\\';
+#else
         ret[pos] = '/';
+#endif
         pos++;
     }
     if (dir)
@@ -84,7 +107,11 @@ char * make_filename(const char * path, const char * dir, const char * file, con
         sanitize_filepath(tmp_dir);
         strncpy(&ret[pos], tmp_dir, strlen(tmp_dir));
         pos     += strlen(tmp_dir);
+#if defined(WIN32) || defined(_WIN32)
+        ret[pos] = '\\';
+#else
         ret[pos] = '/';
+#endif
         pos++;
         free(tmp_dir);
     }
@@ -249,13 +276,14 @@ int recursive_mkdir(char* path_and_name, mode_t mode)
             charReplaced             = path_and_name[count + 1];
             path_and_name[count + 1] = '\0';
 
-#ifdef _WIN32
+#if defined(WIN32) || defined(_WIN32)
             {
                 wchar_t *wide_path_and_name = (wchar_t *) charset_convert(path_and_name, strlen(path_and_name), "UTF-8", "UCS-2-INTERNAL");
                 rc = _wmkdir(wide_path_and_name);
                 free(wide_path_and_name);
             }
 #else
+            fprintf(stderr, "%s\n", path_and_name);
             rc = mkdir(path_and_name, mode);
 #endif
 #ifdef __lv2ppu__
@@ -271,7 +299,7 @@ int recursive_mkdir(char* path_and_name, mode_t mode)
     }
 
     // in case the path doesn't have a trailing slash:
-#ifdef _WIN32
+#if defined(WIN32) || defined(_WIN32)
     {
         wchar_t *wide_path_and_name = (wchar_t *) charset_convert(path_and_name, strlen(path_and_name), "UTF-8", "UCS-2-INTERNAL");
         rc = _wmkdir(wide_path_and_name);
@@ -280,6 +308,7 @@ int recursive_mkdir(char* path_and_name, mode_t mode)
 #else
     rc = mkdir(path_and_name, mode);
 #endif
+
 #ifdef __lv2ppu__
     sysFsChmod(path_and_name, S_IFMT | 0777);
 #elif !defined(_WIN32)
@@ -305,7 +334,8 @@ int recursive_parent_mkdir(char* path_and_name, mode_t mode)
         if (path_and_name[count] == '/' && have_component)
         {
             path_and_name[count] = 0;
-#ifdef _WIN32
+			
+#if defined(WIN32) || defined(_WIN32)
             {
                 wchar_t *wide_path_and_name = (wchar_t *) charset_convert(path_and_name, strlen(path_and_name), "UTF-8", "UCS-2-INTERNAL");
                 rc = _wmkdir(wide_path_and_name);
@@ -321,13 +351,43 @@ int recursive_parent_mkdir(char* path_and_name, mode_t mode)
     return rc;
 }
 
+char *get_unique_path(char *dir, char *file, const char *ext)
+{
+    char *path;
+    char *file_new;
+    unsigned int i = 0;
+    struct stat stat_file;
+
+    file_new = (char *)malloc((strlen(file)+16)*sizeof(char));
+    strcpy(file_new, file);
+    for(i = 0; i < 64; i ++){
+        if(i){
+            snprintf(file_new, strlen(file)+8, "%s (%d)", file, i);
+        }
+        path = make_filename(dir, 0, file_new, ext);
+        if (stat_wrap(path, &stat_file) != 0)       
+        {
+                free(path);
+                path = make_filename(dir, 0, file_new, ext);
+                break;
+        }
+        free(path);
+        path = 0;
+    }
+    free(file_new);
+    if(!path){
+        return 0;
+    }
+    return path;
+}
+
 void get_unique_filename(char **file, const char *ext)
 {
     struct stat stat_file;
     int file_exists, count = 1;
     char *file_org = strdup(*file);
     char *ext_file = make_filename(0, 0, *file, ext);
-    file_exists = (stat(ext_file, &stat_file) == 0);
+    file_exists = (stat_wrap(ext_file, &stat_file) == 0);
     free(ext_file);
     while (file_exists)
     {
@@ -337,7 +397,7 @@ void get_unique_filename(char **file, const char *ext)
         free(*file);
         *file = file_copy;
         ext_file = make_filename(0, 0, file_copy, ext);
-        file_exists = (stat(file_copy, &stat_file) == 0);
+        file_exists = (stat_wrap(ext_file, &stat_file) == 0);
         free(ext_file);
     }
     free(file_org);
@@ -349,17 +409,30 @@ void get_unique_dir(char *device, char **dir)
     int dir_exists, count = 1;
     char *dir_org = strdup(*dir);
     char *device_dir = make_filename(device, *dir, 0, 0);
-    dir_exists = (stat(device ? device_dir : *dir, &stat_dir) == 0);
-    free(device_dir);
+    dir_exists = (stat_wrap(device ? device_dir : *dir, &stat_dir) == 0);
     while (dir_exists)
     {
+        free(device_dir);
         int len = strlen(dir_org) + 10;
         char *dir_copy = (char *) malloc(len);
         snprintf(dir_copy, len, "%s (%d)", dir_org, count++);
         free(*dir);
         *dir = dir_copy;
         device_dir = make_filename(device, dir_copy, 0, 0);
-        dir_exists = (stat(device ? device_dir : dir_copy, &stat_dir) == 0);
+        dir_exists = (stat_wrap(device ? device_dir : dir_copy, &stat_dir) == 0);
+    }
+    if(device){
+        free(*dir);
+        *dir = strdup(device_dir);
+        // Remove the trailing slash
+#if defined(WIN32) || defined(_WIN32)
+        if((*dir)[strlen(*dir)-1]=='\\'){
+#else
+        if((*dir)[strlen(*dir)-1]=='/'){
+#endif
+            (*dir)[strlen(*dir)-1] = '\0';
+        }
+         
         free(device_dir);
     }
     free(dir_org);
