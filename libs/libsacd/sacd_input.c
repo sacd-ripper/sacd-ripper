@@ -19,6 +19,7 @@
  *
  */
 
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
@@ -44,6 +45,7 @@
 #include <pb.h>
 #include <pb_encode.h>
 #include <pb_decode.h>
+#include <charset.h>
 
 #include "scarletbook.h"
 #include "sacd_input.h"
@@ -52,10 +54,10 @@
 
 sacd_input_t (*sacd_input_open)         (const char *);
 int          (*sacd_input_close)        (sacd_input_t);
-ssize_t      (*sacd_input_read)         (sacd_input_t, int, int, void *);
+uint32_t     (*sacd_input_read)         (sacd_input_t, uint32_t, uint32_t, void *);
 char *       (*sacd_input_error)        (sacd_input_t);
 int          (*sacd_input_authenticate) (sacd_input_t);
-int          (*sacd_input_decrypt)      (sacd_input_t, uint8_t *, int);
+int          (*sacd_input_decrypt)      (sacd_input_t, uint8_t *, uint32_t);
 uint32_t     (*sacd_input_total_sectors)(sacd_input_t);
 
 struct sacd_input_s
@@ -94,10 +96,10 @@ static int sacd_dev_input_authenticate(sacd_input_t dev)
     return 0;
 }
 
-static int sacd_dev_input_decrypt(sacd_input_t dev, uint8_t *buffer, int blocks)
+static int sacd_dev_input_decrypt(sacd_input_t dev, uint8_t *buffer,uint32_t blocks)
 {
 #if defined(__lv2ppu__)
-    int ret, block_number = 0;
+    uint32_t ret, block_number = 0;
     while(block_number < blocks)
     {
         // SacModule has an internal max of 3*2048 to process
@@ -114,7 +116,7 @@ static int sacd_dev_input_decrypt(sacd_input_t dev, uint8_t *buffer, int blocks)
     return 0;
 #elif 0
     // testing..
-    int block_number = 0;
+    uint32_t block_number = 0;
     while(block_number < blocks)
     {
         uint8_t * p = buffer + (block_number * SACD_LSN_SIZE);
@@ -146,8 +148,11 @@ static sacd_input_t sacd_dev_input_open(const char *target)
     }
 
     /* Open the device */
-#if defined(WIN32)
-    dev->fd = open(target, O_RDONLY | O_BINARY);
+#if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
+    wchar_t *wide_filename;  
+	wide_filename = (wchar_t *)charset_convert(target, strlen(target),"UTF-8",  "UCS-2-INTERNAL" );
+    dev->fd = _wopen(wide_filename, O_RDONLY | O_BINARY);   
+    free(wide_filename);
 #elif defined(__lv2ppu__)
     {
         uint8_t                 buffer[64];
@@ -188,11 +193,12 @@ static sacd_input_t sacd_dev_input_open(const char *target)
         }
 
     }
-#elif defined _WIN32
-    dev->fd = open(target, O_RDONLY | O_BINARY);
+
 #else
     dev->fd = open(target, O_RDONLY);
 #endif
+
+
     if (dev->fd < 0)
     {
         goto error;
@@ -219,7 +225,7 @@ static char *sacd_dev_input_error(sacd_input_t dev)
 /**
  * read data from the device.
  */
-static ssize_t sacd_dev_input_read(sacd_input_t dev, int pos, int blocks, void *buffer)
+static uint32_t sacd_dev_input_read(sacd_input_t dev,  uint32_t pos,  uint32_t blocks, void *buffer)
 {
 #if defined(__lv2ppu__)
     int      ret;
@@ -230,43 +236,48 @@ static ssize_t sacd_dev_input_read(sacd_input_t dev, int pos, int blocks, void *
     return (ret != 0) ? 0 : sectors_read;
 
 #else
-    ssize_t ret, len;
+    off_t ret_lseek;
+    size_t len;
+    ssize_t ret;
 
-    ret = lseek(dev->fd, (off_t) pos * (off_t) SACD_LSN_SIZE, SEEK_SET);
-    if (ret < 0)
+    ret_lseek = lseek(dev->fd, (off_t)pos * (off_t)SACD_LSN_SIZE, SEEK_SET);
+    if (ret_lseek < 0)  // -1 on error
     {
+		LOG(lm_main, LOG_ERROR, ("Error in sacd_dev_input_read: lseek(..pos..); pos=%ld\n",pos));
         return 0;
     }
 
     len = (size_t) blocks * SACD_LSN_SIZE;
 
-    while (len > 0)
-    {
-        ret = read(dev->fd, buffer, (unsigned int) len);
+    ret = read(dev->fd, buffer, len);
 
-        if (ret < 0)
-        {
-            /* One of the reads failed, too bad.  We won't even bother
+    if (ret <= 0) // -1 on error ; 0 =indicates EOF
+    {
+        /* One of the reads failed, too bad.  We won't even bother
              * returning the reads that went OK, and as in the POSIX spec
              * the file position is left unspecified after a failure. */
-            return ret;
-        }
+        /* (ret == 0 indicates EOF */
 
-        if (ret == 0)
-        {
-            /* Nothing more to read.  Return all of the whole blocks, if any.
-             * Adjust the file position back to the previous block boundary. */
-            ssize_t bytes     = (ssize_t) blocks * SACD_LSN_SIZE - len;
-            off_t   over_read = -(bytes % SACD_LSN_SIZE);
-            /*off_t pos =*/ lseek(dev->fd, over_read, SEEK_CUR);
-            /* should have pos % 2048 == 0 */
-            return (int) (bytes / SACD_LSN_SIZE);
-        }
+        return 0;
+    }
+    
+    if((size_t)ret < len)
+    {
 
-        len -= ret;
+        /*       Nothing more to read.  Return all of the whole blocks, if any.
+             * Adjust the file position back to the previous block boundary.            
+            On success, the number of bytes read is returned(zero indicates end of file), 
+            and the file position is advanced by this number.It is not an error if this number 
+            is smaller than the number of bytes requested; this may happen for example because fewer bytes are
+            actually available right now (maybe because we were close to end-of-
+            file, or because we are reading from a pipe, or from a terminal), or
+            because read() was interrupted by a signal. */
+        return ((uint32_t)ret) / SACD_LSN_SIZE;
     }
 
+    // read with succes
     return blocks;
+    
 #endif
 }
 
@@ -349,23 +360,23 @@ static sacd_input_t sacd_net_input_open(const char *target)
 
     socket_open();
 
-    socket_create(&dev->fd, AF_INET, SOCK_STREAM, 0);
-    socket_setblocking(&dev->fd);
+    socket_create((p_socket)&dev->fd, AF_INET, SOCK_STREAM, 0);
+    socket_setblocking((p_socket)&dev->fd);
 
-    timeout_markstart(&tm); 
-    err = inet_tryconnect(&dev->fd, 
-            substr(target, 0, strchr(target, ':') - target), 
-            atoi(strchr(target, ':') + 1), &tm);
+    timeout_markstart(&tm);
+    err = inet_tryconnect((p_socket)&dev->fd,
+                          substr(target, 0, strchr(target, ':') - target),
+                          atoi(strchr(target, ':') + 1), &tm);
     if (err)
     {
         fprintf(stderr, "Failed to connect\n");
         goto error;
     }
-    socket_setblocking(&dev->fd);
+    socket_setblocking((p_socket)&dev->fd);
 
-    input = pb_istream_from_socket(&dev->fd);
+    input = pb_istream_from_socket((p_socket)&dev->fd);
 
-    output = pb_ostream_from_socket(&dev->fd);
+    output = pb_ostream_from_socket((p_socket)&dev->fd);
 
     request.type = ServerRequest_Type_DISC_OPEN;
 
@@ -412,8 +423,8 @@ static int sacd_net_input_close(sacd_input_t dev)
     {
         ServerRequest request;
         ServerResponse response;
-        pb_istream_t input = pb_istream_from_socket(&dev->fd);
-        pb_ostream_t output = pb_ostream_from_socket(&dev->fd);
+        pb_istream_t input = pb_istream_from_socket((p_socket)&dev->fd);
+        pb_ostream_t output = pb_ostream_from_socket((p_socket)&dev->fd);
         uint8_t zero = 0;
 
         request.type = ServerRequest_Type_DISC_CLOSE;
@@ -439,7 +450,7 @@ error:
 
     if(dev)
     {
-        socket_destroy(&dev->fd);
+        socket_destroy((p_socket)&dev->fd);
         socket_close();
         if (dev->input_buffer)
         {
@@ -462,8 +473,8 @@ static uint32_t sacd_net_input_total_sectors(sacd_input_t dev)
     {
         ServerRequest request;
         ServerResponse response;
-        pb_istream_t input = pb_istream_from_socket(&dev->fd);
-        pb_ostream_t output = pb_ostream_from_socket(&dev->fd);
+        pb_istream_t input = pb_istream_from_socket((p_socket)&dev->fd);
+        pb_ostream_t output = pb_ostream_from_socket((p_socket)&dev->fd);
         uint8_t zero = 0;
 
         request.type = ServerRequest_Type_DISC_SIZE;
@@ -490,7 +501,7 @@ static uint32_t sacd_net_input_total_sectors(sacd_input_t dev)
     }
 }
 
-static ssize_t sacd_net_input_read(sacd_input_t dev, int pos, int blocks, void *buffer)
+static uint32_t sacd_net_input_read(sacd_input_t dev, uint32_t pos, uint32_t blocks, void *buffer)
 {
     if (!dev)
     {
@@ -502,7 +513,7 @@ static ssize_t sacd_net_input_read(sacd_input_t dev, int pos, int blocks, void *
         ServerRequest request;
         ServerResponse response;
         pb_ostream_t output = pb_ostream_from_buffer(output_buf, sizeof(output_buf));
-        pb_istream_t input = pb_istream_from_socket(&dev->fd);
+        pb_istream_t input = pb_istream_from_socket((p_socket)&dev->fd);
         uint8_t zero = 0;
 
         request.type = ServerRequest_Type_DISC_READ;
@@ -520,8 +531,8 @@ static ssize_t sacd_net_input_read(sacd_input_t dev, int pos, int blocks, void *
         // write the output buffer to the opened socket
         {
             bool ret;
-            size_t written; 
-            ret = (socket_send(&dev->fd, (char *) output_buf, output.bytes_written, &written, 0, 0) == IO_DONE && written == output.bytes_written); 
+            size_t written;
+            ret = (socket_send((p_socket)&dev->fd, (char *)output_buf, output.bytes_written, &written, 0, 0) == IO_DONE && written == output.bytes_written);
 
             if (!ret)
                 return 0;
@@ -564,7 +575,7 @@ static ssize_t sacd_net_input_read(sacd_input_t dev, int pos, int blocks, void *
 
         if (response.has_data)
         {
-            return response.result;
+            return (uint32_t) response.result;
         }
     }
 
