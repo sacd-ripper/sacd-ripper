@@ -36,6 +36,7 @@
 #include "charset.h"
 #include "utils.h"
 
+
 int stat_wrap(const char *pathname, struct stat *buf)
 {
     int ret;
@@ -53,6 +54,36 @@ int stat_wrap(const char *pathname, struct stat *buf)
 #endif
     return ret;
 }
+
+//   Test if exist dir
+//    path to input dir
+//    Return 0 = path not exists
+//    Return 1 = path exist
+int path_dir_exists(char * path)
+{
+    int path_exist=0;
+    int ret=0;
+#if defined(WIN32) || defined(_WIN32) || defined(_MSC_VER)
+    struct _stat fileinfo_win;
+#else
+    struct stat fileinfo;
+#endif
+
+#if defined(WIN32) || defined(_WIN32)
+    wchar_t *w_pathname;
+    w_pathname = (wchar_t *)charset_convert(path, strlen(path), "UTF-8", "UCS-2-INTERNAL");
+    ret = _wstat(w_pathname, &fileinfo_win);
+    free(w_pathname);
+    if (ret == 0 && (fileinfo_win.st_mode & _S_IFMT) == _S_IFDIR)
+     path_exist=1;
+#else
+    ret = stat(path, &fileinfo);
+    if (ret == 0 && S_ISDIR(fileinfo.st_mode))
+     path_exist=1;
+#endif
+ return path_exist;
+}
+
 
 // construct a filename from various parts
 //
@@ -380,62 +411,82 @@ char *get_unique_path(char *dir, char *file, const char *ext)
     }
     return path;
 }
-
-void get_unique_filename(char **file, const char *ext)
+// Construct an unique filename
+//  *device
+//  *dir
+//  *file -  path file
+//  *extension
+//  NOTE: caller must free the returned string!
+//
+char * get_unique_filename(char *dev,char *dir, char *file, char *ext)
 {
     struct stat stat_file;
-    int file_exists, count = 1;
-    char *file_org = strdup(*file);
-    char *ext_file = make_filename(0, 0, *file, ext);
-    file_exists = (stat_wrap(ext_file, &stat_file) == 0);
-    free(ext_file);
-    while (file_exists)
+    int file_exists=0, count = 1;
+
+    int len = strlen(file) + 10;
+
+    char *total_path = make_filename(dev, dir, file, ext);
+
+    file_exists = (stat_wrap(total_path, &stat_file) == 0);
+
+    while (file_exists==1)
     {
-        int len = strlen(file_org) + 10;
-        char *file_copy = (char *) malloc(len);
-        snprintf(file_copy, len, "%s (%d)", file_org, count++);
-        free(*file);
-        *file = file_copy;
-        ext_file = make_filename(0, 0, file_copy, ext);
-        file_exists = (stat_wrap(ext_file, &stat_file) == 0);
-        free(ext_file);
+        free(total_path);
+        char *file_copy = (char *) calloc(len, sizeof(char));
+        snprintf(file_copy, len, "%s (%d)", file, count++);
+        total_path = make_filename(dev, dir, file_copy, ext);
+        file_exists = (stat_wrap(total_path, &stat_file) == 0);
+
+        if (count > 20) break; // loop must be stoped somewhere
     }
-    free(file_org);
+    return total_path;
 }
 
-void get_unique_dir(char *device, char **dir)
-{
-    struct stat stat_dir;
-    int dir_exists, count = 1;
-    char *dir_org = strdup(*dir);
-    char *device_dir = make_filename(device, *dir, 0, 0);
-    dir_exists = (stat_wrap(device ? device_dir : *dir, &stat_dir) == 0);
-    while (dir_exists)
+// Construct an unique directory
+//
+//  *device -  device path
+//  **dir - directory
+//  NOTE: in case device is not NULL it removes trailing slash in returned string
+//  NOTE: caller must free the returned string!
+//
+char * get_unique_dir(char *device, char *dir)
+{ 
+
+    int dir_exists = 0, count = 1;
+    int len = strlen(dir) + 10;
+
+    char *device_dir = make_filename(device, dir, NULL, NULL);
+    
+    dir_exists  = path_dir_exists(device_dir);
+    while (dir_exists == 1)
     {
         free(device_dir);
-        int len = strlen(dir_org) + 10;
-        char *dir_copy = (char *) malloc(len);
-        snprintf(dir_copy, len, "%s (%d)", dir_org, count++);
-        free(*dir);
-        *dir = dir_copy;
-        device_dir = make_filename(device, dir_copy, 0, 0);
-        dir_exists = (stat_wrap(device ? device_dir : dir_copy, &stat_dir) == 0);
+        
+        char *dir_copy = calloc(len, sizeof(char));
+        snprintf(dir_copy, len, "%s (%d)", dir, count++);
+        
+        device_dir = make_filename(device, dir_copy, NULL, NULL);
+        dir_exists = path_dir_exists(device_dir);
+        if (count > 20)
+            break; // loop must be stoped somewhere
     }
-    if(device){
-        free(*dir);
-        *dir = strdup(device_dir);
+    if (device != NULL)
+    {       
+        
         // Remove the trailing slash
 #if defined(WIN32) || defined(_WIN32)
-        if((*dir)[strlen(*dir)-1]=='\\'){
+        if (device_dir[strlen(device_dir) - 1] == '\\')
+        {
 #else
-        if((*dir)[strlen(*dir)-1]=='/'){
+        if (device_dir[strlen(device_dir) - 1] == '/')
+        {
 #endif
-            (*dir)[strlen(*dir)-1] = '\0';
+            device_dir[strlen(device_dir) - 1] = '\0';
         }
-         
-        free(device_dir);
+
+        
     }
-    free(dir_org);
+    return device_dir;
 }
 
 void sanitize_filename(char *f)
