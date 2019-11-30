@@ -560,7 +560,7 @@ char ** convert_wargv_to_UTF8(int argc,wchar_t *wargv[])
                     scarletbook_output_start(output);
                     scarletbook_output_destroy(output);
 
-                    fprintf(stdout, "\rWe are done..                                                          \n");
+                    fwprintf(stdout, L"\nWe are done..                                                          \n");
                 }
                 scarletbook_close(handle);
 
@@ -571,6 +571,7 @@ char ** convert_wargv_to_UTF8(int argc,wchar_t *wargv[])
         sacd_close(sacd_reader);
 
 exit_main:
+    fwprintf(stdout, L"\nProgram terminates!\n");
 #ifndef _WIN32
             freopen(0, "w", stdout);
 #endif
@@ -592,9 +593,9 @@ exit_main_1:
             pthread_win32_process_detach_np();
     pthread_win32_thread_detach_np();
 #endif
+
     printf("\n");
-    printf("Program terminate!\n");
-	
+    
 #if defined(WIN32) || defined(_WIN32)
      for (int t=0; t < argc;t++)
 	 {
