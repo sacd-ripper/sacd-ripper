@@ -57,7 +57,7 @@
 #include <fileutils.h>
 #include <utils.h>
 #include <yarn.h>
-
+#include <version.h>
 
 #if defined(WIN32) || defined(_WIN32)
 
@@ -78,10 +78,11 @@ static struct opts_s
     int            convert_dst;
     int            export_cue_sheet;
     int            print;
-    char          *input_device; /* Access method driver should use for control */
-    char           output_file[512];
+    char           *input_device; /* Access method driver should use for control */
+    char           *output_dir;
     int            select_tracks;
     char           selected_tracks[256]; /* scarletbook is limited to 256 tracks */
+    int            version;
 } opts;
 
 scarletbook_handle_t *handle;
@@ -106,34 +107,38 @@ static int parse_options(int argc, char *argv[])
         "  -C, --export-cue                : Export a CUE Sheet\n"
         "  -i, --input[=FILE]              : set source and determine if \"iso\" image, \n"
         "                                    device or server (ex. -i 192.168.1.10:2002)\n"
-        "  -P, --print                     : display disc and track information\n" 
+        "  -o, --output-dir[=DIR]          : Output directory \n"
+        "  -P, --print                     : display disc and track information\n"
+        "  -v, --version                   : Display version\n"
         "\n"
         "Help options:\n"
         "  -?, --help                      : Show this help message\n"
         "  --usage                         : Display brief usage message\n";
 
-    static const char usage_text[] = 
+    static const char usage_text[] =
         "Usage: %s [-2|--2ch-tracks] [-m|--mch-tracks] [-p|--output-dsdiff]\n"
         "        [-e|--output-dsdiff-em] [-s|--output-dsf] [-I|--output-iso]\n"
-        "        [-c|--convert-dst] [-C|--export-cue] [-i|--input FILE] [-P|--print]\n"
+        "        [-c|--convert-dst] [-C|--export-cue] [-i|--input FILE] [-o|--output-dir DIR] [-P|--print]\n"
         "        [-?|--help] [--usage]\n";
 
-    static const char options_string[] = "2mepsIcCi:t:P?";
-    static const struct option options_table[] = {
-        {"2ch-tracks", no_argument, NULL, '2' },
-        {"mch-tracks", no_argument, NULL, 'm' },
-        {"output-dsdiff-em", no_argument, NULL, 'e'}, 
-        {"output-dsdiff", no_argument, NULL, 'p'}, 
-        {"output-dsf", no_argument, NULL, 's'}, 
-        {"output-iso", no_argument, NULL, 'I'}, 
-        {"convert-dst", no_argument, NULL, 'c'}, 
-        {"export-cue", no_argument, NULL, 'C'}, 
-        {"input", required_argument, NULL, 'i' },
-        {"print", no_argument, NULL, 'P' },
+    static const char options_string[] = "2mepsIcCvi:o:t:P?";
 
-        {"help", no_argument, NULL, '?' },
-        {"usage", no_argument, NULL, 'u' },
-        { NULL, 0, NULL, 0 }
+    static const struct option options_table[] = {
+        {"2ch-tracks", no_argument, NULL, '2'},
+        {"mch-tracks", no_argument, NULL, 'm'},
+        {"output-dsdiff-em", no_argument, NULL, 'e'},
+        {"output-dsdiff", no_argument, NULL, 'p'},
+        {"output-dsf", no_argument, NULL, 's'},
+        {"output-iso", no_argument, NULL, 'I'},
+        {"convert-dst", no_argument, NULL, 'c'},
+        {"export-cue", no_argument, NULL, 'C'},
+        {"version", no_argument, NULL, 'v'},
+        {"input", required_argument, NULL, 'i'},
+        {"output-dir", required_argument, NULL, 'o'},
+        {"print", no_argument, NULL, 'P'},
+        {"help", no_argument, NULL, '?'},
+        {"usage", no_argument, NULL, 'u'},
+        {NULL, 0, NULL, 0}
     };
 
     program_name = strrchr(argv[0],'/');
@@ -192,7 +197,9 @@ static int parse_options(int argc, char *argv[])
         case 'c': opts.convert_dst = 1; break;
         case 'C': opts.export_cue_sheet = 1; break;
         case 'i': opts.input_device = strdup(optarg); break;
+        case 'o': opts.output_dir = strdup(optarg);   break;
         case 'P': opts.print = 1; break;
+        case 'v': opts.version = 1; break;
 
         case '?':
             fprintf(stdout, help_text, program_name);
@@ -206,11 +213,6 @@ static int parse_options(int argc, char *argv[])
             return 0;
             break;
         }
-    }
-
-    if (optind < argc) {
-        const char *remaining_arg = argv[optind++];
-        strcpy(opts.output_file, remaining_arg);
     }
 
     return 1;
@@ -295,7 +297,9 @@ static void init(void)
     opts.convert_dst        = 0;
     opts.export_cue_sheet   = 0;
     opts.print              = 0;
-    opts.input_device       = "/dev/cdrom";
+    opts.output_dir         = NULL;
+    opts.input_device       = NULL; //"/dev/cdrom";
+    opts.version            =0;
 
 #if defined(WIN32) || defined(_WIN32)
     signal(SIGINT, handle_sigint);
@@ -337,9 +341,9 @@ char ** convert_wargv_to_UTF8(int argc,wchar_t *wargv[])
     int main(int argc, char *argv[])
 #endif
 {
-    char *albumdir = 0, *musicfilename, *file_path = 0;
+    char *albumdir = NULL, *musicfilename = NULL, *file_path = NULL;
     int i, area_idx;
-    sacd_reader_t *sacd_reader;
+    sacd_reader_t *sacd_reader = NULL;
 
 #ifdef PTW32_STATIC_LIB
     pthread_win32_process_attach_np();
@@ -359,12 +363,35 @@ char ** convert_wargv_to_UTF8(int argc,wchar_t *wargv[])
         if (fwide(stdout, 1) < 0)
         {
             fprintf(stderr, "ERROR: Output not set to wide.\n");
+            goto exit_main_1;
+        }
+
+        if (opts.version==1)
+        {
+            fwprintf(stdout, L"sacd_extract version " SACD_RIPPER_VERSION_STRING "\n");
+            //fwprintf(stdout, L"git repository: " SACD_RIPPER_REPO "\n", s_wchar);
+            goto exit_main;
         }
 
         // default to 2 channel
         if (opts.two_channel == 0 && opts.multi_channel == 0) 
         {
             opts.two_channel = 1;
+        }
+
+        if (opts.output_dir != NULL   ) // test if exists 
+        {
+            if (path_dir_exists(opts.output_dir) == 0)
+            {
+                fprintf(stderr, "%s doesn't exist or is not a directory.\n", opts.output_dir);
+                goto exit_main;
+            }
+
+        }
+
+        if(opts.input_device == NULL)
+        {
+            opts.input_device = strdup("/dev/cdrom");
         }
 
         sacd_reader = sacd_open(opts.input_device);
@@ -386,7 +413,24 @@ char ** convert_wargv_to_UTF8(int argc,wchar_t *wargv[])
                     // select the channel area
                     area_idx = ((has_multi_channel(handle) && opts.multi_channel) || !has_two_channel(handle)) ? handle->mulch_area_idx : handle->twoch_area_idx;
 
-                    albumdir = (strlen(opts.output_file) > 0 ? strdup(opts.output_file) : get_album_dir(handle));
+                    albumdir =  get_album_dir(handle);
+
+                    if (opts.export_cue_sheet)
+                    {
+                        char *cue_file_path_unique = get_unique_filename(NULL, opts.output_dir, albumdir, "cue");
+
+                        wchar_t *wide_filename;
+                        CHAR2WCHAR(wide_filename, cue_file_path_unique);
+                        fwprintf(stdout, L"Exporting CUE sheet: [%ls] \n", wide_filename);
+                        free(wide_filename);
+
+                        if (!file_path)
+                            file_path = make_filename(NULL, NULL, albumdir, "dff");
+
+                        write_cue_sheet(handle, file_path, area_idx, cue_file_path_unique);
+                        free(cue_file_path_unique);
+                        
+                    }
 
                     if (opts.output_iso)
                     {
@@ -398,7 +442,7 @@ char ** convert_wargv_to_UTF8(int argc,wchar_t *wargv[])
                         if (total_sectors > FAT32_SECTOR_LIMIT)
                         {
                             musicfilename = (char *) malloc(512);
-                            file_path = make_filename(0, 0, albumdir, "iso");
+                            file_path = make_filename(NULL, opts.output_dir, albumdir, "iso");
                             for (i = 1; total_sectors != 0; i++)
                             {
                                 sector_size = min(total_sectors, FAT32_SECTOR_LIMIT);
@@ -407,43 +451,49 @@ char ** convert_wargv_to_UTF8(int argc,wchar_t *wargv[])
                                 sector_offset += sector_size;
                                 total_sectors -= sector_size;
                             }
+                            free(file_path);
                             free(musicfilename);
+                            
                         }
                         else
 #endif
                         {
-                            get_unique_filename(&albumdir, "iso");
-                            file_path = make_filename(0, 0, albumdir, "iso");
+
+                            char *file_path_iso_unique = get_unique_filename(NULL, opts.output_dir, albumdir, "iso");
 
                             wchar_t *wide_filename;
-                            CHAR2WCHAR(wide_filename, file_path);
+                            CHAR2WCHAR(wide_filename, file_path_iso_unique);
                             fwprintf(stdout, L"\n ISO output in file: %ls\n", wide_filename);
                             free(wide_filename);
 
-                            scarletbook_output_enqueue_raw_sectors(output, 0, total_sectors, file_path, "iso");
+                            scarletbook_output_enqueue_raw_sectors(output, 0, total_sectors, file_path_iso_unique, "iso");
+
+                            free(file_path_iso_unique);
+                            
                         }
                     }
                     else if (opts.output_dsdiff_em)
                     {
-                        get_unique_filename(&albumdir, "dff");
-                        file_path = make_filename(0, 0, albumdir, "dff");
+
+                        char *file_path_dsdiff_unique = get_unique_filename(NULL, opts.output_dir, albumdir, "dff");
 
                         wchar_t *wide_filename;
-                        CHAR2WCHAR(wide_filename, file_path);
-                        fwprintf(stdout, L"\n DFF output in file: %ls\n", wide_filename);
+                        CHAR2WCHAR(wide_filename, file_path_dsdiff_unique);
+                        fwprintf(stdout, L"\n DFF edit master output in file: %ls\n", wide_filename);
                         free(wide_filename);
 
-                        scarletbook_output_enqueue_track(output, area_idx, 0, file_path, "dsdiff_edit_master", 
+                        scarletbook_output_enqueue_track(output, area_idx, 0, file_path_dsdiff_unique, "dsdiff_edit_master", 
                             (opts.convert_dst ? 1 : handle->area[area_idx].area_toc->frame_format != FRAME_FORMAT_DST));
+
+                        free(file_path_dsdiff_unique);
                     }
                     else if (opts.output_dsf || opts.output_dsdiff)
                     {
                         // create the output folder
-                        get_unique_dir(0, &albumdir);
-                        recursive_mkdir(albumdir, 0774);
+                        char *unique_dir = get_unique_dir(opts.output_dir, albumdir);
 
                         wchar_t *wide_folder;
-                        CHAR2WCHAR(wide_folder, albumdir);
+                        CHAR2WCHAR(wide_folder, unique_dir);
                         if (opts.output_dsf)
                         {
 
@@ -454,7 +504,28 @@ char ** convert_wargv_to_UTF8(int argc,wchar_t *wargv[])
 
                             fwprintf(stdout, L"\n DSDIFF output in folder: %ls\n", wide_folder);
                         }
+                        
+
+                        int ret_mkdir;
+
+#if defined(WIN32) || defined(_WIN32)
+
+                        ret_mkdir = _wmkdir(wide_folder);
+                        
+#else
+
+                        ret_mkdir = mkdir(unique_dir, 0774);
+
+#endif
                         free(wide_folder);
+
+                        if (ret_mkdir != 0)
+                        {
+                            fprintf(stderr, "%s directory can't be created.\n", unique_dir);
+                            free(unique_dir);
+                            free(albumdir);
+                            goto exit_main;
+                        }
 
                         // fill the queue with items to rip
                         for (i = 0; i < handle->area[area_idx].area_toc->track_count; i++) 
@@ -462,46 +533,28 @@ char ** convert_wargv_to_UTF8(int argc,wchar_t *wargv[])
                             if (opts.select_tracks && opts.selected_tracks[i] == 0)
                                 continue;
 
-                            musicfilename = get_music_filename(handle, area_idx, i, opts.output_file);
+                            musicfilename = get_music_filename(handle, area_idx, i, "");
 
                             if (opts.output_dsf)
                             {
-                                file_path = make_filename(0, albumdir, musicfilename, "dsf");
+                                file_path = make_filename(NULL, unique_dir, musicfilename, "dsf");
                                 scarletbook_output_enqueue_track(output, area_idx, i, file_path, "dsf", 
                                     1 /* always decode to DSD */);
                             }
                             else if (opts.output_dsdiff)
                             {
-                                file_path = make_filename(0, albumdir, musicfilename, "dff");
+                                file_path = make_filename(NULL, unique_dir, musicfilename, "dff");
                                 scarletbook_output_enqueue_track(output, area_idx, i, file_path, "dsdiff", 
                                     (opts.convert_dst ? 1 : handle->area[area_idx].area_toc->frame_format != FRAME_FORMAT_DST));
                             }
-
-                            free(musicfilename);
                             free(file_path);
-                            file_path = 0;
+                            free(musicfilename);                                                   
                         }
+
+                        free(unique_dir);
                     }
 
-                    if (opts.export_cue_sheet)
-                    {
-                        char *cue_file_path = make_filename(0, 0, albumdir, "cue");
-
-                        wchar_t *wide_filename;
-                        CHAR2WCHAR(wide_filename, cue_file_path);
-                        fwprintf(stdout, L"Exporting CUE sheet: [%ls] \n", wide_filename);
-                        free(wide_filename);
-
-                        if (!file_path)
-                            file_path = make_filename(0, 0, albumdir, "dff");
-
-
-                        write_cue_sheet(handle, file_path, area_idx, cue_file_path);
-                        free(cue_file_path);
-                        
-                    }
-
-                    free(file_path);
+                    free(albumdir);
 
                     started_processing = time(0);
                     scarletbook_output_start(output);
@@ -511,30 +564,36 @@ char ** convert_wargv_to_UTF8(int argc,wchar_t *wargv[])
                 }
                 scarletbook_close(handle);
 
-                free(albumdir);
+                
             }
         }
 
         sacd_close(sacd_reader);
 
+exit_main:
 #ifndef _WIN32
-        freopen(0, "w", stdout);
+            freopen(0, "w", stdout);
 #endif
         if (fwide(stdout, -1) >= 0)
         {
             fprintf(stderr, "ERROR: Output not set to byte oriented.\n");
         }
     }
-
+exit_main_1:
     free_lock(g_fwprintf_lock);
     destroy_logging();
 
+    if (opts.output_dir!=NULL)
+        free(opts.output_dir);
+    if (opts.input_device != NULL)
+        free(opts.input_device);
+
 #ifdef PTW32_STATIC_LIB
-    pthread_win32_process_detach_np();
+            pthread_win32_process_detach_np();
     pthread_win32_thread_detach_np();
 #endif
-
     printf("\n");
+    printf("Program terminate!\n");
 	
 #if defined(WIN32) || defined(_WIN32)
      for (int t=0; t < argc;t++)
