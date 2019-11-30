@@ -61,11 +61,12 @@ void sanitize_filename(char *f);
 
 void sanitize_filepath(char *f);
 
-void get_unique_filename(char **file, const char *ext);
+char *get_unique_filename(char *dev, char *dir, char *file, char *ext);
 
 char * get_unique_path(char *dir, char *file, const char *ext);
 
-void get_unique_dir(char *device, char **dir);
+char * get_unique_dir(char *device, char *dir);
 int stat_wrap(const char *pathname, struct stat *buf);
+int path_dir_exists(char *path);
 
 #endif
