@@ -455,8 +455,8 @@ char * get_unique_dir(char *device, char *dir)
     int dir_exists = 0, count = 1;
     int len = strlen(dir) + 10;
 
-    char *device_dir = make_filename(device, dir, NULL, NULL);
-    
+    char *device_dir = make_filename(NULL, device, dir, NULL);
+
     dir_exists  = path_dir_exists(device_dir);
     while (dir_exists == 1)
     {
@@ -464,8 +464,8 @@ char * get_unique_dir(char *device, char *dir)
         
         char *dir_copy = calloc(len, sizeof(char));
         snprintf(dir_copy, len, "%s (%d)", dir, count++);
-        
-        device_dir = make_filename(device, dir_copy, NULL, NULL);
+
+        device_dir = make_filename(NULL,device, dir_copy, NULL);
         dir_exists = path_dir_exists(device_dir);
         if (count > 20)
             break; // loop must be stoped somewhere
