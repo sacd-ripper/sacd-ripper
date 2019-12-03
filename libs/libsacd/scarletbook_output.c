@@ -297,13 +297,24 @@ static void frame_read_callback(scarletbook_handle_t *handle, uint8_t* frame_dat
 {
     scarletbook_output_format_t *ft = (scarletbook_output_format_t *) userdata;
 
-    if (ft->dsd_encoded_export && ft->dst_encoded_import)
+    uint64_t frame_count_time_start = TIME_FRAMECOUNT(&handle->area[ft->area].area_tracklist_time->start[ft->track]);
+
+    uint64_t frame_count_time_end = TIME_FRAMECOUNT(&handle->area[ft->area].area_tracklist_time->start[ft->track]) +
+                                    TIME_FRAMECOUNT(&handle->area[ft->area].area_tracklist_time->duration[ft->track]);
+
+    uint64_t frame_timecode =  TIME_FRAMECOUNT(&handle->audio_sector.frame[0].timecode);
+    
+    if (frame_timecode >= frame_count_time_start && 
+        frame_timecode <= frame_count_time_end   )
     {
-        dst_decoder_decode(ft->dst_decoder, frame_data, frame_size);
-    }
-    else
-    {
-        write_block(ft, frame_data, frame_size);
+        if (ft->dsd_encoded_export && ft->dst_encoded_import)
+        {
+            dst_decoder_decode(ft->dst_decoder, frame_data, frame_size);
+        }
+        else
+        {
+            write_block(ft, frame_data, frame_size);
+        }
     }
 }
 
