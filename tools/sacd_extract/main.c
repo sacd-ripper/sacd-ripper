@@ -560,7 +560,7 @@ char ** convert_wargv_to_UTF8(int argc,wchar_t *wargv[])
                     scarletbook_output_start(output);
                     scarletbook_output_destroy(output);
 
-                    fwprintf(stdout, L"\nWe are done..                                                          \n");
+                    fwprintf(stdout, L"\n\n We are done..                                                          \n");
                 }
                 scarletbook_close(handle);
 
