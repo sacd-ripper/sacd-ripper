@@ -29,7 +29,7 @@
 
 #ifdef __lv2ppu__
 #include <sys/file.h>
-#elif defined(WIN32)
+#elif defined(WIN32) || defined(_WIN32)
 #include <io.h>
 #endif
 
@@ -169,21 +169,21 @@ static int dsf_create(scarletbook_output_format_t *ft)
 
 static int dsf_close(scarletbook_output_format_t *ft)
 {
-    dsf_handle_t *handle = (dsf_handle_t *) ft->priv;
+    dsf_handle_t *handle = (dsf_handle_t *)ft->priv;
     int i;
 
-    // write out what was left in the ring buffers
     for (i = 0; i < handle->channel_count; i++)
     {
-	if (handle->buffer_ptr[i] > handle->buffer[i]) {
-	    handle->sample_count += handle->buffer_ptr[i] - handle->buffer[i];
+        if (handle->buffer_ptr[i] > handle->buffer[i])
+        {
+            handle->sample_count += handle->buffer_ptr[i] - handle->buffer[i];
 
-	    fwrite(handle->buffer[i], 1, SACD_BLOCK_SIZE_PER_CHANNEL, ft->fd);
-	    memset(handle->buffer[i], 0, SACD_BLOCK_SIZE_PER_CHANNEL);
+            fwrite(handle->buffer[i], 1, SACD_BLOCK_SIZE_PER_CHANNEL, ft->fd);
+            memset(handle->buffer[i], 105, SACD_BLOCK_SIZE_PER_CHANNEL);  // 105 -> 69 hex for reducing pop noise 
 
-	    handle->buffer_ptr[i] = handle->buffer[i];
-	    handle->audio_data_size += SACD_BLOCK_SIZE_PER_CHANNEL;
-	}
+            handle->buffer_ptr[i] = handle->buffer[i];
+            handle->audio_data_size += SACD_BLOCK_SIZE_PER_CHANNEL;
+        }
     }
 
     // write the footer
@@ -225,14 +225,16 @@ static size_t dsf_write_frame(scarletbook_output_format_t *ft, const uint8_t *bu
 
                 handle->buffer_ptr[i]++;
                 buf_ptr++;
-            } else {
-		handle->sample_count += handle->buffer_ptr[i] - handle->buffer[i];
+            } 
+            else 
+            {
+                handle->sample_count += handle->buffer_ptr[i] - handle->buffer[i];
 
-		fwrite(handle->buffer[i], 1, SACD_BLOCK_SIZE_PER_CHANNEL, ft->fd);
-		memset(handle->buffer[i], 0, SACD_BLOCK_SIZE_PER_CHANNEL);
+                fwrite(handle->buffer[i], 1, SACD_BLOCK_SIZE_PER_CHANNEL, ft->fd);
+                memset(handle->buffer[i], 105, SACD_BLOCK_SIZE_PER_CHANNEL); // 105 -> 69 hex for reducing pop noise
 
-		handle->buffer_ptr[i] = handle->buffer[i];
-		handle->audio_data_size += SACD_BLOCK_SIZE_PER_CHANNEL;
+                handle->buffer_ptr[i] = handle->buffer[i];
+                handle->audio_data_size += SACD_BLOCK_SIZE_PER_CHANNEL;
 	    }
         }
     }
