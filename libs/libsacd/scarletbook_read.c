@@ -28,6 +28,7 @@
 #endif
 
 #include <charset.h>
+#include <logging.h>
 
 #include "endianess.h"
 #include "scarletbook.h"
@@ -664,6 +665,10 @@ void scarletbook_process_frames(scarletbook_handle_t *handle, uint8_t *read_buff
                     {
                         // buffer overflow error, try next frame..
                         handle->frame.started = 0;
+                        {
+                            LOG(lm_main, LOG_ERROR, ("Error : scarletbook_process_frames(), buffer overflow error"));
+                            return ;
+                        }
                     }
                 }
                 break;
