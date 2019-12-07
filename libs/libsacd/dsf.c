@@ -26,7 +26,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <time.h>
-
+#include <logging.h>
 #ifdef __lv2ppu__
 #include <sys/file.h>
 #elif defined(WIN32) || defined(_WIN32)
@@ -41,7 +41,8 @@
 #include "scarletbook.h"
 #include "dsf.h"
 
-#define DSF_BUFFER_SIZE    2048
+
+#define DSF_HEADER_FOOTER_SIZE    2048
 
 typedef struct
 {
@@ -88,9 +89,9 @@ static int dsf_create_header(scarletbook_output_format_t *ft)
     dsf_handle_t  *handle = (dsf_handle_t *) ft->priv;
 
     if (!handle->header)
-        handle->header = (uint8_t *) calloc(DSF_BUFFER_SIZE, 1);
+        handle->header = (uint8_t *) calloc(DSF_HEADER_FOOTER_SIZE, 1);
     if (!handle->footer)
-        handle->footer = (uint8_t *) calloc(DSF_BUFFER_SIZE, 1);
+        handle->footer = (uint8_t *) calloc(DSF_HEADER_FOOTER_SIZE, 1);
     handle->header_size = 0;
     handle->footer_size = 0;
 
@@ -156,9 +157,12 @@ static int dsf_create_header(scarletbook_output_format_t *ft)
     dsd_chunk->total_file_size = htole64(handle->header_size + handle->audio_data_size + handle->footer_size);
     dsd_chunk->metadata_offset = htole64(handle->footer_size ? handle->header_size + handle->audio_data_size : 0);
 
-    fwrite(handle->header, 1, handle->header_size, ft->fd);
-
-    return 0;
+    size_t bytes_w;
+    bytes_w=fwrite(handle->header, 1, handle->header_size, ft->fd);
+    if(bytes_w != handle->header_size)
+		return -1;
+	else
+        return 0;
 }
 
 
@@ -171,6 +175,8 @@ static int dsf_close(scarletbook_output_format_t *ft)
 {
     dsf_handle_t *handle = (dsf_handle_t *)ft->priv;
     int i;
+	size_t bytes_w;
+	int result=0;
 
     for (i = 0; i < handle->channel_count; i++)
     {
@@ -178,16 +184,31 @@ static int dsf_close(scarletbook_output_format_t *ft)
         {
             handle->sample_count += handle->buffer_ptr[i] - handle->buffer[i];
 
-            fwrite(handle->buffer[i], 1, SACD_BLOCK_SIZE_PER_CHANNEL, ft->fd);
-            memset(handle->buffer[i], 105, SACD_BLOCK_SIZE_PER_CHANNEL);  // 105 -> 69 hex for reducing pop noise 
+            bytes_w=fwrite(handle->buffer[i], 1, SACD_BLOCK_SIZE_PER_CHANNEL, ft->fd);
+			if(bytes_w !=SACD_BLOCK_SIZE_PER_CHANNEL)
+			{ 		        
+				LOG(lm_main, LOG_ERROR, ("dsf_close(): error writing last buffer %s", ft->filename));
+				result=-1;
+                handle->audio_data_size += bytes_w;
+				break;
+			}
+            memset(handle->buffer[i], 0x69, SACD_BLOCK_SIZE_PER_CHANNEL);  // 105 -> 69 hex for reducing pop noise 
 
             handle->buffer_ptr[i] = handle->buffer[i];
             handle->audio_data_size += SACD_BLOCK_SIZE_PER_CHANNEL;
+			
+
         }
     }
 
     // write the footer
-    fwrite(handle->footer, 1, handle->footer_size, ft->fd);
+    bytes_w=fwrite(handle->footer, 1, handle->footer_size, ft->fd);
+	if(bytes_w != handle->footer_size)
+	{
+		result =-1;
+		LOG(lm_main, LOG_ERROR, ("dsf_close(): error at write footer %s", ft->filename));
+	}
+	
     fseek(ft->fd, 0, SEEK_SET);
     
     // write the final header
@@ -198,7 +219,7 @@ static int dsf_close(scarletbook_output_format_t *ft)
     if (handle->footer)
         free(handle->footer);
 
-    return 0;
+    return result;
 }
 
 static size_t dsf_write_frame(scarletbook_output_format_t *ft, const uint8_t *buf, size_t len)
@@ -230,8 +251,15 @@ static size_t dsf_write_frame(scarletbook_output_format_t *ft, const uint8_t *bu
             {
                 handle->sample_count += handle->buffer_ptr[i] - handle->buffer[i];
 
-                fwrite(handle->buffer[i], 1, SACD_BLOCK_SIZE_PER_CHANNEL, ft->fd);
-                memset(handle->buffer[i], 105, SACD_BLOCK_SIZE_PER_CHANNEL); // 105 -> 69 hex for reducing pop noise
+				size_t bytes_w;
+                bytes_w=fwrite(handle->buffer[i], 1, SACD_BLOCK_SIZE_PER_CHANNEL, ft->fd);
+				if(bytes_w != SACD_BLOCK_SIZE_PER_CHANNEL)
+				{					
+					LOG(lm_main, LOG_ERROR, ("dsf_write_frame(): error writting buffer in file: %s", ft->filename));
+					return -1;
+				}
+	
+                memset(handle->buffer[i], 0x69, SACD_BLOCK_SIZE_PER_CHANNEL); // 105 -> 69 hex for reducing pop noise
 
                 handle->buffer_ptr[i] = handle->buffer[i];
                 handle->audio_data_size += SACD_BLOCK_SIZE_PER_CHANNEL;
