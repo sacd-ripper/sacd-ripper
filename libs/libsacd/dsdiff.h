@@ -29,7 +29,7 @@
 #undef PRAGMA_PACK_BEGIN
 #undef PRAGMA_PACK_END
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) && !defined(__MINGW32__)
 #if __GNUC__ > 2 || (__GNUC__ == 2 && __GNUC_MINOR__ >= 95)
 #define ATTRIBUTE_PACKED    __attribute__ ((packed))
 #define PRAGMA_PACK         0
@@ -653,7 +653,7 @@ struct comment_t
     // 5..65535 Reserved for future use
     //
     // The format for File History-Place or Zone is
-    // "(GMT ±hh:mm)", if desired followed by a textual description. A space (0x20) is used
+    // "(GMT Â±hh:mm)", if desired followed by a textual description. A space (0x20) is used
     // after GMT. When the File History-Place or Zone is omitted the indicating time is
     // Greenwich Mean Time "(GMT +00:00)".
     //
