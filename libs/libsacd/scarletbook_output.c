@@ -39,6 +39,7 @@
 #include <pthread.h>
 #endif
 #include <sys/atomic.h>
+#include <signal.h>
 
 #include <charset.h>
 #include <utils.h>
@@ -221,13 +222,13 @@ static int create_output_file(scarletbook_output_format_t *ft)
     sysFsChmod(ft->filename, S_IFMT | 0777); 
 #endif
 
-    ft->write_cache = malloc(WRITE_CACHE_SIZE);
-    setvbuf(ft->fd, ft->write_cache, _IOFBF , WRITE_CACHE_SIZE);
+    //ft->write_cache = malloc(WRITE_CACHE_SIZE);
+    //setvbuf(ft->fd, ft->write_cache, _IOFBF , WRITE_CACHE_SIZE);
 
     ft->priv = calloc(1, ft->handler.priv_size);
 
     result = ft->handler.startwrite ? (*ft->handler.startwrite)(ft) : 0;
-
+   
     return result;
 
 error:
@@ -241,15 +242,18 @@ static inline int close_output_file(scarletbook_output_format_t * ft)
     int result;
 
     result = ft->handler.stopwrite ? (*ft->handler.stopwrite)(ft) : 0;
-
+    if(result ==-1)
+	  LOG(lm_main, LOG_ERROR, ("error closing %s", ft->filename));
+  
     if (ft->fd)
     {
         fclose(ft->fd);
     }
-    free(ft->write_cache);
+    //free(ft->write_cache);
     free(ft->filename);
     free(ft->priv);
     free(ft);
+
 
     return result;
 }
@@ -276,6 +280,7 @@ static void scarletbook_output_init_stats(scarletbook_output_t *output)
 static inline size_t write_block(scarletbook_output_format_t * ft, const uint8_t *buf, size_t len)
 {
     size_t actual = ft->handler.write? (*ft->handler.write)(ft, buf, len) : 0;
+	if (actual == (size_t)-1) return -1;
     ft->write_length += actual;
     return actual;
 }
@@ -283,7 +288,13 @@ static inline size_t write_block(scarletbook_output_format_t * ft, const uint8_t
 static void frame_decoded_callback(uint8_t* frame_data, size_t frame_size, void *userdata)
 {
     scarletbook_output_format_t *ft = (scarletbook_output_format_t *) userdata;
-    write_block(ft, frame_data, frame_size);
+    size_t rezult = write_block(ft, frame_data, frame_size);
+	if (rezult == (size_t)-1) 
+	{
+	 ft->cb_fwprintf(stderr, L"\n ERROR in frame_decoded_callback():write_block()...at writting in file.\n");
+	 LOG(lm_main, LOG_ERROR, ("ERROR in frame_decoded_callback():write_block()...writting in file: %s  ",ft->filename) );
+	 raise(SIGINT);
+	}
 }
 
 static void frame_error_callback(int frame_count, int frame_error_code, const char *frame_error_message, void *userdata)
@@ -303,19 +314,49 @@ static void frame_read_callback(scarletbook_handle_t *handle, uint8_t* frame_dat
                                     TIME_FRAMECOUNT(&handle->area[ft->area].area_tracklist_time->duration[ft->track]);
 
     uint64_t frame_timecode =  TIME_FRAMECOUNT(&handle->audio_sector.frame[0].timecode);
-    
-    if (frame_timecode >= frame_count_time_start && 
-        frame_timecode <= frame_count_time_end   )
+
+    if (ft->handler.flags & OUTPUT_FLAG_EDIT_MASTER) //  only for DSDIFF master
     {
-        if (ft->dsd_encoded_export && ft->dst_encoded_import)
+        if (ft->dsd_encoded_export && ft->dst_encoded_import) 
         {
             dst_decoder_decode(ft->dst_decoder, frame_data, frame_size);
         }
         else
         {
-            write_block(ft, frame_data, frame_size);
+            size_t rezult = 0;
+            rezult = write_block(ft, frame_data, frame_size);
+            if (rezult == (size_t)-1)
+            {
+                ft->cb_fwprintf(stderr, L"\n ERROR in frame_read_callback():write_block()..at writting in file. \n");
+                LOG(lm_main, LOG_ERROR, ("ERROR in frame_read_callback:write_block()...writting in file: %s  ", ft->filename));
+                raise(SIGINT);
+            }
         }
     }
+    else   // DSF, DSDIFF
+    {
+        if (frame_timecode >= frame_count_time_start &&
+            frame_timecode <= frame_count_time_end )
+        {
+
+            if (ft->dsd_encoded_export && ft->dst_encoded_import)
+            {
+                dst_decoder_decode(ft->dst_decoder, frame_data, frame_size);
+            }
+            else
+            {
+                size_t rezult = 0;
+                rezult = write_block(ft, frame_data, frame_size);
+                if (rezult == (size_t)-1)
+                {
+                    ft->cb_fwprintf(stderr, L"\n ERROR in frame_read_callback():write_block()..at writting in file. \n");
+                    LOG(lm_main, LOG_ERROR, ("ERROR in frame_read_callback:write_block()...writting in file: %s  ", ft->filename));
+                    raise(SIGINT);
+                }
+            }
+        }
+    }
+	
 }
 
 #ifdef __lv2ppu__
@@ -461,7 +502,13 @@ static void *processing_thread(void *arg)
                     // ISO output is written without frame processing                        
                     else if (ft->handler.flags & OUTPUT_FLAG_RAW)
                     {
-                        write_block(ft, output->read_buffer, block_size);
+                       size_t rezult=  write_block(ft, output->read_buffer, block_size);
+					   if (rezult ==(size_t) -1) 
+					   {
+						   output->fwprintf_callback(stdout, L"\n \n Error in writting ISO in file. \n");
+						   sysAtomicSet(&output->stop_processing, 1);
+					   }
+					    
                     }
 
                     // update statistics
