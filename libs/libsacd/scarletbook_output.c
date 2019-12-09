@@ -249,7 +249,7 @@ static inline int close_output_file(scarletbook_output_format_t * ft)
     {
         fclose(ft->fd);
     }
-    //free(ft->write_cache);
+    free(ft->write_cache);
     free(ft->filename);
     free(ft->priv);
     free(ft);
