@@ -48,7 +48,7 @@ typedef struct scarletbook_format_handler_t
     char const *description;
     char const *name;
     int (*startwrite)(scarletbook_output_format_t *ft);
-    size_t (*write)(scarletbook_output_format_t *ft, const uint8_t *buf, size_t len);
+    int (*write)(scarletbook_output_format_t *ft, const uint8_t *buf, size_t len);
     int (*stopwrite)(scarletbook_output_format_t *ft);
     int         flags;
     size_t      priv_size;
