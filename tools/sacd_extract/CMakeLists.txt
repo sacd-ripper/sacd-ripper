@@ -1,6 +1,18 @@
 # CMake build file for SACD Extract
 
 cmake_minimum_required(VERSION 2.6)
+
+# Mingw-w64 support
+OPTION(MINGW64 "Mingw-w64" NO)
+if (MINGW64 MATCHES "YES")
+    MESSAGE(STATUS "Mingw-w64 mode enabled")
+    SET(CMAKE_SYSTEM_NAME Windows)
+    SET(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
+    SET(TOOLCHAIN_PREFIX x86_64-w64-mingw32)
+    SET(CMAKE_C_COMPILER ${TOOLCHAIN_PREFIX}-gcc)
+    SET(CMAKE_FIND_ROOT_PATH /usr/${TOOLCHAIN_PREFIX})
+endif (MINGW64 MATCHES "YES")
+
 project(sacd_extract C)
 
 # Load some macros.
@@ -16,21 +28,18 @@ include(FindThreads)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${sacd_extract_SOURCE_DIR})
 
-if (MSVC)
-    include_directories("./win32")
-endif (MSVC)
 include_directories("../../libs/libcommon")
 include_directories("../../libs/libdstdec")
 include_directories("../../libs/libid3")
 include_directories("../../libs/libsacd")
 
 # Extra flags for GCC
-if (CMAKE_COMPILER_IS_GNUCC)
+if (CMAKE_COMPILER_IS_GNUCC OR (CMAKE_C_COMPILER_ID MATCHES "Clang"))
   add_definitions(
       -pipe
-      -Wall -Wextra -Wcast-align -Wpointer-arith
+      -Wall -Wextra -Wcast-align -Wpointer-arith -O3
       -Wno-unused-parameter -msse2)
-endif (CMAKE_COMPILER_IS_GNUCC)
+endif (CMAKE_COMPILER_IS_GNUCC OR (CMAKE_C_COMPILER_ID MATCHES "Clang"))
 
 if (MSVC)
     SET (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /MTd")
