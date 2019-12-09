@@ -222,7 +222,7 @@ static int dsf_close(scarletbook_output_format_t *ft)
     return result;
 }
 
-static size_t dsf_write_frame(scarletbook_output_format_t *ft, const uint8_t *buf, size_t len)
+static int dsf_write_frame(scarletbook_output_format_t *ft, const uint8_t *buf, size_t len)
 {
     dsf_handle_t *handle = (dsf_handle_t *) ft->priv;
     const uint8_t *buf_end_ptr = buf + len;
@@ -267,7 +267,7 @@ static size_t dsf_write_frame(scarletbook_output_format_t *ft, const uint8_t *bu
         }
     }
 
-    return (size_t) (handle->audio_data_size - prev_audio_data_size);
+    return (int) (handle->audio_data_size - prev_audio_data_size);
 }
 
 scarletbook_format_handler_t const * dsf_format_fn(void) 
