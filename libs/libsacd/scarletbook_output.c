@@ -277,10 +277,10 @@ static void scarletbook_output_init_stats(scarletbook_output_t *output)
     }
 }
 
-static inline size_t write_block(scarletbook_output_format_t * ft, const uint8_t *buf, size_t len)
+static inline int write_block(scarletbook_output_format_t * ft, const uint8_t *buf, size_t len)
 {
-    size_t actual = ft->handler.write? (*ft->handler.write)(ft, buf, len) : 0;
-	if (actual == (size_t)-1) return -1;
+    int actual = ft->handler.write? (*ft->handler.write)(ft, buf, len) : 0;
+    if (actual < 0 ) return -1;
     ft->write_length += actual;
     return actual;
 }
@@ -288,9 +288,9 @@ static inline size_t write_block(scarletbook_output_format_t * ft, const uint8_t
 static void frame_decoded_callback(uint8_t* frame_data, size_t frame_size, void *userdata)
 {
     scarletbook_output_format_t *ft = (scarletbook_output_format_t *) userdata;
-    size_t rezult = write_block(ft, frame_data, frame_size);
-	if (rezult == (size_t)-1) 
-	{
+    int rezult = write_block(ft, frame_data, frame_size);
+    if (rezult == -1)
+    {
 	 ft->cb_fwprintf(stderr, L"\n ERROR in frame_decoded_callback():write_block()...at writting in file.\n");
 	 LOG(lm_main, LOG_ERROR, ("ERROR in frame_decoded_callback():write_block()...writting in file: %s  ",ft->filename) );
 	 raise(SIGINT);
@@ -323,9 +323,9 @@ static void frame_read_callback(scarletbook_handle_t *handle, uint8_t* frame_dat
         }
         else
         {
-            size_t rezult = 0;
+            int rezult;
             rezult = write_block(ft, frame_data, frame_size);
-            if (rezult == (size_t)-1)
+            if (rezult == -1)
             {
                 ft->cb_fwprintf(stderr, L"\n ERROR in frame_read_callback():write_block()..at writting in file. \n");
                 LOG(lm_main, LOG_ERROR, ("ERROR in frame_read_callback:write_block()...writting in file: %s  ", ft->filename));
@@ -345,9 +345,9 @@ static void frame_read_callback(scarletbook_handle_t *handle, uint8_t* frame_dat
             }
             else
             {
-                size_t rezult = 0;
+                int rezult;
                 rezult = write_block(ft, frame_data, frame_size);
-                if (rezult == (size_t)-1)
+                if (rezult == -1)
                 {
                     ft->cb_fwprintf(stderr, L"\n ERROR in frame_read_callback():write_block()..at writting in file. \n");
                     LOG(lm_main, LOG_ERROR, ("ERROR in frame_read_callback:write_block()...writting in file: %s  ", ft->filename));
