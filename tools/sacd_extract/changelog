@@ -1,3 +1,17 @@
+version 0.3.9.3 prelease
+
+Binaries compiled with mingw32 for Windows (64bit) & Gnu 7.4.0 for Linux.
+-fixed infinite loop 99% when iso files are corrupted;
+-added Performer tag to dsf files;
+-now multi-byte chars in filenames is supported for Windows when input files are iso (using wmain);
+-better management in creating folders/files/tracks names (including albums with multiple discs);
+-changed priority in title/artist extracting metadata. Now disc_title/disc_artist came first instead of album_title/album_artist (useful in case of multiple discs of an album);
+-added -w (--concurrent) for compatibility with SACDExtractGUI;
+-added -o (--output-dir[=DIR] ) and -y (--output-dir-conc[=DIR]) option for setting explicit output folder (for compatibility with SACDExtractGUI, except option -z  (--nopad);
+-for DSF files the pop noise is reduced by padding the last block with '69'h instead of '00' (so --nopad option is useless);
+-for DSF files some frames are trimmed out (based on timecode) to reflect the correct playing time of tracks;
+-eliminates crashes when disk for output is full.
+ 
 version 0.3.7
 
     - fixed a bug where arranger phonetic was referenced incorrectly during print (-P)
