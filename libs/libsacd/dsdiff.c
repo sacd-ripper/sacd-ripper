@@ -644,7 +644,7 @@ static int dsdiff_close(scarletbook_output_format_t *ft)
     return 0;
 }
 
-static size_t dsdiff_write_frame(scarletbook_output_format_t *ft, const uint8_t *buf, size_t len)
+static int dsdiff_write_frame(scarletbook_output_format_t *ft, const uint8_t *buf, size_t len)
 {
     dsdiff_handle_t *handle = (dsdiff_handle_t *) ft->priv;
 
@@ -660,7 +660,7 @@ static size_t dsdiff_write_frame(scarletbook_output_format_t *ft, const uint8_t 
 			return -1;               				
 		}
         handle->audio_data_size += nrw;
-        return nrw;
+        return (int)nrw;
     }
     else
     {
@@ -691,7 +691,7 @@ static size_t dsdiff_write_frame(scarletbook_output_format_t *ft, const uint8_t 
 			if(nrw !=DST_FRAME_DATA_CHUNK_SIZE)
 			{ 		        
 				LOG(lm_main, LOG_ERROR, ("dsdiff_write_frame(0: error writing in file %s", ft->filename));
-				return (size_t)-1;               				
+				return -1;               				
 			}
 			
 			size_t nrw1;
@@ -715,7 +715,7 @@ static size_t dsdiff_write_frame(scarletbook_output_format_t *ft, const uint8_t 
                 nrw += nrw1;
             }
             handle->audio_data_size += nrw;
-            return nrw;
+            return (int)nrw;
         }
     }
 }
