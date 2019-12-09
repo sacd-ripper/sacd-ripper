@@ -222,8 +222,8 @@ static int create_output_file(scarletbook_output_format_t *ft)
     sysFsChmod(ft->filename, S_IFMT | 0777); 
 #endif
 
-    //ft->write_cache = malloc(WRITE_CACHE_SIZE);
-    //setvbuf(ft->fd, ft->write_cache, _IOFBF , WRITE_CACHE_SIZE);
+    ft->write_cache = malloc(WRITE_CACHE_SIZE);
+    setvbuf(ft->fd, ft->write_cache, _IOFBF , WRITE_CACHE_SIZE);
 
     ft->priv = calloc(1, ft->handler.priv_size);
 
