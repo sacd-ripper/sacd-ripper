@@ -444,7 +444,8 @@ char ** convert_wargv_to_UTF8(int argc,wchar_t *wargv[])
                 fprintf(stderr, "%s doesn't exist or is not a directory.\n", opts.output_dir);
                 goto exit_main;
             }
-
+            if (opts.output_dir_conc == NULL)
+                opts.output_dir_conc = strdup(opts.output_dir);
         }
 		
 		if (opts.output_dir_conc != NULL   ) // test if exists 
@@ -454,7 +455,8 @@ char ** convert_wargv_to_UTF8(int argc,wchar_t *wargv[])
                 fprintf(stderr, "%s doesn't exist or is not a directory.\n", opts.output_dir_conc);
                 goto exit_main;
             }
-
+            if (opts.output_dir == NULL)
+                opts.output_dir = strdup(opts.output_dir_conc);
         }
 
         if(opts.input_device == NULL)
