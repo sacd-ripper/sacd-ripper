@@ -28,9 +28,6 @@ include(FindThreads)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${sacd_extract_SOURCE_DIR})
 
-if (MSVC)
-    include_directories("./win32")
-endif (MSVC)
 include_directories("../../libs/libcommon")
 include_directories("../../libs/libdstdec")
 include_directories("../../libs/libid3")
@@ -43,32 +40,6 @@ if (CMAKE_COMPILER_IS_GNUCC OR (CMAKE_C_COMPILER_ID MATCHES "Clang"))
       -Wall -Wextra -Wcast-align -Wpointer-arith -O3
       -Wno-unused-parameter -msse2)
 endif (CMAKE_COMPILER_IS_GNUCC OR (CMAKE_C_COMPILER_ID MATCHES "Clang"))
-
-if (MSVC)
-    SET (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /MTd")
-    SET (CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /MT /D PTW32_STATIC_LIB")
-    ADD_DEFINITIONS(-D_CRT_NONSTDC_NO_DEPRECATE)
-    ADD_DEFINITIONS(-D_CRT_SECURE_NO_DEPRECATE)
-    ADD_DEFINITIONS(-D_CRT_NONSTDC_NO_WARNINGS)
-    SET (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} ws2_32.lib pthreadVC2.lib iconv.lib")
-    SET (CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} ws2_32.lib pthreadVC2_static.lib iconv.lib /NODEFAULTLIB:LIBCMT.LIB") 
-
-    # disable warnings about libiconv link directory
-    cmake_policy(SET CMP0015 NEW)
-
-    include_directories("../../libs/libiconv/include")
-    link_directories("../../libs/libiconv/lib/")
-elseif(WIN32)
-    set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIRARIES} -lpthread -lws2_32 -liconv -static")
-    target_compile_options(${PROJECT_NAME} PRIVATE -municode)
-    target_link_libraries(${PROJECT_NAME} -municode)
-    add_definitions(-DUNICODE -D_UNICODE)
-elseif(APPLE)
-  set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIRARIES} -liconv -lpthread")
-else()
-  add_definitions(-D_FILE_OFFSET_BITS=64)
-  set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIRARIES} -lpthread")
-endif()
 
 file(GLOB libcommon_headers ../../libs/libcommon/*.h)
 file(GLOB libcommon_sources ../../libs/libcommon/*.c)
@@ -97,3 +68,32 @@ add_executable(sacd_extract
     ${libid3_headers} ${libid3_sources}
     ${libsacd_headers} ${libsacd_sources}
     )
+
+if (MSVC)
+    SET (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /MTd")
+    SET (CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /MT /D PTW32_STATIC_LIB")
+    ADD_DEFINITIONS(-D_CRT_NONSTDC_NO_DEPRECATE)
+    ADD_DEFINITIONS(-D_CRT_SECURE_NO_DEPRECATE)
+    ADD_DEFINITIONS(-D_CRT_NONSTDC_NO_WARNINGS)
+    SET (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} ws2_32.lib pthreadVC2.lib iconv.lib")
+    SET (CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} ws2_32.lib pthreadVC2_static.lib iconv.lib /NODEFAULTLIB:LIBCMT.LIB") 
+
+    # disable warnings about libiconv link directory
+    cmake_policy(SET CMP0015 NEW)
+
+    include_directories("../../libs/libiconv/include")
+    link_directories("../../libs/libiconv/lib/")
+elseif(WIN32)
+    set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIRARIES} -lpthread -lws2_32 -liconv -static")
+    target_compile_options(${PROJECT_NAME} PRIVATE -municode)
+    target_link_libraries(${PROJECT_NAME} -municode)
+    add_definitions(-D_FILE_OFFSET_BITS=64)
+    add_definitions(-DUNICODE -D_UNICODE)
+elseif(APPLE)
+  set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIRARIES} -liconv -lpthread")
+else()
+  add_definitions(-D_FILE_OFFSET_BITS=64)
+  set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIRARIES} -lpthread")
+endif()
+
+
