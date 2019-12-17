@@ -492,6 +492,7 @@ char ** convert_wargv_to_UTF8(int argc,wchar_t *wargv[])
 
                     write_cue_sheet(handle, file_path, 0, cue_file_path_unique);
                     free(cue_file_path_unique);
+			free(file_path);
                     fwprintf(stdout, L"\n\n We are done exporting CUE sheet. \n");
                 }
                
