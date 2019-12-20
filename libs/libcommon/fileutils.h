@@ -53,7 +53,7 @@ char * parse_format(const char * format, int tracknum, const char * year, const 
 // NOTE: any of the parameters may be NULL to be omitted
 char * make_filename(const char * path, const char * dir, const char * file, const char * extension);
 
-int recursive_mkdir(char* pathAndName, mode_t mode);
+int recursive_mkdir(char *pathAndName, char *base_dir, mode_t mode);
 
 int recursive_parent_mkdir(char* pathAndName, mode_t mode);
 
