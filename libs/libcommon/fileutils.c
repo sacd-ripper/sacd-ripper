@@ -291,21 +291,38 @@ char * parse_format(const char * format, int tracknum, const char * year, const 
 #include <sys/file.h>
 #endif
 
-// Uses mkdir() for every component of the path
-// and returns if any of those fails with anything other than EEXIST.
-int recursive_mkdir(char* path_and_name, mode_t mode)
+
+// Uses mkdir() for every component of the path except base_dir
+//  input: path_and_name (including base_dir)
+//         base_dir (from where to start creating directories)
+//         base_dir can be NULL
+// returns if any of those fails with anything other than EEXIST.
+//
+int recursive_mkdir(char* path_and_name,char * base_dir, mode_t mode)
 {
     int  count;
-    int  path_and_name_length = strlen(path_and_name);
+    int  path_and_name_length = 0;
     int  rc;
     char charReplaced;
+    char * pos=NULL;
+
+    if(path_and_name==NULL)return -1;
+
+    if(base_dir == NULL)
+        pos = path_and_name;
+    else
+        pos = path_and_name + strlen(base_dir)+1;
+
+    path_and_name_length = strlen(pos);
 
     for (count = 0; count < path_and_name_length; count++)
     {
-        if (path_and_name[count] == '/')
+        if (pos[count] == '/' || pos[count] == '\\')
         {
-            charReplaced             = path_and_name[count + 1];
-            path_and_name[count + 1] = '\0';
+            if(count==0)continue;  // skip first trailing slash
+
+            charReplaced             = pos[count];
+            pos[count] = '\0';
 
 #if defined(WIN32) || defined(_WIN32)
             {
@@ -314,20 +331,22 @@ int recursive_mkdir(char* path_and_name, mode_t mode)
                 free(wide_path_and_name);
             }
 #else
-            fprintf(stderr, "%s\n", path_and_name);
+            
             rc = mkdir(path_and_name, mode);
-#endif
+#endif            
+
 #ifdef __lv2ppu__
             sysFsChmod(path_and_name, S_IFMT | 0777); 
 #elif !defined(_WIN32)
             chmod(path_and_name, mode);
 #endif
-            path_and_name[count + 1] = charReplaced;
+            pos[count] = charReplaced;
 
             if (rc != 0 && !(errno == EEXIST || errno == EISDIR || errno == EACCES || errno == EROFS))
                 return rc;
         }
-    }
+    } // end for count
+
 
     // in case the path doesn't have a trailing slash:
 #if defined(WIN32) || defined(_WIN32)
@@ -345,7 +364,10 @@ int recursive_mkdir(char* path_and_name, mode_t mode)
 #elif !defined(_WIN32)
     chmod(path_and_name, mode);
 #endif
-    return rc;
+    if (rc != 0 && !(errno == EEXIST || errno == EISDIR || errno == EACCES || errno == EROFS))
+        return rc;
+    else
+        return 0;
 }
 
 // Uses mkdir() for every component of the path except the last one,
@@ -356,16 +378,18 @@ int recursive_parent_mkdir(char* path_and_name, mode_t mode)
     int have_component = 0;
     int rc             = 1; // guaranteed fail unless mkdir is called
 
+
     // find the last component and cut it off
     for (count = strlen(path_and_name) - 1; count >= 0; count--)
     {
-        if (path_and_name[count] != '/')
+        if (path_and_name[count] != '/' && path_and_name[count] != '\\')
             have_component = 1;
 
-        if (path_and_name[count] == '/' && have_component)
+        if ((path_and_name[count] == '/' && have_component) ||
+            (path_and_name[count] == '\\' && have_component) )
         {
             path_and_name[count] = 0;
-			
+
 #if defined(WIN32) || defined(_WIN32)
             {
                 wchar_t *wide_path_and_name = (wchar_t *) charset_convert(path_and_name, strlen(path_and_name), "UTF-8", "UCS-2-INTERNAL");
@@ -373,7 +397,7 @@ int recursive_parent_mkdir(char* path_and_name, mode_t mode)
                 free(wide_path_and_name);
             }
 #else
-            rc = mkdir(path_and_name, mode);
+            rc = mkdir(path_and_name, 0777); // 0774 // S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH
 #endif
             path_and_name[count] = '/';
         }
@@ -455,7 +479,7 @@ char * get_unique_dir(char *device, char *dir)
     int dir_exists = 0, count = 1;
     int len = strlen(dir) + 10;
 
-    char *device_dir = make_filename(NULL, device, dir, NULL);
+    char *device_dir = make_filename(device, dir , NULL,NULL);
 
     dir_exists  = path_dir_exists(device_dir);
     while (dir_exists == 1)
@@ -465,13 +489,12 @@ char * get_unique_dir(char *device, char *dir)
         char *dir_copy = calloc(len, sizeof(char));
         snprintf(dir_copy, len, "%s (%d)", dir, count++);
 
-        device_dir = make_filename(NULL,device, dir_copy, NULL);
+        device_dir = make_filename(device, dir_copy, NULL, NULL);
         dir_exists = path_dir_exists(device_dir);
         if (count > 20)
             break; // loop must be stoped somewhere
     }
-    if (device != NULL)
-    {       
+       
         
         // Remove the trailing slash
 #if defined(WIN32) || defined(_WIN32)
@@ -484,8 +507,6 @@ char * get_unique_dir(char *device, char *dir)
             device_dir[strlen(device_dir) - 1] = '\0';
         }
 
-        
-    }
     return device_dir;
 }
 
