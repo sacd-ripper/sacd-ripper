@@ -444,6 +444,7 @@ void read_config()
 //   Creates directory tree like: Album title \ (Disc no..) \ Stereo (or Multich)
 //     input: hadle
 //            area_idx
+//            If there is not multichannel area Then did not add \Stereo..or Multich 
 //            base_output_dir = directory from where to start creating new directory tree
 //
 char *create_path_output(scarletbook_handle_t *handle, int area_idx, char * base_output_dir)
@@ -470,8 +471,12 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
 
     strncat(path_output, album_path, strlen(album_path));
     free(album_path);
-    strncat(path_output, PATH_TRAILING_SLASH,1);
-    strcat(path_output, get_speaker_config_string(handle->area[area_idx].area_toc));
+
+    if (has_multi_channel(handle))
+    {
+        strncat(path_output, PATH_TRAILING_SLASH, 1);
+        strcat(path_output, get_speaker_config_string(handle->area[area_idx].area_toc));
+    }
 
     int ret_mkdir = recursive_mkdir(path_output, base_output_dir, 0774);
 
