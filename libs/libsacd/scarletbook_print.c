@@ -220,6 +220,8 @@ static void scarletbook_print_area_toc(scarletbook_handle_t *handle, int area_id
         fwprintf(stdout, L"\tArea Description Phonetic: %ls\n", ucs(area->description_phonetic));
 
     fwprintf(stdout, L"\tTrack Count: %i\n", area_toc->track_count);
+    fwprintf(stdout, L"\tTotal play time: %02d:%02d:%02d [mins:secs:frames]\n", area_toc->total_playtime.minutes, area_toc->total_playtime.seconds, area_toc->total_playtime.frames);
+
     fwprintf(stdout, L"\tSpeaker config: ");
     if (area_toc->channel_count == 2 && area_toc->extra_settings == 0)
     {
