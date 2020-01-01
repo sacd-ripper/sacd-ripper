@@ -669,178 +669,181 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
 
                 } // end if (opts.output_iso)
 
-                while (opts.two_channel + opts.multi_channel > 0)
+                if (opts.output_dsf || opts.output_dsdiff || opts.output_dsdiff_em || opts.export_cue_sheet)
                 {
-                    if (opts.multi_channel && (!has_multi_channel(handle))  )            // skip if we want multich but disc have no multich area
+                    while (opts.two_channel + opts.multi_channel > 0)
                     {
+                        if (opts.multi_channel && (!has_multi_channel(handle))) // skip if we want multich but disc have no multich area
+                        {
                             fwprintf(stdout, L"\n Asked multichannel format but disc has no multichannel area. So skip processing...                                            \n");
-                            goto end_while_opts;
-                    }
-
-                    if (opts.two_channel && (!has_two_channel(handle) )) // skip;   or want 2ch but disc have no 2 ch area (if exists ?)                                                        
-                    {
-                            fwprintf(stdout, L"\n Asked for stereo format but disc has no stereo area. So skip processing...                                            \n");
-                            goto end_while_opts;
-                    }
-
-                    if (opts.output_dsdiff_em)
-                    {
-                        // select the channel area
-                        area_idx =  has_multi_channel(handle) && opts.multi_channel  ? handle->mulch_area_idx : handle->twoch_area_idx;                        
-
-                        // create the output folder
-                        char *output_dir = create_path_output(handle, area_idx, opts.output_dir);
-                        if (output_dir == NULL)
-                        {
-                            free(album_filename);
-                            scarletbook_close(handle);
-                            sacd_close(sacd_reader);
-                            goto exit_main;
+                            opts.multi_channel = 0;
+                            continue;
                         }
 
-                        char *file_path_dsdiff_unique = get_unique_filename(NULL, output_dir, album_filename, "dff");
-                        free(output_dir);
-
-                        wchar_t *wide_filename;
-                        CHAR2WCHAR(wide_filename, file_path_dsdiff_unique);
-                        fwprintf(stdout, L"\n Exporting DFF edit master output in file: %ls\n", wide_filename);
-                        free(wide_filename);
-
-                        output = scarletbook_output_create(handle, handle_status_update_track_callback, handle_status_update_progress_callback, safe_fwprintf);
-
-                        scarletbook_output_enqueue_track(output, area_idx, 0, file_path_dsdiff_unique, "dsdiff_edit_master",
-                                                        (opts.convert_dst ? 1 : handle->area[area_idx].area_toc->frame_format != FRAME_FORMAT_DST));
-
-                        free(file_path_dsdiff_unique);
-
-						print_start_time();
-                        
-                        scarletbook_output_start(output);
-                        scarletbook_output_destroy(output);
-						
-						print_end_time();						
-
-                        fwprintf(stdout, L"\n\n We are done exporting DFF edit master.                                                          \n");
-
-                        // Must generate cue sheet
-                        opts.export_cue_sheet=1;
-
-                    } // end if  opts.output_dsdiff_em
-
-                    if (opts.export_cue_sheet)
-                    {
-                        // select the channel area
-                        area_idx = has_multi_channel(handle) && opts.multi_channel ? handle->mulch_area_idx : handle->twoch_area_idx;
-
-                        // create the output folder
-                        char *output_dir = create_path_output(handle, area_idx, opts.output_dir);
-                        if (output_dir == NULL)
+                        if (opts.two_channel && (!has_two_channel(handle) )) // skip;   if want 2ch but disc have no 2 ch area (YES !!! Exists these type of discs  - e.g Rubinstein - Grieg..only multich area)                                                    
                         {
-                            free(album_filename);
-                            scarletbook_close(handle);
-                            sacd_close(sacd_reader);
-                            goto exit_main;
-                        }
-
-                        char *cue_file_path_unique = get_unique_filename(NULL, output_dir, album_filename, "cue");
-                        free(output_dir);
-
-                        wchar_t *wide_filename;
-                        CHAR2WCHAR(wide_filename, cue_file_path_unique);
-                        fwprintf(stdout, L"\n\n Exporting CUE sheet: [%ls] ... \n", wide_filename);
-                        free(wide_filename);
-
-                        file_path = make_filename(NULL, NULL, album_filename, "dff");
-
-                        write_cue_sheet(handle, file_path, area_idx, cue_file_path_unique);
-                        free(cue_file_path_unique);
-                        free(file_path);
-
-                        
-                        fwprintf(stdout, L"\n\n We are done exporting CUE sheet. \n");
-                    }
-
-                    if (opts.output_dsf || opts.output_dsdiff)
-                    {
-                        // select the channel area
-                        area_idx = has_multi_channel(handle) && opts.multi_channel ? handle->mulch_area_idx : handle->twoch_area_idx;
-
-                        // create the output folder
-                        char *output_dir = create_path_output(handle, area_idx, opts.output_dir_conc);
-                        if (output_dir == NULL)
-                        {
-                            free(album_filename);
-                            scarletbook_close(handle);
-                            sacd_close(sacd_reader);
-                            goto exit_main;
-                        }
-
-                        wchar_t *wide_folder;
-                        CHAR2WCHAR(wide_folder, output_dir);
-                        if (opts.output_dsf)
-                        {
-                            fwprintf(stdout, L"\n Exporting DSF output in folder: %ls\n", wide_folder);
-                        }
-                        else
-                        {
-                            fwprintf(stdout, L"\n Exporting DSDIFF output in folder: %ls\n", wide_folder);
-                        }
-                        free(wide_folder);
-
-
-                        output = scarletbook_output_create(handle, handle_status_update_track_callback, handle_status_update_progress_callback, safe_fwprintf);
-                        // fill the queue with items to rip
-                        for (i = 0; i < handle->area[area_idx].area_toc->track_count; i++) 
-                        {
-                            if (opts.select_tracks && opts.selected_tracks[i] == 0)
+                                fwprintf(stdout, L"\n Asked for stereo format but disc has no stereo area. So skip processing...                                            \n");
+                                opts.two_channel = 0;
                                 continue;
+                        }
 
-                            musicfilename = get_music_filename(handle, area_idx, i, "",performer_flag);
+                        if (opts.output_dsdiff_em)
+                        {
+                            // select the channel area
+                            area_idx =  has_multi_channel(handle) && opts.multi_channel  ? handle->mulch_area_idx : handle->twoch_area_idx;                        
 
+                            // create the output folder
+                            char *output_dir = create_path_output(handle, area_idx, opts.output_dir);
+                            if (output_dir == NULL)
+                            {
+                                free(album_filename);
+                                scarletbook_close(handle);
+                                sacd_close(sacd_reader);
+                                goto exit_main;
+                            }
+
+                            char *file_path_dsdiff_unique = get_unique_filename(NULL, output_dir, album_filename, "dff");
+                            free(output_dir);
+
+                            wchar_t *wide_filename;
+                            CHAR2WCHAR(wide_filename, file_path_dsdiff_unique);
+                            fwprintf(stdout, L"\n Exporting DFF edit master output in file: %ls\n", wide_filename);
+                            free(wide_filename);
+
+                            output = scarletbook_output_create(handle, handle_status_update_track_callback, handle_status_update_progress_callback, safe_fwprintf);
+
+                            scarletbook_output_enqueue_track(output, area_idx, 0, file_path_dsdiff_unique, "dsdiff_edit_master",
+                                                            (opts.convert_dst ? 1 : handle->area[area_idx].area_toc->frame_format != FRAME_FORMAT_DST));
+
+                            free(file_path_dsdiff_unique);
+
+                            print_start_time();
+                            
+                            scarletbook_output_start(output);
+                            scarletbook_output_destroy(output);
+                            
+                            print_end_time();						
+
+                            fwprintf(stdout, L"\n\n We are done exporting DFF edit master.                                                          \n");
+
+                            // Must generate cue sheet
+                            opts.export_cue_sheet=1;
+
+                        } // end if  opts.output_dsdiff_em
+
+                        if (opts.export_cue_sheet)
+                        {
+                            // select the channel area
+                            area_idx = has_multi_channel(handle) && opts.multi_channel ? handle->mulch_area_idx : handle->twoch_area_idx;
+
+                            // create the output folder
+                            char *output_dir = create_path_output(handle, area_idx, opts.output_dir);
+                            if (output_dir == NULL)
+                            {
+                                free(album_filename);
+                                scarletbook_close(handle);
+                                sacd_close(sacd_reader);
+                                goto exit_main;
+                            }
+
+                            char *cue_file_path_unique = get_unique_filename(NULL, output_dir, album_filename, "cue");
+                            free(output_dir);
+
+                            wchar_t *wide_filename;
+                            CHAR2WCHAR(wide_filename, cue_file_path_unique);
+                            fwprintf(stdout, L"\n\n Exporting CUE sheet: [%ls] ... \n", wide_filename);
+                            free(wide_filename);
+
+                            file_path = make_filename(NULL, NULL, album_filename, "dff");
+
+                            write_cue_sheet(handle, file_path, area_idx, cue_file_path_unique);
+                            free(cue_file_path_unique);
+                            free(file_path);
+
+                            
+                            fwprintf(stdout, L"\n\n We are done exporting CUE sheet. \n");
+                        }
+
+                        if (opts.output_dsf || opts.output_dsdiff)
+                        {
+                            // select the channel area
+                            area_idx = has_multi_channel(handle) && opts.multi_channel ? handle->mulch_area_idx : handle->twoch_area_idx;
+
+                            // create the output folder
+                            char *output_dir = create_path_output(handle, area_idx, opts.output_dir_conc);
+                            if (output_dir == NULL)
+                            {
+                                free(album_filename);
+                                scarletbook_close(handle);
+                                sacd_close(sacd_reader);
+                                goto exit_main;
+                            }
+
+                            wchar_t *wide_folder;
+                            CHAR2WCHAR(wide_folder, output_dir);
                             if (opts.output_dsf)
                             {
-                                file_path = make_filename(NULL, output_dir, musicfilename, "dsf");
-                                scarletbook_output_enqueue_track(output, area_idx, i, file_path, "dsf", 
-                                    1 /* always decode to DSD */);
+                                fwprintf(stdout, L"\n Exporting DSF output in folder: %ls\n", wide_folder);
                             }
-                            else if (opts.output_dsdiff)
+                            else
                             {
-                                file_path = make_filename(NULL, output_dir, musicfilename, "dff");
-                                scarletbook_output_enqueue_track(output, area_idx, i, file_path, "dsdiff", 
-                                    (opts.convert_dst ? 1 : handle->area[area_idx].area_toc->frame_format != FRAME_FORMAT_DST));
+                                fwprintf(stdout, L"\n Exporting DSDIFF output in folder: %ls\n", wide_folder);
                             }
-                            free(file_path);
-                            free(musicfilename);                                                   
-                        }
+                            free(wide_folder);
 
-                        free(output_dir);
 
-                        print_start_time();
+                            output = scarletbook_output_create(handle, handle_status_update_track_callback, handle_status_update_progress_callback, safe_fwprintf);
+                            // fill the queue with items to rip
+                            for (i = 0; i < handle->area[area_idx].area_toc->track_count; i++) 
+                            {
+                                if (opts.select_tracks && opts.selected_tracks[i] == 0)
+                                    continue;
 
-                        LOG(lm_main, LOG_NOTICE, ("Start processing dsf/dff files"));
-                        scarletbook_output_start(output);
-						LOG(lm_main, LOG_NOTICE, ("Start destroy dsf/dff"));
-                        scarletbook_output_destroy(output);
-						LOG(lm_main, LOG_NOTICE, ("Finish destroy dsf/dff"));
-						
-						print_end_time();
+                                musicfilename = get_music_filename(handle, area_idx, i, "",performer_flag);
 
-                        if (opts.output_dsf)
-                            fwprintf(stdout, L"\n\n We are done exporting DSF..                                                          \n");                       
-                        else
-                            fwprintf(stdout, L"\n\n We are done exporting DSDIFF..                                                          \n");
+                                if (opts.output_dsf)
+                                {
+                                    file_path = make_filename(NULL, output_dir, musicfilename, "dsf");
+                                    scarletbook_output_enqueue_track(output, area_idx, i, file_path, "dsf", 
+                                        1 /* always decode to DSD */);
+                                }
+                                else if (opts.output_dsdiff)
+                                {
+                                    file_path = make_filename(NULL, output_dir, musicfilename, "dff");
+                                    scarletbook_output_enqueue_track(output, area_idx, i, file_path, "dsdiff", 
+                                        (opts.convert_dst ? 1 : handle->area[area_idx].area_toc->frame_format != FRAME_FORMAT_DST));
+                                }
+                                free(file_path);
+                                free(musicfilename);                                                   
+                            }
 
-                    } // end if (opts.output_dsf || opts.output_dsdiff)
+                            free(output_dir);
 
-                    
-                    
+                            print_start_time();
 
-end_while_opts:     if (opts.multi_channel == 1)
-                        opts.multi_channel = 0;
-                    else if(opts.two_channel == 1)
-                        opts.two_channel = 0;
+                            LOG(lm_main, LOG_NOTICE, ("Start processing dsf/dff files"));
+                            scarletbook_output_start(output);
+                            LOG(lm_main, LOG_NOTICE, ("Start destroy dsf/dff"));
+                            scarletbook_output_destroy(output);
+                            LOG(lm_main, LOG_NOTICE, ("Finish destroy dsf/dff"));
+                            
+                            print_end_time();
 
-                } // end while opts.two_channel + opts.multi_channel
+                            if (opts.output_dsf)
+                                fwprintf(stdout, L"\n\n We are done exporting DSF..                                                          \n");                       
+                            else
+                                fwprintf(stdout, L"\n\n We are done exporting DSDIFF..                                                          \n");
+
+                        } // end if (opts.output_dsf || opts.output_dsdiff)
+
+                        
+                        if (opts.multi_channel == 1)
+                            opts.multi_channel = 0;
+                        else if(opts.two_channel == 1)
+                            opts.two_channel = 0;
+
+                    } // end while opts.two_channel + opts.multi_channel
+                }  // end if opts....
                 free(album_filename);
                 
 
