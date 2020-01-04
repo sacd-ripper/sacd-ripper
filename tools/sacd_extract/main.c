@@ -266,11 +266,6 @@ static void handle_sigint(int sig_no)
     scarletbook_output_interrupt(output);
 }
 
-static void handle_sigterm(int sig_no)
-{
-    safe_fwprintf(stdout, L"\n\n Received signal to terminate program...                                                      \n");
-    scarletbook_output_interrupt(output);
-}
 
 static void handle_status_update_track_callback(char *filename, int current_track, int total_tracks)
 {
@@ -332,17 +327,12 @@ static void init(void)
 
 #if defined(WIN32) || defined(_WIN32)
     signal(SIGINT, handle_sigint);
-	signal(SIGTERM, handle_sigterm);
+	
 #else
     struct sigaction sa;
     memset(&sa, 0, sizeof(sa));
     sa.sa_handler = &handle_sigint;
     sigaction(SIGINT, &sa, NULL);
-	
-	struct sigaction sa_term;
-    memset(&sa_term, 0, sizeof(sa_term));
-    sa_term.sa_handler = &handle_sigterm;
-    sigaction(SIGTERM, &sa_term, NULL);
 #endif
 
     init_logging();
@@ -498,6 +488,7 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
     char *album_filename = NULL, *musicfilename = NULL, *file_path = NULL;
     int i, area_idx;
     sacd_reader_t *sacd_reader = NULL;
+	int exit_main_flag=0; //0=succes; -1 failed
 
 #ifdef PTW32_STATIC_LIB
     pthread_win32_process_attach_np();
@@ -517,6 +508,7 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
         if (fwide(stdout, 1) < 0)
         {
             fprintf(stderr, "ERROR: Output not set to wide.\n");
+			exit_main_flag=-1;
             goto exit_main_1;
         }
 
@@ -549,6 +541,7 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
             if (path_dir_exists(opts.output_dir) == 0)
             {
                 fprintf(stderr, "%s doesn't exist or is not a directory.\n", opts.output_dir);
+				exit_main_flag=-1;
                 goto exit_main;
             }
             if (opts.output_dir_conc == NULL)
@@ -560,6 +553,7 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
             if (path_dir_exists(opts.output_dir_conc) == 0)
             {
                 fprintf(stderr, "%s doesn't exist or is not a directory.\n", opts.output_dir_conc);
+				exit_main_flag=-1;
                 goto exit_main;
             }
             if (opts.output_dir == NULL)
@@ -616,6 +610,7 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
                         free(album_filename);
                         scarletbook_close(handle);
                         sacd_close(sacd_reader);
+						exit_main_flag=-1;
                         goto exit_main;
                     }
 
@@ -699,6 +694,7 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
                                 free(album_filename);
                                 scarletbook_close(handle);
                                 sacd_close(sacd_reader);
+								exit_main_flag=-1;
                                 goto exit_main;
                             }
 
@@ -743,6 +739,7 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
                                 free(album_filename);
                                 scarletbook_close(handle);
                                 sacd_close(sacd_reader);
+								exit_main_flag=-1;
                                 goto exit_main;
                             }
 
@@ -776,6 +773,7 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
                                 free(album_filename);
                                 scarletbook_close(handle);
                                 sacd_close(sacd_reader);
+								exit_main_flag=-1;
                                 goto exit_main;
                             }
 
@@ -846,12 +844,17 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
                 }  // end if opts....
                 free(album_filename);
                 
-
+				scarletbook_close(handle);
             }  // end if handle
-            scarletbook_close(handle);
+			else
+				exit_main_flag=-1;
+            
+			sacd_close(sacd_reader);
         }
+		else
+			exit_main_flag=-1;
 
-        sacd_close(sacd_reader);
+        
 
 exit_main:
     fwprintf(stdout, L"\nProgram terminates!\n");
@@ -889,5 +892,5 @@ exit_main_1:
 	 
 #endif
 	
-    return 0;
+    return exit_main_flag;
 }
