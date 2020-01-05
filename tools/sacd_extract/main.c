@@ -218,8 +218,64 @@ static int parse_options(int argc, char *argv[])
         case 'c': opts.convert_dst = 1; break;
         case 'C': opts.export_cue_sheet = 1; break;
         case 'i': opts.input_device = strdup(optarg); break;
-        case 'o': opts.output_dir = strdup(optarg);   break;
-		case 'y': opts.output_dir_conc = strdup(optarg); break;
+        case 'o':
+        {
+			size_t n = strlen(optarg);
+            if (n > 2)
+            {     				
+				// remove double quotes if exists (especially in Windows)
+				char * start_dir;
+                if (optarg[0] ==  '\"' )
+                {  
+					start_dir=optarg + 1;
+                    n =n-1;
+                }
+				else
+					start_dir=optarg;
+				if (start_dir[n - 1] ==  '\"' )  
+				  n = n-1;
+								 
+                // strip ending slash if exists
+                if (start_dir[n - 1] == '\\' ||
+                    start_dir[n - 1] == '/')
+                {
+					n=n-1;
+                }
+                //opts.output_dir = strndup(start_dir, n - 1); //  strndup didn't exist in Windows
+                opts.output_dir = calloc(n+1, sizeof(char));
+                memcpy(opts.output_dir, start_dir, n);                               
+            }
+            break;
+        }
+        case 'y': 
+        {
+			size_t n = strlen(optarg);
+            if (n > 2)
+            {     				
+				// remove double quotes if exists (especially in Windows)
+				char * start_dir;
+                if (optarg[0] ==  '\"' )
+                {
+                    start_dir = optarg + 1;
+                    n = n - 1;
+                }
+                else
+					start_dir=optarg;
+				if (start_dir[n - 1] ==  '\"' )  
+				  n = n-1;
+								 
+                // strip ending slash if exists
+                if (start_dir[n - 1] == '\\' ||
+                    start_dir[n - 1] == '/')
+                {
+					n=n-1;
+                }
+                //opts.output_dir = strndup(start_dir, n - 1); //  strndup didn't exist in Windows
+                opts.output_dir = calloc(n+1, sizeof(char));
+                memcpy(opts.output_dir_conc, start_dir, n);                               
+            }		
+            break;
+        }
         case 'P': opts.print = 1; break;
         case 'v': opts.version = 1; break;
 
