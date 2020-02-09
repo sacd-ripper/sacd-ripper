@@ -648,12 +648,12 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
 					char *output_dir;
 					if(opts.output_dir !=NULL)
 					{
-						output_dir = calloc(strlen(opts.output_dir) + 1 + strlen(album_path), sizeof(char));
+						output_dir = calloc(strlen(opts.output_dir) + 1 + strlen(album_path) + 1, sizeof(char));
 						strncpy(output_dir, opts.output_dir, strlen(opts.output_dir));
 						strncat(output_dir, PATH_TRAILING_SLASH, 1);
 					}
 					else
-						output_dir = calloc(strlen(album_path), sizeof(char));
+						output_dir = calloc(strlen(album_path) + 1, sizeof(char));
 					
 
                     strncat(output_dir, album_path, strlen(album_path));
