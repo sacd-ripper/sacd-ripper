@@ -336,7 +336,7 @@ static void frame_read_callback(scarletbook_handle_t *handle, uint8_t* frame_dat
     else   // DSF, DSDIFF
     {
         if (frame_timecode >= frame_count_time_start &&
-            frame_timecode <= frame_count_time_end )
+            frame_timecode < frame_count_time_end )
         {
 
             if (ft->dsd_encoded_export && ft->dst_encoded_import)
