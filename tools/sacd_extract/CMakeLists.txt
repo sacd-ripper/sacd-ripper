@@ -33,12 +33,15 @@ include_directories("../../libs/libdstdec")
 include_directories("../../libs/libid3")
 include_directories("../../libs/libsacd")
 
+message(STATUS "libmxl2 ${LIBXML2_LIBRARIES}")
+find_package(LibXml2 REQUIRED)
+
 # Extra flags for GCC
 if (CMAKE_COMPILER_IS_GNUCC OR (CMAKE_C_COMPILER_ID MATCHES "Clang"))
   add_definitions(
       -pipe
       -Wall -Wextra -Wcast-align -Wpointer-arith -O3
-      -Wno-unused-parameter -msse2)
+      -Wno-unused-parameter -msse2 `xml2-config --cflags --libs`)
 endif (CMAKE_COMPILER_IS_GNUCC OR (CMAKE_C_COMPILER_ID MATCHES "Clang"))
 
 file(GLOB libcommon_headers ../../libs/libcommon/*.h)
@@ -75,7 +78,7 @@ if (MSVC)
     ADD_DEFINITIONS(-D_CRT_NONSTDC_NO_DEPRECATE)
     ADD_DEFINITIONS(-D_CRT_SECURE_NO_DEPRECATE)
     ADD_DEFINITIONS(-D_CRT_NONSTDC_NO_WARNINGS)
-    SET (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} ws2_32.lib pthreadVC2.lib iconv.lib")
+    SET (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} ws2_32.lib pthreadVC2.lib iconv.lib libxml2.lib")
     SET (CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} ws2_32.lib pthreadVC2_static.lib iconv.lib /NODEFAULTLIB:LIBCMT.LIB") 
 
     # disable warnings about libiconv link directory
@@ -84,13 +87,13 @@ if (MSVC)
     include_directories("../../libs/libiconv/include")
     link_directories("../../libs/libiconv/lib/")
 elseif(WIN32)
-    set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIRARIES} -lpthread -lws2_32 -liconv -static")
+    set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIRARIES} -lpthread -lws2_32 -liconv -lxml2 -static")
     target_compile_options(${PROJECT_NAME} PRIVATE -municode)
     target_link_libraries(${PROJECT_NAME} -municode)
     add_definitions(-D_FILE_OFFSET_BITS=64)
-    add_definitions(-DUNICODE -D_UNICODE)
+    add_definitions(-DUNICODE -D_UNICODE -DIN_LIBXML)
 elseif(APPLE)
-  set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIRARIES} -liconv -lpthread")
+  set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIRARIES} -liconv -lpthread -lxml2")
 else()
   add_definitions(-D_FILE_OFFSET_BITS=64)
   set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIRARIES} -lpthread")
