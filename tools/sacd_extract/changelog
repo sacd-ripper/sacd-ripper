@@ -1,16 +1,21 @@
 version 0.3.9.3 prelease
 
-Binaries compiled with mingw32 for Windows (64bit) & Gnu 7.4.0 for Linux.
--fixed infinite loop 99% when iso files are corrupted;
--added Performer tag to dsf files;
--now multi-byte chars in filenames is supported for Windows when input files are iso (using wmain);
--better management in creating folders/files/tracks names (including albums with multiple discs);
--changed priority in title/artist extracting metadata. Now disc_title/disc_artist came first instead of album_title/album_artist (useful in case of multiple discs of an album);
--added -w (--concurrent) for compatibility with SACDExtractGUI;
--added -o (--output-dir[=DIR] ) and -y (--output-dir-conc[=DIR]) option for setting explicit output folder (for compatibility with SACDExtractGUI, except option -z  (--nopad);
--for DSF files the pop noise is reduced by padding the last block with '69'h instead of '00' (so --nopad option is useless);
--for DSF files some frames are trimmed out (based on timecode) to reflect the correct playing time of tracks;
--eliminates crashes when disk for output is full.
+Binaries compiled with mingw64 for Windows (64bit) & Gnu 7.4.0 for Linux.
+- fixed infinite loop 99% when iso files are corrupted;
+- added Performer tag to dsf files;
+- now multi-byte chars in filenames is supported for Windows when input files are iso (using wmain);
+- better management in creating folders/files/tracks names (including albums with multiple discs);
+- now folders are created like this: Album name/(Disc no)/(Stereo or 5ch or 6ch). If configuration file sacd_extract.cfg exist in working folder of app(which can be shown with -v option) and has text lines: 'artist=1' (and/or 'performer=1') it adds artist at the name of folder and/or adds performer at the filename of tracks;
+- changed priority in title/artist extracting metadata. Now disc_title/disc_artist came first instead of album_title/album_artist (useful in case of multiple discs of an album);
+- added -w (--concurrent) for compatibility with SACDExtractGUI;
+- added -o (--output-dir[=DIR] ) and -y (--output-dir-conc[=DIR]) options for setting explicit output folder (for compatibility with SACDExtractGUI, except option -z (--nopad);
+- for DSF files the pop noise is reduced by padding the last block with '69'h instead of '00' (so --nopad option is useless);
+- audio frames are trimmed out (based on timecode) at boundaries to reflect the correct playing time of tracks specified in Tracklist. This is done for DSF/DFF files (no for DFF-EM);
+- eliminates crashes when disk for output is full;
+- corrected behavior in case of discs with only one multi-channel area (with no stereo area);
+- added total play time for each area when printing disc info;
+- now it strips out ending slash or backslash, if exists, at --output-dir or --output-dir-conc to be compatible with BatchEncoder;
+- added xml metadata file export option (is activated when Print disc summary is checked). Libray libxml2 is used.
  
 version 0.3.7
 
