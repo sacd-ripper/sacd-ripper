@@ -81,11 +81,13 @@ static void scarletbook_print_disc_text(scarletbook_handle_t *handle)
 
     uint8_t current_charset_nr;
     char *current_charset_name;
-
     current_charset_nr = master_toc->locales[0].character_set & 0x07;
     current_charset_name = (char *)character_set[current_charset_nr];
 
-    fwprintf(stdout, L"\tLocale: %c%c, Code character set:[%d], %ls\n", master_toc->locales[0].language_code[0], master_toc->locales[0].language_code[1], master_toc->locales[0].character_set, ucs(current_charset_name));
+    if (master_toc->locales[0].language_code[0] != '\0' && master_toc->locales[0].language_code[1] != '\0')
+        fwprintf(stdout, L"\tLocale: %c%c, Code character set:[%d], %ls\n", master_toc->locales[0].language_code[0], master_toc->locales[0].language_code[1], master_toc->locales[0].character_set, ucs(current_charset_name));
+    else
+        fwprintf(stdout, L"\tLocale: (zero) unspecified, asume Code character set:[%d], %ls\n",  master_toc->locales[0].character_set, ucs(current_charset_name));
 
     if (master_text->disc_title)
         fwprintf(stdout, L"\tTitle: %ls\n", ucs(master_text->disc_title));
@@ -160,6 +162,7 @@ static void scarletbook_print_master_toc(scarletbook_handle_t *handle)
 static void scarletbook_print_area_text(scarletbook_handle_t *handle, int area_idx)
 {
     int i;
+
     fwprintf(stdout, L"\tTrack list [%d]:\n", area_idx);
     for (i = 0; i < handle->area[area_idx].area_toc->track_count; i++)
     {
@@ -192,6 +195,12 @@ static void scarletbook_print_area_text(scarletbook_handle_t *handle, int area_i
             fwprintf(stdout, L"\t\tExtra Message[%d]: %ls\n", i, ucs(track_text->track_type_extra_message));
         if (track_text->track_type_extra_message_phonetic)
             fwprintf(stdout, L"\t\tExtra Message Phonetic[%d]: %ls\n", i, ucs(track_text->track_type_extra_message_phonetic));
+
+        area_tracklist_time_t time_start = handle->area[area_idx].area_tracklist_time->start[i];
+        area_tracklist_time_t time_duration = handle->area[area_idx].area_tracklist_time->duration[i];
+        fwprintf(stdout, L"\t\tTrack_Start_Time_Code: %02d:%02d:%02d [mins:secs:frames]\n", time_start.minutes, time_start.seconds, time_start.frames);
+        fwprintf(stdout, L"\t\tDuration: %02d:%02d:%02d [mins:secs:frames]\n", time_duration.minutes, time_duration.seconds, time_duration.frames);
+        fwprintf(stdout, L"\n");
     }
 }
 
