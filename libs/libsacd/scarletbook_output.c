@@ -149,21 +149,50 @@ int scarletbook_output_enqueue_track(scarletbook_output_t *output, int area, int
         }
         else
         {
-            if (track > 0) 
+            //if (track > 0) 
+            //{
+            output_format_ptr->start_lsn = sb_handle->area[area].area_tracklist_offset->track_start_lsn[track];
+            // }
+            // else 
+            // {
+            //     output_format_ptr->start_lsn = sb_handle->area[area].area_toc->track_start;
+            // }
+            // if (track < sb_handle->area[area].area_toc->track_count - 1) 
+            // {
+            //     output_format_ptr->length_lsn = sb_handle->area[area].area_tracklist_offset->track_start_lsn[track + 1] - output_format_ptr->start_lsn + 1;
+            // }
+            //else 
+            //{
+             //   output_format_ptr->length_lsn = sb_handle->area[area].area_toc->track_end - output_format_ptr->start_lsn +1;
+            //}
+            output_format_ptr->length_lsn = sb_handle->area[area].area_tracklist_offset->track_length_lsn[track];
+
+            //The Track_Start_Address of a Track must be in the Track Area of
+            //    the corresponding Audio Area
+            if (!(output_format_ptr->start_lsn >= sb_handle->area[area].area_toc->track_start) ||
+                !(output_format_ptr->start_lsn <= sb_handle->area[area].area_toc->track_end)    )
             {
-                output_format_ptr->start_lsn = sb_handle->area[area].area_tracklist_offset->track_start_lsn[track];
+                LOG(lm_main, LOG_NOTICE, ("Queuing error: track_start_lsn is not is area! area: %d, track %d, start_lsn: %d, length_lsn: %d", area, track, output_format_ptr->start_lsn, output_format_ptr->length_lsn));
+                output_format_ptr->cb_fwprintf(stderr, L"\n Queuing error: track_start_lsn is not is area! area: %d, track %d, start_lsn: %d, length_lsn: %d\n", area, track, output_format_ptr->start_lsn, output_format_ptr->length_lsn);
             }
-            else 
+
+            //  For 1 ≤ track < N_Tracks the following equation must be true:
+            //        Track_Start_Address[track+1] ≥ Track_Start_Address[track] + Track_Length[track] - 1
+            if (track < sb_handle->area[area].area_toc->track_count - 1)
             {
-                output_format_ptr->start_lsn = sb_handle->area[area].area_toc->track_start;
+               if( !(sb_handle->area[area].area_tracklist_offset->track_start_lsn[track + 1] >= sb_handle->area[area].area_tracklist_offset->track_start_lsn[track] + sb_handle->area[area].area_tracklist_offset->track_length_lsn[track] - 1))
+                 {
+                     LOG(lm_main, LOG_NOTICE, ("Queuing error: equation not valid! area: %d, track %d, start_lsn: %d, length_lsn: %d", area, track, output_format_ptr->start_lsn, output_format_ptr->length_lsn));
+                     output_format_ptr->cb_fwprintf(stderr, L"\n Queuing error: equation not valid(beetween track_start_lsn and track_length_lsn)! area: %d, track %d, start_lsn: %d, length_lsn: %d\n", area, track, output_format_ptr->start_lsn, output_format_ptr->length_lsn);
+                 }
             }
-            if (track < sb_handle->area[area].area_toc->track_count - 1) 
+            else
             {
-                output_format_ptr->length_lsn = sb_handle->area[area].area_tracklist_offset->track_start_lsn[track + 1] - output_format_ptr->start_lsn + 1;
-            }
-            else 
-            {
-                output_format_ptr->length_lsn = sb_handle->area[area].area_toc->track_end - output_format_ptr->start_lsn;
+                if (!(sb_handle->area[area].area_toc->track_end >= sb_handle->area[area].area_tracklist_offset->track_start_lsn[track] + sb_handle->area[area].area_tracklist_offset->track_length_lsn[track] - 1))
+                {
+                    LOG(lm_main, LOG_NOTICE, ("Queuing error: equation not valid! area: %d, track %d, start_lsn: %d, length_lsn: %d", area, track, output_format_ptr->start_lsn, output_format_ptr->length_lsn));
+                    output_format_ptr->cb_fwprintf(stderr, L"\n Queuing error: equation not valid(beetween track_start_lsn and track_length_lsn)! area: %d, track %d, start_lsn: %d, length_lsn: %d\n", area, track, output_format_ptr->start_lsn, output_format_ptr->length_lsn);
+                }
             }
         }
 
@@ -313,7 +342,7 @@ static void frame_read_callback(scarletbook_handle_t *handle, uint8_t* frame_dat
     uint64_t frame_count_time_end = TIME_FRAMECOUNT(&handle->area[ft->area].area_tracklist_time->start[ft->track]) +
                                     TIME_FRAMECOUNT(&handle->area[ft->area].area_tracklist_time->duration[ft->track]);
 
-    uint64_t frame_timecode =  TIME_FRAMECOUNT(&handle->audio_sector.frame[0].timecode);
+    uint64_t frame_timecode = TIME_FRAMECOUNT(&handle->audio_sector.frame[handle->frame_info_counter].timecode);
 
     if (ft->handler.flags & OUTPUT_FLAG_EDIT_MASTER) //  only for DSDIFF master
     {
@@ -356,7 +385,6 @@ static void frame_read_callback(scarletbook_handle_t *handle, uint8_t* frame_dat
             }
         }
     }
-	
 }
 
 #ifdef __lv2ppu__
