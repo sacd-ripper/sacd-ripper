@@ -1,6 +1,6 @@
 version 0.3.9.3 prelease
 
-Binaries compiled with mingw64 for Windows (64bit) & Gnu 7.4.0 for Linux.
+Binaries compiled with cross compiler mingw64 for Windows (64bit) & Gnu 7.4.0 for Linux.
 - fixed infinite loop 99% when iso files are corrupted;
 - added Performer tag to dsf files;
 - now multi-byte chars in filenames is supported for Windows when input files are iso (using wmain);
