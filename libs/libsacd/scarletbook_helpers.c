@@ -93,8 +93,8 @@ int utf8cpy(char *dst, char *src, int n)
 #define MAX_TRACK_ARTIST_LEN 40
 
 //  Generates a name for a diretory from disc/album artist and album/disc title
-//  if album is muliset the adds  - 'Disc no- no total discs'
-// if artist_flag >0 the adds disc/album artist to the name of directory
+//  if album is muliset then adds  - 'Disc no-no total discs'
+// if artist_flag >0 then adds disc/album artist to the name of directory
 //   NOTE: caller must free the returned string!
 char *get_album_dir(scarletbook_handle_t *handle, int artist_flag)
 {
@@ -144,6 +144,7 @@ char *get_album_dir(scarletbook_handle_t *handle, int artist_flag)
             pos = pos1;
 
         strncpy(disc_artist, p_artist, min(pos - p_artist, MAX_DISC_ARTIST_LEN));
+        sanitize_filename(disc_artist);
     }
 
     memset(disc_album_title, 0, sizeof(disc_album_title));
@@ -153,6 +154,7 @@ char *get_album_dir(scarletbook_handle_t *handle, int artist_flag)
         if (!pos)
             pos = p_album_title + strlen(p_album_title);
         strncpy(disc_album_title, p_album_title, min(pos - p_album_title, MAX_ALBUM_TITLE_LEN));
+        sanitize_filename(disc_album_title);
     }
 
     char multiset_s[20] = "";
@@ -167,8 +169,8 @@ char *get_album_dir(scarletbook_handle_t *handle, int artist_flag)
 
     snprintf(disc_album_year, sizeof(disc_album_year), "%04d", handle->master_toc->disc_date_year);
 
-    sanitize_filename(disc_artist);
-    sanitize_filename(disc_album_title_final);
+   
+    //sanitize_filename(disc_album_title_final);
 
     if (strlen(disc_artist) > 0 && strlen(disc_album_title) > 0 && artist_flag !=0 )
         albumdir = parse_format("%A - %L", 0, disc_album_year, disc_artist, disc_album_title_final, NULL);
@@ -179,7 +181,7 @@ char *get_album_dir(scarletbook_handle_t *handle, int artist_flag)
     else
         albumdir = parse_format("Unknown Album", 0, disc_album_year, disc_artist, disc_album_title_final, NULL);
 
-    sanitize_filepath(albumdir);
+    //sanitize_filepath(albumdir);
 
     free(disc_album_title_final);
     
@@ -191,7 +193,7 @@ char *get_album_dir(scarletbook_handle_t *handle, int artist_flag)
 //  Generates a path from disc title or album title
 //  If album has multiple discs then
 //   adds /Disc 1 of 3, /Disc 1 of 2 ....
-// if artist_flag=1 the adds artist to the path
+// if artist_flag=1 then adds artist to the path
 //  NOTE: caller must free the returned string!
 char *get_path_disc_album(scarletbook_handle_t *handle, int artist_flag)
 {
@@ -236,7 +238,7 @@ char *get_path_disc_album(scarletbook_handle_t *handle, int artist_flag)
         strncpy(disc_title, "unknown title", min(strlen("unknown title"), MAX_ALBUM_TITLE_PATH_LEN));
     }
 
-    memset(disc_album_title, 0, sizeof(disc_album_title));
+    memset(disc_album_title, 0,sizeof(disc_album_title));
     if (p_album_title)
     {
         strncpy(disc_album_title, p_album_title, min(strlen(p_album_title), MAX_ALBUM_TITLE_PATH_LEN));
@@ -300,8 +302,6 @@ char *get_path_disc_album(scarletbook_handle_t *handle, int artist_flag)
             strncat(disc_album_title_final, disc_album_title, strlen(disc_album_title));
         }
 
-        
-
 #if defined(WIN32) || defined(_WIN32)
             strncat(disc_album_title_final, "\\", 1);
 #else
@@ -339,7 +339,7 @@ char *get_path_disc_album(scarletbook_handle_t *handle, int artist_flag)
         
     }
 
-    sanitize_filepath(disc_album_title_final);
+    //sanitize_filepath(disc_album_title_final);
     
     return disc_album_title_final;
 }
