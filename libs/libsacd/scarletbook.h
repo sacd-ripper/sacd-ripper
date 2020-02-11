@@ -29,7 +29,7 @@
 #undef PRAGMA_PACK_BEGIN
 #undef PRAGMA_PACK_END
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) &&  !defined(__MINGW32__)
 #if __GNUC__ > 2 || (__GNUC__ == 2 && __GNUC_MINOR__ >= 95)
 #define ATTRIBUTE_PACKED    __attribute__ ((packed))
 #define PRAGMA_PACK         0
@@ -190,8 +190,8 @@ ATTRIBUTE_PACKED genre_table_t;
  */
 typedef struct
 {
-    char    language_code[2];                 // ISO639-2 Language code
-    uint8_t character_set;                    // char_set_t, 1 (ISO 646)
+    char    language_code[2];                 // ISO639-2 Language code , "en"
+    uint8_t character_set;                    // char_set_t, 1 (ISO 646),  2 (ISO 8859-1)
     uint8_t reserved;
 }
 ATTRIBUTE_PACKED locale_table_t;
@@ -216,10 +216,10 @@ typedef struct
     char           album_catalog_number[16];  // 0x00 when empty, else padded with spaces for short strings
     genre_table_t  album_genre[4];
     uint8_t        reserved03[8];
-    uint32_t       area_1_toc_1_start;
-    uint32_t       area_1_toc_2_start;
-    uint32_t       area_2_toc_1_start;
-    uint32_t       area_2_toc_2_start;
+    uint32_t       area_1_toc_1_start;   /*LSN for AREA_TOC_1 of 2 channel */
+    uint32_t       area_1_toc_2_start;   /*LSN for AREA_TOC_2 of 2 channel */
+    uint32_t       area_2_toc_1_start;   /*LSN for AREA_TOC_1 of M channel */
+    uint32_t       area_2_toc_2_start;   /*LSN for AREA_TOC_1 of M channel */
 #if defined(__BIG_ENDIAN__)
     uint8_t        disc_type_hybrid     : 1;
     uint8_t        disc_type_reserved   : 7;
@@ -228,15 +228,15 @@ typedef struct
     uint8_t        disc_type_hybrid     : 1;
 #endif
     uint8_t        reserved04[3];
-    uint16_t       area_1_toc_size;
-    uint16_t       area_2_toc_size;
+    uint16_t       area_1_toc_size;  /*Length in Sectors of AREA_TOC of  2ch */
+    uint16_t       area_2_toc_size;  /*Length in Sectors of AREA_TOC of M channel  */
     char           disc_catalog_number[16];   // 0x00 when empty, else padded with spaces for short strings
     genre_table_t  disc_genre[4];
     uint16_t       disc_date_year;
     uint8_t        disc_date_month;
     uint8_t        disc_date_day;
     uint8_t        reserved05[4];
-    uint8_t        text_area_count;
+    uint8_t        text_area_count;       // can be ZERO very seldom
     uint8_t        reserved06[7];
     locale_table_t locales[MAX_LANGUAGE_COUNT];
 }
@@ -316,59 +316,59 @@ typedef struct
     } ATTRIBUTE_PACKED version;               // 1.20 / 0x0114
     uint16_t       size;                      // ex. 40 (total size of TOC)
     uint8_t        reserved01[4];
-    uint32_t       max_byte_rate;
+    uint32_t       max_byte_rate;             /*up is for A_TOC_0_Header */ /*Max Average Byte Rate of Multiplexed Frames*/
     uint8_t        sample_frequency;          // 0x04 = (64 * 44.1 kHz) (physically there can be no other values, or..? :)
 #if defined(__BIG_ENDIAN__)
-    uint8_t        reserved02   : 4;
+    uint8_t        reserved02   : 4;           //     uchar area_flags;
     uint8_t        frame_format : 4;
 #else
     uint8_t        frame_format : 4;
     uint8_t        reserved02   : 4;
 #endif
     uint8_t        reserved03[10];
-    uint8_t        channel_count;
+    uint8_t        channel_count;           // uchar N_channels; /* the num of audio channels for each frame */ 
 #if defined(__BIG_ENDIAN__)
-    uint8_t        loudspeaker_config : 5;
+    uint8_t        loudspeaker_config : 5;  //      uchar area_config;    
     uint8_t        extra_settings : 3;
 #else
     uint8_t        extra_settings : 3;
     uint8_t        loudspeaker_config : 5;
 #endif
-    uint8_t        max_available_channels;
+    uint8_t        max_available_channels;    //uchar max_ok_channels;
     uint8_t        area_mute_flags;
     uint8_t        reserved04[12];
 #if defined(__BIG_ENDIAN__)
-    uint8_t        reserved05 : 4;
+    uint8_t        reserved05 : 4;    // uchar area_copy_mng;
     uint8_t        track_attribute : 4;
 #else
     uint8_t        track_attribute : 4;
     uint8_t        reserved05 : 4;
 #endif
     uint8_t        reserved06[15];
-    struct
+    struct                                  // uchar total_play_time[3];
     {
         uint8_t minutes;
         uint8_t seconds;
         uint8_t frames;
     } ATTRIBUTE_PACKED total_playtime;
     uint8_t        reserved07;
-    uint8_t        track_offset;
-    uint8_t        track_count;
+    uint8_t        track_offset;    /* track offset of a disc is from an album */ 
+    uint8_t        track_count;    /*The tracks number in the current audio area*/
     uint8_t        reserved08[2];
-    uint32_t       track_start;
-    uint32_t       track_end;
+    uint32_t       track_start;     /* uint track_start_addr;   */
+    uint32_t       track_end;       /* uint track_end_addr;   */
     uint8_t        text_area_count;
     uint8_t        reserved09[7];
     locale_table_t languages[10];
-    uint16_t       track_text_offset;
+    uint16_t       track_text_offset; /*up is for Area_Data*/
     uint16_t       index_list_offset;
     uint16_t       access_list_offset;
-    uint8_t        reserved10[10];
-    uint16_t       area_description_offset;
+    uint8_t        reserved10[10];     // char reserved7[8];  // /*up is for List_pointer */
+    uint16_t       area_description_offset;   
     uint16_t       copyright_offset;
     uint16_t       area_description_phonetic_offset;
     uint16_t       copyright_phonetic_offset;
-    uint8_t        data[1896];
+    uint8_t        data[1896];    // area_text[1904]
 }
 ATTRIBUTE_PACKED area_toc_t;
 
@@ -518,15 +518,15 @@ ATTRIBUTE_PACKED audio_frame_info_t;
 typedef struct
 {
 #if defined(__BIG_ENDIAN__)
-    uint8_t packet_info_count : 3;
-    uint8_t frame_info_count  : 3;
+    uint8_t packet_info_count : 3; // N_Packets
+    uint8_t frame_info_count  : 3; // N_Frame_Starts
     uint8_t reserved          : 1;
     uint8_t dst_encoded       : 1;
 #else
     uint8_t dst_encoded       : 1;
     uint8_t reserved          : 1;
-    uint8_t frame_info_count  : 3;
-    uint8_t packet_info_count : 3;
+    uint8_t frame_info_count  : 3;  // N_Frame_Starts
+    uint8_t packet_info_count : 3;  // N_Packets
 #endif
 }
 ATTRIBUTE_PACKED audio_frame_header_t;
@@ -559,7 +559,7 @@ scarletbook_area_t;
 
 typedef struct scarletbook_audio_frame_t
 {
-    uint8_t            *data;
+    uint8_t            *data;     // must be allocated MAX_DST_SIZE  ; (1024 * 64)
     int                 size;
     int                 started;
 
@@ -582,11 +582,12 @@ typedef struct
     int                        twoch_area_idx;
     int                        mulch_area_idx;
     int                        area_count;
-    scarletbook_area_t         area[2];
+    scarletbook_area_t         area[4];   // added for backup 2 more areas:  2= TWOCHTOC  TOC-2;    3 =MULCHTOC  TOC-2
 
     scarletbook_audio_frame_t  frame;
     audio_sector_t             audio_sector;
     int                        packet_info_idx;
+    int                        frame_info_counter;  // added for retrieving timecode of current frame;   e.g. handle->audio_sector.frame[handle->frame_info_counter].timecode
 } 
 scarletbook_handle_t;
 
