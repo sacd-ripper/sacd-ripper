@@ -91,78 +91,67 @@ int path_dir_exists(char * path)
 // dir - the parent directory of the file (don't include a trailing '/')
 // file - the filename
 // extension - the suffix of a file (don't include a leading '.')
-//
+//             assume the length of extenstion must be 3 chars
 // NOTE: caller must free the returned string!
 // NOTE: any of the parameters may be NULL to be omitted
-char *make_filename(const char *path, const char *dir, const char *file, const char *extension)
+char *make_filename(const char *path, const char *dir, const char *filename, const char *extension)
 {
-    int  len   = 1;
     char * ret = NULL;
     int  pos   = 0;
+    char string_buf[1024];  // keep the full path
+
+    memset(string_buf,0,sizeof(string_buf));
 
     if (path)
     {
-        len += strlen(path) + 1;
+        strncpy(string_buf, path, min(strlen(path), sizeof(string_buf) - 5)); // (-4 => making room for dot + extension!!!)
+        pos += min(strlen(path), sizeof(string_buf) - 5);
+#if defined(WIN32) || defined(_WIN32)
+        string_buf[pos] = '\\';
+#else
+        string_buf[pos] = '/';
+#endif
+        pos++;
     }
     if (dir)
-    {
-        len += strlen(dir) + 1;
-    }
-    if (file)
-    {
-        len += strlen(file);
-    }
-    if (extension)
-    {
-        len += strlen(extension) + 1;
+    {       
+        strncpy(string_buf+pos,dir,min(strlen(dir),sizeof(string_buf) -pos-5));
+        pos += min(strlen(dir), sizeof(string_buf) - pos - 5);
+#if defined(WIN32) || defined(_WIN32)
+        string_buf[pos] = '\\';
+#else
+        string_buf[pos] = '/';
+#endif
+        pos++;      
     }
 
-    ret = malloc(sizeof(char) * (len + 1));
+    sanitize_filepath(string_buf);
+
+    if (filename)
+    {
+        char filename_duplicate[512];
+        memset(filename_duplicate, 0, sizeof(filename_duplicate));
+        strncpy(filename_duplicate, filename, min(strlen(filename), sizeof(filename_duplicate) - 1));
+        sanitize_filename(filename_duplicate);
+
+        strncpy(string_buf + pos, filename_duplicate, min(strlen(filename_duplicate), sizeof(string_buf) - pos - 5)); 
+        pos += min(strlen(filename_duplicate), sizeof(string_buf) - pos - 5);
+        }
+    if (extension)
+    {
+        string_buf[pos] = '.';
+        pos++;
+        strncpy(string_buf + pos, extension, min(strlen(extension), sizeof(string_buf) - pos - 1));
+        pos += min(strlen(extension), sizeof(string_buf) - pos - 1);
+    }
+
+    ret = strdup(string_buf);
     if (ret == NULL)
-        LOG(lm_main, LOG_ERROR, ("malloc(sizeof(char) * len) failed. Out of memory."));
-
-    if (path)
     {
-        strncpy(&ret[pos], path, strlen(path));
-        pos     += strlen(path);
-#if defined(WIN32) || defined(_WIN32)
-        ret[pos] = '\\';
-#else
-        ret[pos] = '/';
-#endif
-        pos++;
+        // LOG(lm_main, LOG_ERROR, ("calloc(sizeof(char) * len) failed. Out of memory."));
+        printf("Error! make_filename: Cannot alocate memory Out of memory.\n");
+        return NULL;
     }
-    if (dir)
-    {
-        char *tmp_dir = strdup(dir);
-        sanitize_filepath(tmp_dir);
-        strncpy(&ret[pos], tmp_dir, strlen(tmp_dir));
-        pos     += strlen(tmp_dir);
-#if defined(WIN32) || defined(_WIN32)
-        ret[pos] = '\\';
-#else
-        ret[pos] = '/';
-#endif
-        pos++;
-        free(tmp_dir);
-    }
-    if (file)
-    {
-        char * tmp_file = strdup(file);
-        sanitize_filename(tmp_file);
-        strncpy(&ret[pos], tmp_file, strlen(tmp_file));
-        pos += strlen(tmp_file);
-        free(tmp_file);
-    }
-    if (extension)
-    {
-        ret[pos] = '.';
-        pos++;
-        strncpy(&ret[pos], extension, strlen(extension));
-        pos += strlen(extension);
-    }
-    ret[pos] = '\0';
-
     return ret;
 }
 
@@ -451,7 +440,7 @@ char * get_unique_filename(char *dev,char *dir, char *file, char *ext)
 
     char *total_path = make_filename(dev, dir, file, ext);
 
-    file_exists = (stat_wrap(total_path, &stat_file) == 0);
+    file_exists = (stat_wrap(total_path, &stat_file) == 0) ? 1 :0;
 
     while (file_exists==1)
     {
@@ -459,7 +448,7 @@ char * get_unique_filename(char *dev,char *dir, char *file, char *ext)
         char *file_copy = (char *) calloc(len, sizeof(char));
         snprintf(file_copy, len, "%s (%d)", file, count++);
         total_path = make_filename(dev, dir, file_copy, ext);
-        file_exists = (stat_wrap(total_path, &stat_file) == 0);
+        file_exists = (stat_wrap(total_path, &stat_file) == 0)? 1:0;
 
         if (count > 20) break; // loop must be stoped somewhere
     }
