@@ -39,25 +39,25 @@
 #endif
 
 #include <pthread.h>
-
 #include <charset.h>
 #include <logging.h>
 
 #include "getopt.h"
+#include "sacd_reader.h"
+#include "scarletbook.h"
+#include "scarletbook_read.h"
+#include "scarletbook_output.h"
+#include "scarletbook_print.h"
+#include "scarletbook_helpers.h"
+#include "scarletbook_id3.h"
+#include "cuesheet.h"
+#include "endianess.h"
+#include "fileutils.h"
+#include "utils.h"
+#include "yarn.h"
+#include "version.h"
+#include "scarletbook_xml.h"
 
-#include <sacd_reader.h>
-#include <scarletbook.h>
-#include <scarletbook_read.h>
-#include <scarletbook_output.h>
-#include <scarletbook_print.h>
-#include <scarletbook_helpers.h>
-#include <scarletbook_id3.h>
-#include <cuesheet.h>
-#include <endianess.h>
-#include <fileutils.h>
-#include <utils.h>
-#include <yarn.h>
-#include <version.h>
 
 #if defined(WIN32) || defined(_WIN32)
 
@@ -286,7 +286,7 @@ static int parse_options(int argc, char *argv[])
             break;
 
         case 'u':
-            fprintf(stderr, usage_text, program_name);
+            fprintf(stdout, usage_text, program_name);
             free(program_name);
             return 0;
             break;
@@ -487,6 +487,8 @@ void read_config()
     }
 } // end read_config
 
+
+
 //   Creates directory tree like: Album title \ (Disc no..) \ Stereo (or Multich)
 //     input: hadle
 //            area_idx
@@ -528,7 +530,11 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
 
     if (ret_mkdir != 0)
     {
-        fprintf(stderr, "\n\n Error: %s directory can't be created.\n", path_output);
+        wchar_t *wide_filename;
+        CHAR2WCHAR(wide_filename, path_output);
+        fwprintf(stderr, L"\n\n Error: %s directory can't be created.\n", wide_filename);
+        free(wide_filename);
+        
         free(path_output);
         return NULL;
     }
@@ -596,7 +602,11 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
         {
             if (path_dir_exists(opts.output_dir) == 0)
             {
-                fprintf(stderr, "%s doesn't exist or is not a directory.\n", opts.output_dir);
+                wchar_t *wide_filename;
+                CHAR2WCHAR(wide_filename, opts.output_dir);
+                fwprintf(stdout, L"%s doesn't exist or is not a directory.\n",wide_filename);
+                free(wide_filename);
+
 				exit_main_flag=-1;
                 goto exit_main;
             }
@@ -608,8 +618,12 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
         {
             if (path_dir_exists(opts.output_dir_conc) == 0)
             {
-                fprintf(stderr, "%s doesn't exist or is not a directory.\n", opts.output_dir_conc);
-				exit_main_flag=-1;
+                wchar_t *wide_filename;
+                CHAR2WCHAR(wide_filename, opts.output_dir_conc);
+                fwprintf(stdout, L"%s doesn't exist or is not a directory.\n", opts.output_dir_conc);
+                free(wide_filename);
+
+                exit_main_flag=-1;
                 goto exit_main;
             }
             if (opts.output_dir == NULL)
@@ -628,13 +642,13 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
             handle = scarletbook_open(sacd_reader, 0);
             if (handle)
             {
+                album_filename = get_album_dir(handle, artist_flag);
+                
                 if (opts.print)
                 {
                     scarletbook_print(handle);
                 }
                
-                album_filename = get_album_dir(handle, artist_flag);
-
                 if (opts.output_iso)
                 {
                     // create the output folder
@@ -800,7 +814,8 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
                             }
 
                             char *cue_file_path_unique = get_unique_filename(NULL, output_dir, album_filename, "cue");
-                            free(output_dir);
+
+                            //free(output_dir);
 
                             wchar_t *wide_filename;
                             CHAR2WCHAR(wide_filename, cue_file_path_unique);
@@ -813,8 +828,24 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
                             free(cue_file_path_unique);
                             free(file_path);
 
-                            
                             fwprintf(stdout, L"\n\n We are done exporting CUE sheet. \n");
+
+                            // create file XML metadata file
+                            char *metadata_file_path_unique = get_unique_filename(NULL, output_dir, album_filename, "xml");
+                            if (metadata_file_path_unique == NULL)
+                                fwprintf(stderr, L"\n ERROR: cannot create get_unique_filename (==NULL) !!\n");
+
+                            free(output_dir);
+
+                            //wchar_t *wide_filename;
+                            CHAR2WCHAR(wide_filename, metadata_file_path_unique);
+
+                            fwprintf(stdout, L"\n\n Exporting metadata XML file: [%ls] ... \n", wide_filename);
+                            free(wide_filename);
+
+                            write_metadata_xml(handle, metadata_file_path_unique);
+                            free(metadata_file_path_unique);
+                            fwprintf(stdout, L"\n\n We are done exporting XML metadata. \n");
                         }
 
                         if (opts.output_dsf || opts.output_dsdiff)
@@ -919,7 +950,7 @@ exit_main:
 #endif
         if (fwide(stdout, -1) >= 0)
         {
-            fprintf(stderr, "ERROR: Output not set to byte oriented.\n");
+            fwprintf(stderr, L"ERROR: Output not set to byte oriented.\n");
         }
     }
 exit_main_1:
