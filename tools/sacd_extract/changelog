@@ -15,7 +15,7 @@ Binaries compiled with cross compiler mingw64 for Windows (64bit) & Gnu 7.4.0 fo
 - corrected behavior in case of discs with only one multi-channel area (with no stereo area);
 - added total play time for each area when printing disc info;
 - now it strips out ending slash or backslash, if exists, at --output-dir or --output-dir-conc to be compatible with BatchEncoder;
-- added xml metadata file export option (is activated when Print disc summary is checked). Libray libxml2 is used.
+- added xml metadata file export option (is activated when Cue sheet is checked). Libray libxml2 is used.
  
 version 0.3.7
 
