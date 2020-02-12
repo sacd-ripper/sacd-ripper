@@ -259,7 +259,7 @@ static int dsf_write_frame(scarletbook_output_format_t *ft, const uint8_t *buf, 
 					return -1;
 				}
 	
-                memset(handle->buffer[i], 0x69, SACD_BLOCK_SIZE_PER_CHANNEL); // 105 -> 69 hex for reducing pop noise
+                memset(handle->buffer[i], 0x99, SACD_BLOCK_SIZE_PER_CHANNEL); // 105 -> 69 hex for reducing pop noise (or 0x99 -> 10011001) 
 
                 handle->buffer_ptr[i] = handle->buffer[i];
                 handle->audio_data_size += SACD_BLOCK_SIZE_PER_CHANNEL;
