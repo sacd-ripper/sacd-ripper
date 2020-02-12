@@ -65,6 +65,7 @@
 #define MAX_DST_SIZE                   (1024 * 64)
 #define SAMPLES_PER_FRAME              588
 #define FRAME_SIZE_64                 (SAMPLES_PER_FRAME * 64 / 8)
+#define MAX_PACKET_SIZE                 2045
 #define SUPPORTED_VERSION_MAJOR        1
 #define SUPPORTED_VERSION_MINOR        20
 
@@ -75,7 +76,7 @@
 
 enum
 {
-      FRAME_FORMAT_DST         = 0
+      FRAME_FORMAT_DST         = 0               // maybe to add FRAME_FORMAT_INVALID -1
     , FRAME_FORMAT_DSD_3_IN_14 = 2
     , FRAME_FORMAT_DSD_3_IN_16 = 3
 } 
@@ -442,6 +443,21 @@ typedef struct
     uint8_t seconds;
     uint8_t frames;
 #if defined(__BIG_ENDIAN__)
+    uint8_t extra_use : 3;
+    uint8_t reserved : 5;
+#else
+    uint8_t reserved : 5;
+    uint8_t extra_use : 3;
+#endif
+} 
+ATTRIBUTE_PACKED area_tracklist_time_start_t;
+
+typedef struct
+{
+    uint8_t minutes;
+    uint8_t seconds;
+    uint8_t frames;
+#if defined(__BIG_ENDIAN__)
     uint8_t track_flags_ilp : 1;
     uint8_t track_flags_tmf4 : 1;
     uint8_t track_flags_tmf3 : 1;
@@ -457,7 +473,7 @@ typedef struct
     uint8_t track_flags_ilp : 1;
 #endif
 }
-ATTRIBUTE_PACKED area_tracklist_time_t;
+ATTRIBUTE_PACKED area_tracklist_time_t; //area_tracklist_time_duration_t
 
 #define TIME_FRAMECOUNT(m) ((m)->minutes * 60 * SACD_FRAME_RATE + (m)->seconds * SACD_FRAME_RATE + (m)->frames)
 
@@ -588,6 +604,7 @@ typedef struct
     audio_sector_t             audio_sector;
     int                        packet_info_idx;
     int                        frame_info_counter;  // added for retrieving timecode of current frame;   e.g. handle->audio_sector.frame[handle->frame_info_counter].timecode
+    int                        sector_bad_reads;    // ==0 no errorsl; -1 if there are errors in processing frames form audiosectors
 } 
 scarletbook_handle_t;
 
