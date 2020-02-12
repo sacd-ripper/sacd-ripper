@@ -648,9 +648,14 @@ static int scarletbook_read_area_toc(scarletbook_handle_t *handle, int area_idx)
 void scarletbook_frame_init(scarletbook_handle_t *handle)
 {
     handle->packet_info_idx = 0;
+    handle->frame_info_counter = 0;
+    handle->sector_bad_reads = 0;
+
     handle->frame.size = 0;
     handle->frame.started = 0;
-    handle->frame_info_counter=0;
+    handle->frame.sector_count = 0;
+    handle->frame.channel_count = 0;
+    handle->frame.dst_encoded = 0;
 
     memset(&handle->audio_sector, 0, sizeof(audio_sector_t));
 }
@@ -673,26 +678,40 @@ static inline int get_channel_count(audio_frame_info_t *frame_info)
 
 static inline void exec_read_callback(scarletbook_handle_t *handle, frame_read_callback_t frame_read_callback, void *userdata)
 {
-    if (handle->frame.started && handle->frame.size > 0 && 
-        ((handle->frame.dst_encoded && handle->frame.sector_count == 0) ||
+    if ( ((handle->frame.dst_encoded && handle->frame.sector_count == 0) ||
         (!handle->frame.dst_encoded && handle->frame.size % FRAME_SIZE_64 == 0))
         )
     {
         handle->frame.started = 0;
         frame_read_callback(handle, handle->frame.data, handle->frame.size, userdata);
     }
+    else  // erros? bad reads!!
+    {
+        handle->sector_bad_reads++;      
+    }
+   
 }
 
-void scarletbook_process_frames(scarletbook_handle_t *handle, uint8_t *read_buffer, int blocks_read_in, int last_block, frame_read_callback_t frame_read_callback, void *userdata)
+//       Extract audio frames from blocks (LSN) a.k.a audio sectors and call frame_read_callback if succes
+//       return 1 succes
+//              -1 error sector_bad_reads
+//
+int scarletbook_process_frames(scarletbook_handle_t *handle, uint8_t *read_buffer, int blocks_read_in, int last_block, frame_read_callback_t frame_read_callback, void *userdata)
 {
     int frame_info_counter;
     uint8_t *read_buffer_ptr_blocks = read_buffer;
     uint8_t *read_buffer_ptr;
     int blocks_read = blocks_read_in;
+    int sector_bad_reads = 0;
 
+    read_buffer_ptr = read_buffer_ptr_blocks;
     while (blocks_read--)
     {
-        read_buffer_ptr = read_buffer_ptr_blocks;
+        if(sector_bad_reads > 0)
+        {
+             scarletbook_frame_init(handle);             
+             return -1;
+        }
 
         if (handle->packet_info_idx == handle->audio_sector.header.packet_info_count) 
         {
@@ -733,16 +752,28 @@ void scarletbook_process_frames(scarletbook_handle_t *handle, uint8_t *read_buff
             }
         }
 
+        if(handle->audio_sector.header.packet_info_count > (uint8_t)7)  // max 7 packets must contain an audio sector
+        {
+            sector_bad_reads ++;
+        }
+
         frame_info_counter = 0;
-        while (handle->packet_info_idx < handle->audio_sector.header.packet_info_count) 
+        while (handle->packet_info_idx < handle->audio_sector.header.packet_info_count && sector_bad_reads == 0)
         {
             audio_packet_info_t* packet = &handle->audio_sector.packet[handle->packet_info_idx];
+            if(packet->packet_length > MAX_PACKET_SIZE)
+            {
+                sector_bad_reads++;
+            }
             switch (packet->data_type) 
             {
                 case DATA_TYPE_AUDIO:
                     if (packet->frame_start)
                     {
-                        exec_read_callback(handle, frame_read_callback, userdata);
+                        if (handle->frame.started && handle->frame.size > 0)
+                            exec_read_callback(handle, frame_read_callback, userdata);
+                        if(handle->sector_bad_reads > 0 )  // check after return to see errors 
+                           sector_bad_reads ++;
 
                         handle->frame.size = 0;
                         handle->frame.dst_encoded = handle->audio_sector.header.dst_encoded;
@@ -767,14 +798,13 @@ void scarletbook_process_frames(scarletbook_handle_t *handle, uint8_t *read_buff
                         }
                         else
                         {
+                            sector_bad_reads ++;
                             // buffer overflow error, try next frame..
                             handle->frame.started = 0;
-                            {
 
-                                fwprintf(stderr, L"\n ERROR: scarletbook_process_frames(), buffer overflow error. \n");
-                                LOG(lm_main, LOG_ERROR, ("Error : scarletbook_process_frames(), buffer overflow error"));
-                                continue;
-                            }
+                            fwprintf(stderr, L"\n ERROR: scarletbook_process_frames(), buffer overflow error. Remaining blocks_read:%d\n", blocks_read);
+                            LOG(lm_main, LOG_ERROR, ("Error : scarletbook_process_frames(), buffer overflow error. Remaining blocks_read:%d", blocks_read));
+                            continue;                            
                         }
                     }
                     break;
@@ -790,13 +820,27 @@ void scarletbook_process_frames(scarletbook_handle_t *handle, uint8_t *read_buff
             handle->packet_info_idx++;
         } // end while (handle->packet_info_idx < handle->audio_sector.header.packet_info_count)
 
+        // obtain the next sector data block
         read_buffer_ptr_blocks += SACD_LSN_SIZE;
+        read_buffer_ptr = read_buffer_ptr_blocks;
 
     } // end while(blocks_read--)
 
-    if (last_block) 
-    {
-        exec_read_callback(handle, frame_read_callback, userdata);
-    }
+//             FINALLY BIG BUG SOLVED !!!!!!!!!!!!!!
+// !!!!!!!!!!!!!!!!!!!!! THIS IS WHERE POPS AND CRACKLES ARE GENERATED !!!!!!!!!!!!!!!!!!!!!!!! 
+    // if (last_block) 
+    // {
+    //     if (handle->frame.started && handle->frame.size > 0)
+    //         exec_read_callback(handle, frame_read_callback, userdata);
+    //     if (handle->sector_bad_reads > 0)
+    //     {
+    //         fwprintf(stderr, L"\n ERROR: scarletbook_process_frames();exec_read_callback; sector_bad_reads. last block\n");
+    //         LOG(lm_main, LOG_ERROR, ("Error : scarletbook_process_frames();exec_read_callback; sector_bad_reads. last block:%d"));
+
+    //         return -1;
+    //     }
+    // }
+
+    return 0;
 
 }
