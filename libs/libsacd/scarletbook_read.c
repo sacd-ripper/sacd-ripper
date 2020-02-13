@@ -847,6 +847,6 @@ int scarletbook_process_frames(scarletbook_handle_t *handle, uint8_t *read_buffe
     if (sector_bad_reads > 0)
         return -1;  
     else
-        return 0;
+        return 1;
 
 }
