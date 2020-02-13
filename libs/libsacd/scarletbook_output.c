@@ -342,7 +342,7 @@ static void frame_read_callback(scarletbook_handle_t *handle, uint8_t* frame_dat
     uint64_t frame_count_time_end = TIME_FRAMECOUNT(&handle->area[ft->area].area_tracklist_time->start[ft->track]) +
                                     TIME_FRAMECOUNT(&handle->area[ft->area].area_tracklist_time->duration[ft->track]);
 
-    uint64_t frame_timecode = TIME_FRAMECOUNT(&handle->audio_sector.frame[handle->frame_info_counter].timecode);
+    uint64_t frame_timecode = TIME_FRAMECOUNT(&handle->audio_sector.frame[handle->frame_info_idx].timecode);
 
     if (ft->handler.flags & OUTPUT_FLAG_EDIT_MASTER) //  only for DSDIFF master
     {
