@@ -525,7 +525,9 @@ static void *processing_thread(void *arg)
                     // process DSD & DST frames
                     if (ft->handler.flags & OUTPUT_FLAG_DSD || ft->handler.flags & OUTPUT_FLAG_DST)
                     {
-                        scarletbook_process_frames(ft->sb_handle, output->read_buffer, block_size, ft->current_lsn == end_lsn, frame_read_callback, ft);
+                       int rezult_proc_frames =  scarletbook_process_frames(ft->sb_handle, output->read_buffer, block_size, ft->current_lsn == end_lsn, frame_read_callback, ft);
+                       if (rezult_proc_frames != 1)
+                           output->fwprintf_callback(stdout, L"\n \n Error in processing frames! \n");
                     }
                     // ISO output is written without frame processing                        
                     else if (ft->handler.flags & OUTPUT_FLAG_RAW)
