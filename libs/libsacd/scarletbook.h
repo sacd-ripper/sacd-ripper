@@ -64,8 +64,8 @@
 #define MAX_CHANNEL_COUNT              6
 #define MAX_DST_SIZE                   (1024 * 64)
 #define SAMPLES_PER_FRAME              588
-#define FRAME_SIZE_64                 (SAMPLES_PER_FRAME * 64 / 8)
-#define MAX_PACKET_SIZE                 2045
+#define FRAME_SIZE_64                  4704    // (SAMPLES_PER_FRAME * 64 / 8)   // = 4704 bytes for fs=2822400 for uncompressed frame
+#define MAX_PACKET_SIZE                2045
 #define SUPPORTED_VERSION_MAJOR        1
 #define SUPPORTED_VERSION_MINOR        20
 
@@ -603,8 +603,7 @@ typedef struct
     scarletbook_audio_frame_t  frame;
     audio_sector_t             audio_sector;
     int                        packet_info_idx;
-    int                        frame_info_counter;  // added for retrieving timecode of current frame;   e.g. handle->audio_sector.frame[handle->frame_info_counter].timecode
-    int                        sector_bad_reads;    // ==0 no errorsl; -1 if there are errors in processing frames form audiosectors
+    int                        frame_info_idx;  // added for retrieving timecode of current frame;   e.g. handle->audio_sector.frame[handle->frame_info_idx].timecode
 } 
 scarletbook_handle_t;
 
