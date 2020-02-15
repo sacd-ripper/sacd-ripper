@@ -602,7 +602,7 @@ typedef struct
 
     scarletbook_audio_frame_t  frame;
     audio_sector_t             audio_sector;
-    int                        packet_info_idx;
+    //int                        packet_info_idx;
     int                        frame_info_idx;  // added for retrieving timecode of current frame;   e.g. handle->audio_sector.frame[handle->frame_info_idx].timecode
 } 
 scarletbook_handle_t;
