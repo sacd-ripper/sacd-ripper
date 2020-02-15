@@ -83,6 +83,7 @@ static struct opts_s
 	char           *output_dir_conc;
     int            select_tracks;
     char           selected_tracks[256]; /* scarletbook is limited to 256 tracks */
+    int            dsf_nopad;
     int            version;
 } opts;
 
@@ -102,6 +103,7 @@ static int parse_options(int argc, char *argv[])
         "  -e, --output-dsdiff-em          : output as Philips DSDIFF (Edit Master) file\n"
         "  -p, --output-dsdiff             : output as Philips DSDIFF file\n"
         "  -s, --output-dsf                : output as Sony DSF file\n"
+        "  -z, --dsf-nopad                 : Do not zero pad DSF (cannot be used with -t)\n"
         "  -t, --select-track              : only output selected track(s) (ex. -t 1,5,13)\n"
         "  -I, --output-iso                : output as RAW ISO\n"
 #ifndef SECTOR_LIMIT
@@ -112,7 +114,7 @@ static int parse_options(int argc, char *argv[])
         "  -i, --input[=FILE]              : set source and determine if \"iso\" image, \n"
         "                                    device or server (ex. -i 192.168.1.10:2002)\n"
         "  -o, --output-dir[=DIR]          : Output directory for ISO or DSDIFF Edit Master\n"
-		"  -y, --output-dir-conc[=DIR]     : Output directory for DSF or DSDIFF \n"
+        "  -y, --output-dir-conc[=DIR]     : Output directory for DSF or DSDIFF \n"
         "  -P, --print                     : display disc and track information\n"
         "  -v, --version                   : Display version\n"
         "\n"
@@ -132,10 +134,10 @@ static int parse_options(int argc, char *argv[])
 
 
 #ifdef SECTOR_LIMIT
-    static const char options_string[] = "2mepsIcCvi:o:y:t:P?";
+    static const char options_string[] = "2mepszIcCvi:o:y:t:P?";
 #else
-    static const char options_string[] = "2mepsIwcCvi:o:y:t:P?";
-#endif	
+    static const char options_string[] = "2mepszIwcCvi:o:y:t:P?";
+#endif
 
     static const struct option options_table[] = {
         {"2ch-tracks", no_argument, NULL, '2'},
@@ -143,21 +145,21 @@ static int parse_options(int argc, char *argv[])
         {"output-dsdiff-em", no_argument, NULL, 'e'},
         {"output-dsdiff", no_argument, NULL, 'p'},
         {"output-dsf", no_argument, NULL, 's'},
+        {"dsf-nopad", no_argument, NULL, 'z'},
         {"output-iso", no_argument, NULL, 'I'},
 #ifndef SECTOR_LIMIT
         {"concurrent", no_argument, NULL, 'w'}, 
-#endif		
+#endif
         {"convert-dst", no_argument, NULL, 'c'},
         {"export-cue", no_argument, NULL, 'C'},
         {"version", no_argument, NULL, 'v'},
         {"input", required_argument, NULL, 'i'},
         {"output-dir", required_argument, NULL, 'o'},
-		{"output-dir-conc", required_argument, NULL, 'y' },
+        {"output-dir-conc", required_argument, NULL, 'y'},
         {"print", no_argument, NULL, 'P'},
         {"help", no_argument, NULL, '?'},
         {"usage", no_argument, NULL, 'u'},
-        {NULL, 0, NULL, 0}
-    };
+        {NULL, 0, NULL, 0}};
 
     program_name = strrchr(argv[0],'/');
     program_name = program_name ? strdup(program_name+1) : strdup(argv[0]);
@@ -206,6 +208,9 @@ static int parse_options(int argc, char *argv[])
                 opts.select_tracks = count != 0;
             }
             break;
+        case 'z':
+            opts.dsf_nopad = 1;
+            break;    
         case 'I': 
             //opts.output_dsdiff_em = 0; 
             //opts.output_dsdiff = 0; 
@@ -380,6 +385,7 @@ static void init(void)
 	opts.output_dir_conc	= NULL;
     opts.input_device       = NULL; //"/dev/cdrom";
     opts.version            =0;
+    opts.dsf_nopad = 0;
 
 #if defined(WIN32) || defined(_WIN32)
     signal(SIGINT, handle_sigint);
@@ -584,7 +590,7 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
             {
                 wchar_t *wide_filename;
                 CHAR2WCHAR(wide_filename, buffer);
-                fwprintf(stdout, L"\n Working directory: %ls; Artist will be inserted in folder name=%ls; Performer will be inserted in filename of track=%ls\n", 
+                fwprintf(stdout, L"\n Working directory (for the app and 'sacd_extract.cfg' file): %ls; Configure settings: Artist will be inserted in folder name=%ls; Performer will be inserted in filename of track=%ls\n", 
                    wide_filename, artist_flag > 0 ? L"yes" : L"no", performer_flag > 0 ? L"yes" : L"no");
                 free(wide_filename);
             }
@@ -779,7 +785,7 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
                             output = scarletbook_output_create(handle, handle_status_update_track_callback, handle_status_update_progress_callback, safe_fwprintf);
 
                             scarletbook_output_enqueue_track(output, area_idx, 0, file_path_dsdiff_unique, "dsdiff_edit_master",
-                                                            (opts.convert_dst ? 1 : handle->area[area_idx].area_toc->frame_format != FRAME_FORMAT_DST));
+                                                            (opts.convert_dst ? 1 : handle->area[area_idx].area_toc->frame_format != FRAME_FORMAT_DST),0);
 
                             free(file_path_dsdiff_unique);
 
@@ -889,14 +895,14 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
                                 if (opts.output_dsf)
                                 {
                                     file_path = make_filename(NULL, output_dir, musicfilename, "dsf");
-                                    scarletbook_output_enqueue_track(output, area_idx, i, file_path, "dsf", 
-                                        1 /* always decode to DSD */);
+                                    scarletbook_output_enqueue_track(output, area_idx, i, file_path, "dsf",
+                                                                     1 /* always decode to DSD */, opts.dsf_nopad && !opts.select_tracks);
                                 }
                                 else if (opts.output_dsdiff)
                                 {
                                     file_path = make_filename(NULL, output_dir, musicfilename, "dff");
                                     scarletbook_output_enqueue_track(output, area_idx, i, file_path, "dsdiff", 
-                                        (opts.convert_dst ? 1 : handle->area[area_idx].area_toc->frame_format != FRAME_FORMAT_DST));
+                                        (opts.convert_dst ? 1 : handle->area[area_idx].area_toc->frame_format != FRAME_FORMAT_DST),0);
                                 }
                                 free(file_path);
                                 free(musicfilename);                                                   
