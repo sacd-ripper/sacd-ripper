@@ -124,7 +124,7 @@ static void destroy_ripping_queue(scarletbook_output_t *output)
     }
 }
 
-int scarletbook_output_enqueue_track(scarletbook_output_t *output, int area, int track, char *file_path, char *fmt, int dsd_encoded_export)
+int scarletbook_output_enqueue_track(scarletbook_output_t *output, int area, int track, char *file_path, char *fmt, int dsd_encoded_export, int dsf_nopad)
 {
     scarletbook_format_handler_t const * handler;
     scarletbook_output_format_t * output_format_ptr;
@@ -142,6 +142,7 @@ int scarletbook_output_enqueue_track(scarletbook_output_t *output, int area, int
         output_format_ptr->channel_count = sb_handle->area[area].area_toc->channel_count;
         output_format_ptr->dst_encoded_import = sb_handle->area[area].area_toc->frame_format == FRAME_FORMAT_DST;
         output_format_ptr->dsd_encoded_export = dsd_encoded_export;
+        output_format_ptr->dsf_nopad = dsf_nopad;
         if (handler->flags & OUTPUT_FLAG_EDIT_MASTER)
         {
             output_format_ptr->start_lsn = sb_handle->area[area].area_toc->track_start;
@@ -149,22 +150,9 @@ int scarletbook_output_enqueue_track(scarletbook_output_t *output, int area, int
         }
         else
         {
-            //if (track > 0) 
-            //{
+
             output_format_ptr->start_lsn = sb_handle->area[area].area_tracklist_offset->track_start_lsn[track];
-            // }
-            // else 
-            // {
-            //     output_format_ptr->start_lsn = sb_handle->area[area].area_toc->track_start;
-            // }
-            // if (track < sb_handle->area[area].area_toc->track_count - 1) 
-            // {
-            //     output_format_ptr->length_lsn = sb_handle->area[area].area_tracklist_offset->track_start_lsn[track + 1] - output_format_ptr->start_lsn + 1;
-            // }
-            //else 
-            //{
-             //   output_format_ptr->length_lsn = sb_handle->area[area].area_toc->track_end - output_format_ptr->start_lsn +1;
-            //}
+
             output_format_ptr->length_lsn = sb_handle->area[area].area_tracklist_offset->track_length_lsn[track];
 
             //The Track_Start_Address of a Track must be in the Track Area of
@@ -337,12 +325,6 @@ static void frame_read_callback(scarletbook_handle_t *handle, uint8_t* frame_dat
 {
     scarletbook_output_format_t *ft = (scarletbook_output_format_t *) userdata;
 
-    uint64_t frame_count_time_start = TIME_FRAMECOUNT(&handle->area[ft->area].area_tracklist_time->start[ft->track]);
-
-    uint64_t frame_count_time_end = TIME_FRAMECOUNT(&handle->area[ft->area].area_tracklist_time->start[ft->track]) +
-                                    TIME_FRAMECOUNT(&handle->area[ft->area].area_tracklist_time->duration[ft->track]);
-
-    uint64_t frame_timecode = TIME_FRAMECOUNT(&handle->audio_sector.frame[handle->frame_info_idx].timecode);
 
     if (ft->handler.flags & OUTPUT_FLAG_EDIT_MASTER) //  only for DSDIFF master
     {
@@ -364,10 +346,15 @@ static void frame_read_callback(scarletbook_handle_t *handle, uint8_t* frame_dat
     }
     else   // DSF, DSDIFF
     {
-        if (frame_timecode >= frame_count_time_start &&
-            frame_timecode < frame_count_time_end )
-        {
 
+        uint64_t frame_count_time_start = TIME_FRAMECOUNT(&handle->area[ft->area].area_tracklist_time->start[ft->track]);
+        uint64_t frame_count_time_end = TIME_FRAMECOUNT(&handle->area[ft->area].area_tracklist_time->start[ft->track]) +
+                                        TIME_FRAMECOUNT(&handle->area[ft->area].area_tracklist_time->duration[ft->track]);
+        uint64_t frame_timecode = TIME_FRAMECOUNT(&handle->audio_sector.frame[handle->frame_info_idx].timecode);
+
+        if (frame_timecode >= frame_count_time_start &&
+            frame_timecode < frame_count_time_end)
+        {
             if (ft->dsd_encoded_export && ft->dst_encoded_import)
             {
                 dst_decoder_decode(ft->dst_decoder, frame_data, frame_size);
@@ -384,6 +371,7 @@ static void frame_read_callback(scarletbook_handle_t *handle, uint8_t* frame_dat
                 }
             }
         }
+
     }
 }
 
