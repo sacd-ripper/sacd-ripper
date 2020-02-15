@@ -58,6 +58,9 @@ typedef struct
 
     uint8_t             buffer[MAX_CHANNEL_COUNT][SACD_BLOCK_SIZE_PER_CHANNEL];
     uint8_t            *buffer_ptr[MAX_CHANNEL_COUNT];
+
+    uint8_t             buffer_prev[MAX_CHANNEL_COUNT][SACD_BLOCK_SIZE_PER_CHANNEL];  // used for nopad option; keep the previus data copied form buffer[]
+    uint8_t             *buffer_ptr_prev[MAX_CHANNEL_COUNT];   // used for nopad option
 } 
 dsf_handle_t;
 
@@ -168,36 +171,73 @@ static int dsf_create_header(scarletbook_output_format_t *ft)
 
 static int dsf_create(scarletbook_output_format_t *ft)
 {
+    dsf_handle_t *handle = (dsf_handle_t *)ft->priv;
+
+    // If this is not the first track, carry over the leftover samples from the tail of the previous track for no zero padding.
+    if (ft->track > 0 && ft->dsf_nopad)
+    {
+        for (int i = 0; i < handle->channel_count; i++)
+        {
+            if (handle->buffer_ptr_prev[i] > handle->buffer_prev[i]) // if has something in buffer_prev[] to carry over
+            {
+                memcpy(handle->buffer[i], handle->buffer_prev[i], SACD_BLOCK_SIZE_PER_CHANNEL);
+                handle->buffer_ptr[i] = handle->buffer[i] + (handle->buffer_ptr_prev[i] - handle->buffer_prev[i]);
+            }
+        }
+    }
+
     return dsf_create_header(ft);
 }
 
 static int dsf_close(scarletbook_output_format_t *ft)
 {
     dsf_handle_t *handle = (dsf_handle_t *)ft->priv;
+    scarletbook_handle_t *sb_handle = ft->sb_handle;
     int i;
 	size_t bytes_w;
 	int result=0;
 
-    for (i = 0; i < handle->channel_count; i++)
+    // Save the remaining samples in the buffer to be attached to the beginning of the next track.
+    // This is needed for padding-less DSF generation.  This is for players that cannot handle zero-padding properly.
+    if (ft->dsf_nopad && ft->track < sb_handle->area[ft->area].area_toc->track_count - 1)
     {
-        if (handle->buffer_ptr[i] > handle->buffer[i])
+        for (i = 0; i < handle->channel_count; i++)
         {
-            handle->sample_count += handle->buffer_ptr[i] - handle->buffer[i];
+            // if it exists some data in buffers then copy it in a special buffers for use in next track
+            if (handle->buffer_ptr[i] > handle->buffer[i])
+            {
+                memcpy(handle->buffer_prev[i], handle->buffer[i], SACD_BLOCK_SIZE_PER_CHANNEL);
+                handle->buffer_ptr_prev[i] = handle->buffer_prev[i] + (handle->buffer_ptr[i] - handle->buffer[i]);
+            }
+            else
+            {
+                handle->buffer_ptr_prev[i] = handle->buffer_prev[i]; // emtpy, nothing to carry over to the next track               
+            }
+        }
+    }
+    else // if dsf_nopad = 0 or is last track in dsf_nopad==1 case
+    {
+        // Write out what was left in the ring buffers 
+        // This does zero fill to make the last block size 4096 bytes which leads to pop noise in some players (as in 0.3.8).
+        for (i = 0; i < handle->channel_count; i++)
+        {
+             // if it exists some data in buffers then save it
+            if (handle->buffer_ptr[i] > handle->buffer[i])
+            {
+                handle->sample_count += handle->buffer_ptr[i] - handle->buffer[i];
 
-            bytes_w=fwrite(handle->buffer[i], 1, SACD_BLOCK_SIZE_PER_CHANNEL, ft->fd);
-			if(bytes_w !=SACD_BLOCK_SIZE_PER_CHANNEL)
-			{ 		        
-				LOG(lm_main, LOG_ERROR, ("dsf_close(): error writing last buffer %s", ft->filename));
-				result=-1;
-                handle->audio_data_size += bytes_w;
-				break;
-			}
-            memset(handle->buffer[i], 0x69, SACD_BLOCK_SIZE_PER_CHANNEL);  // 105 -> 69 hex for reducing pop noise 
+                bytes_w = fwrite(handle->buffer[i], 1, SACD_BLOCK_SIZE_PER_CHANNEL, ft->fd);
+                if (bytes_w != SACD_BLOCK_SIZE_PER_CHANNEL)
+                {
+                    LOG(lm_main, LOG_ERROR, ("dsf_close(): error writing last buffer %s", ft->filename));
+                    result = -1;
+                    handle->audio_data_size += bytes_w;
+                    break;
+                }
 
-            handle->buffer_ptr[i] = handle->buffer[i];
-            handle->audio_data_size += SACD_BLOCK_SIZE_PER_CHANNEL;
-			
-
+                handle->buffer_ptr[i] = handle->buffer[i];
+                handle->audio_data_size += SACD_BLOCK_SIZE_PER_CHANNEL;
+            }
         }
     }
 
