@@ -33,7 +33,7 @@
 //#define SACD_RIPPER_VERSION_MINOR (SACD_RIPPER_VERSION % 100)
 
 #define SACD_RIPPER_VERSION_INFO                         \
-    "SACD Ripper\n" \
+    "SACD extract 0.3.9.3 \n" \
     SACD_RIPPER_VERSION_STRING "\n" \
     "Copyright (c) 2010-2020 by respective authors.\n" \
 
