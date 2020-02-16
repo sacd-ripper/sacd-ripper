@@ -41,48 +41,46 @@
 #include "scarletbook.h"
 #include "dsf.h"
 
-
-#define DSF_HEADER_FOOTER_SIZE    2048
+#define DSF_HEADER_FOOTER_SIZE 2048
 
 typedef struct
 {
-    uint8_t            *header;
-    size_t              header_size;
-    uint8_t            *footer;
-    size_t              footer_size;
+    uint8_t *header;
+    size_t header_size;
+    uint8_t *footer;
+    size_t footer_size;
 
-    uint64_t            audio_data_size;
+    uint64_t audio_data_size;
 
-    int                 channel_count;
-    uint64_t            sample_count;
+    int channel_count;
+    uint64_t sample_count;
 
-    uint8_t             buffer[MAX_CHANNEL_COUNT][SACD_BLOCK_SIZE_PER_CHANNEL];
-    uint8_t            *buffer_ptr[MAX_CHANNEL_COUNT];
+    uint8_t buffer[MAX_CHANNEL_COUNT][SACD_BLOCK_SIZE_PER_CHANNEL];
+    uint8_t *buffer_ptr[MAX_CHANNEL_COUNT];
 
-    uint8_t             buffer_prev[MAX_CHANNEL_COUNT][SACD_BLOCK_SIZE_PER_CHANNEL];  // used for nopad option; keep the previus data copied form buffer[]
-    uint8_t             *buffer_ptr_prev[MAX_CHANNEL_COUNT];   // used for nopad option
-} 
-dsf_handle_t;
+    uint8_t buffer_prev[MAX_CHANNEL_COUNT][SACD_BLOCK_SIZE_PER_CHANNEL]; // used for nopad option; keep the previus data copied form buffer[]
+    uint8_t *buffer_ptr_prev[MAX_CHANNEL_COUNT];                         // used for nopad option
+} dsf_handle_t;
 
-static const uint8_t bit_reverse_table[] = 
-{
-    0x00, 0x80, 0x40, 0xc0, 0x20, 0xa0, 0x60, 0xe0, 0x10, 0x90, 0x50, 0xd0, 0x30, 0xb0, 0x70, 0xf0, 
-    0x08, 0x88, 0x48, 0xc8, 0x28, 0xa8, 0x68, 0xe8, 0x18, 0x98, 0x58, 0xd8, 0x38, 0xb8, 0x78, 0xf8, 
-    0x04, 0x84, 0x44, 0xc4, 0x24, 0xa4, 0x64, 0xe4, 0x14, 0x94, 0x54, 0xd4, 0x34, 0xb4, 0x74, 0xf4, 
-    0x0c, 0x8c, 0x4c, 0xcc, 0x2c, 0xac, 0x6c, 0xec, 0x1c, 0x9c, 0x5c, 0xdc, 0x3c, 0xbc, 0x7c, 0xfc, 
-    0x02, 0x82, 0x42, 0xc2, 0x22, 0xa2, 0x62, 0xe2, 0x12, 0x92, 0x52, 0xd2, 0x32, 0xb2, 0x72, 0xf2, 
-    0x0a, 0x8a, 0x4a, 0xca, 0x2a, 0xaa, 0x6a, 0xea, 0x1a, 0x9a, 0x5a, 0xda, 0x3a, 0xba, 0x7a, 0xfa,
-    0x06, 0x86, 0x46, 0xc6, 0x26, 0xa6, 0x66, 0xe6, 0x16, 0x96, 0x56, 0xd6, 0x36, 0xb6, 0x76, 0xf6, 
-    0x0e, 0x8e, 0x4e, 0xce, 0x2e, 0xae, 0x6e, 0xee, 0x1e, 0x9e, 0x5e, 0xde, 0x3e, 0xbe, 0x7e, 0xfe,
-    0x01, 0x81, 0x41, 0xc1, 0x21, 0xa1, 0x61, 0xe1, 0x11, 0x91, 0x51, 0xd1, 0x31, 0xb1, 0x71, 0xf1,
-    0x09, 0x89, 0x49, 0xc9, 0x29, 0xa9, 0x69, 0xe9, 0x19, 0x99, 0x59, 0xd9, 0x39, 0xb9, 0x79, 0xf9, 
-    0x05, 0x85, 0x45, 0xc5, 0x25, 0xa5, 0x65, 0xe5, 0x15, 0x95, 0x55, 0xd5, 0x35, 0xb5, 0x75, 0xf5,
-    0x0d, 0x8d, 0x4d, 0xcd, 0x2d, 0xad, 0x6d, 0xed, 0x1d, 0x9d, 0x5d, 0xdd, 0x3d, 0xbd, 0x7d, 0xfd,
-    0x03, 0x83, 0x43, 0xc3, 0x23, 0xa3, 0x63, 0xe3, 0x13, 0x93, 0x53, 0xd3, 0x33, 0xb3, 0x73, 0xf3, 
-    0x0b, 0x8b, 0x4b, 0xcb, 0x2b, 0xab, 0x6b, 0xeb, 0x1b, 0x9b, 0x5b, 0xdb, 0x3b, 0xbb, 0x7b, 0xfb,
-    0x07, 0x87, 0x47, 0xc7, 0x27, 0xa7, 0x67, 0xe7, 0x17, 0x97, 0x57, 0xd7, 0x37, 0xb7, 0x77, 0xf7, 
-    0x0f, 0x8f, 0x4f, 0xcf, 0x2f, 0xaf, 0x6f, 0xef, 0x1f, 0x9f, 0x5f, 0xdf, 0x3f, 0xbf, 0x7f, 0xff
-};
+static const uint8_t bit_reverse_table[] =
+    {
+        0x00, 0x80, 0x40, 0xc0, 0x20, 0xa0, 0x60, 0xe0, 0x10, 0x90, 0x50, 0xd0, 0x30, 0xb0, 0x70, 0xf0,
+        0x08, 0x88, 0x48, 0xc8, 0x28, 0xa8, 0x68, 0xe8, 0x18, 0x98, 0x58, 0xd8, 0x38, 0xb8, 0x78, 0xf8,
+        0x04, 0x84, 0x44, 0xc4, 0x24, 0xa4, 0x64, 0xe4, 0x14, 0x94, 0x54, 0xd4, 0x34, 0xb4, 0x74, 0xf4,
+        0x0c, 0x8c, 0x4c, 0xcc, 0x2c, 0xac, 0x6c, 0xec, 0x1c, 0x9c, 0x5c, 0xdc, 0x3c, 0xbc, 0x7c, 0xfc,
+        0x02, 0x82, 0x42, 0xc2, 0x22, 0xa2, 0x62, 0xe2, 0x12, 0x92, 0x52, 0xd2, 0x32, 0xb2, 0x72, 0xf2,
+        0x0a, 0x8a, 0x4a, 0xca, 0x2a, 0xaa, 0x6a, 0xea, 0x1a, 0x9a, 0x5a, 0xda, 0x3a, 0xba, 0x7a, 0xfa,
+        0x06, 0x86, 0x46, 0xc6, 0x26, 0xa6, 0x66, 0xe6, 0x16, 0x96, 0x56, 0xd6, 0x36, 0xb6, 0x76, 0xf6,
+        0x0e, 0x8e, 0x4e, 0xce, 0x2e, 0xae, 0x6e, 0xee, 0x1e, 0x9e, 0x5e, 0xde, 0x3e, 0xbe, 0x7e, 0xfe,
+        0x01, 0x81, 0x41, 0xc1, 0x21, 0xa1, 0x61, 0xe1, 0x11, 0x91, 0x51, 0xd1, 0x31, 0xb1, 0x71, 0xf1,
+        0x09, 0x89, 0x49, 0xc9, 0x29, 0xa9, 0x69, 0xe9, 0x19, 0x99, 0x59, 0xd9, 0x39, 0xb9, 0x79, 0xf9,
+        0x05, 0x85, 0x45, 0xc5, 0x25, 0xa5, 0x65, 0xe5, 0x15, 0x95, 0x55, 0xd5, 0x35, 0xb5, 0x75, 0xf5,
+        0x0d, 0x8d, 0x4d, 0xcd, 0x2d, 0xad, 0x6d, 0xed, 0x1d, 0x9d, 0x5d, 0xdd, 0x3d, 0xbd, 0x7d, 0xfd,
+        0x03, 0x83, 0x43, 0xc3, 0x23, 0xa3, 0x63, 0xe3, 0x13, 0x93, 0x53, 0xd3, 0x33, 0xb3, 0x73, 0xf3,
+        0x0b, 0x8b, 0x4b, 0xcb, 0x2b, 0xab, 0x6b, 0xeb, 0x1b, 0x9b, 0x5b, 0xdb, 0x3b, 0xbb, 0x7b, 0xfb,
+        0x07, 0x87, 0x47, 0xc7, 0x27, 0xa7, 0x67, 0xe7, 0x17, 0x97, 0x57, 0xd7, 0x37, 0xb7, 0x77, 0xf7,
+        0x0f, 0x8f, 0x4f, 0xcf, 0x2f, 0xaf, 0x6f, 0xef, 0x1f, 0x9f, 0x5f, 0xdf, 0x3f, 0xbf, 0x7f, 0xff
+    };
 
 static int dsf_create_header(scarletbook_output_format_t *ft)
 {
@@ -173,6 +171,14 @@ static int dsf_create(scarletbook_output_format_t *ft)
 {
     dsf_handle_t *handle = (dsf_handle_t *)ft->priv;
 
+    int rez = dsf_create_header(ft);
+
+    ////// BUG - buffer_ptr[] where not initialized at all in original code!!!!!  Now initialized here!
+    for (int i = 0; i < MAX_CHANNEL_COUNT; i++)
+    {
+        handle->buffer_ptr[i] = &handle->buffer[i][0]; // or  NULL, but must make test ==NULL in dsf_write_frame;
+    }
+
     // If this is not the first track, carry over the leftover samples from the tail of the previous track for no zero padding.
     if (ft->track > 0 && ft->dsf_nopad)
     {
@@ -180,13 +186,13 @@ static int dsf_create(scarletbook_output_format_t *ft)
         {
             if (handle->buffer_ptr_prev[i] > handle->buffer_prev[i]) // if has something in buffer_prev[] to carry over
             {
-                memcpy(handle->buffer[i], handle->buffer_prev[i], SACD_BLOCK_SIZE_PER_CHANNEL);
-                handle->buffer_ptr[i] = handle->buffer[i] + (handle->buffer_ptr_prev[i] - handle->buffer_prev[i]);
+                memcpy(&handle->buffer[i][0], &handle->buffer_prev[i][0], SACD_BLOCK_SIZE_PER_CHANNEL);
+                handle->buffer_ptr[i] = &handle->buffer[i][0] + (handle->buffer_ptr_prev[i] - &handle->buffer_prev[i][0]);
             }
         }
     }
 
-    return dsf_create_header(ft);
+    return rez;
 }
 
 static int dsf_close(scarletbook_output_format_t *ft)
@@ -196,20 +202,26 @@ static int dsf_close(scarletbook_output_format_t *ft)
     int i;
 	size_t bytes_w;
 	int result=0;
+    uint8_t *buffer_row_start_ptr;
 
-    // Save the remaining samples in the buffer to be attached to the beginning of the next track.
+    // Save the remaining samples in the buffer to be attached to the beginning of the next track.  // This is mindset idea with nopad option !! Thank you!
     // This is needed for padding-less DSF generation.  This is for players that cannot handle zero-padding properly.
     if (ft->dsf_nopad && ft->track < sb_handle->area[ft->area].area_toc->track_count - 1)
     {
         for (i = 0; i < handle->channel_count; i++)
         {
             // if it exists some data in buffers then copy it in a special buffers for use in next track
-            if (handle->buffer_ptr[i] > handle->buffer[i])
+            buffer_row_start_ptr = &handle->buffer[i][0];
+            if (handle->buffer_ptr[i] > buffer_row_start_ptr)
             {
-                memcpy(handle->buffer_prev[i], handle->buffer[i], SACD_BLOCK_SIZE_PER_CHANNEL);
-                handle->buffer_ptr_prev[i] = handle->buffer_prev[i] + (handle->buffer_ptr[i] - handle->buffer[i]);
+                memcpy(&handle->buffer_prev[i][0], buffer_row_start_ptr, SACD_BLOCK_SIZE_PER_CHANNEL);
+                handle->buffer_ptr_prev[i] = handle->buffer_prev[i] + (handle->buffer_ptr[i] - buffer_row_start_ptr);
+
+                // empty the main frame buffers
+                memset(buffer_row_start_ptr, 0x99, SACD_BLOCK_SIZE_PER_CHANNEL); // Mandatory is 0x00. But tried with 0x99 (10011001) for reducing pop noise ( or 0x69)
+                handle->buffer_ptr[i] = buffer_row_start_ptr;
             }
-            else
+            else  // very rare but happens
             {
                 handle->buffer_ptr_prev[i] = handle->buffer_prev[i]; // emtpy, nothing to carry over to the next track               
             }
@@ -222,21 +234,24 @@ static int dsf_close(scarletbook_output_format_t *ft)
         for (i = 0; i < handle->channel_count; i++)
         {
              // if it exists some data in buffers then save it
-            if (handle->buffer_ptr[i] > handle->buffer[i])
-            {
-                handle->sample_count += handle->buffer_ptr[i] - handle->buffer[i];
+             buffer_row_start_ptr = &handle->buffer[i][0];
+             if (handle->buffer_ptr[i] > buffer_row_start_ptr)
+             {
+                 bytes_w = fwrite(buffer_row_start_ptr, 1, SACD_BLOCK_SIZE_PER_CHANNEL, ft->fd);
+                 if (bytes_w != SACD_BLOCK_SIZE_PER_CHANNEL)
+                 {
+                     LOG(lm_main, LOG_ERROR, ("dsf_close(): error writing last buffer %s", ft->filename));
+                     result = -1;
+                     handle->audio_data_size += bytes_w;
+                     break;
+                 }
 
-                bytes_w = fwrite(handle->buffer[i], 1, SACD_BLOCK_SIZE_PER_CHANNEL, ft->fd);
-                if (bytes_w != SACD_BLOCK_SIZE_PER_CHANNEL)
-                {
-                    LOG(lm_main, LOG_ERROR, ("dsf_close(): error writing last buffer %s", ft->filename));
-                    result = -1;
-                    handle->audio_data_size += bytes_w;
-                    break;
-                }
+                 handle->sample_count += handle->buffer_ptr[i] - buffer_row_start_ptr;
+                 handle->audio_data_size += SACD_BLOCK_SIZE_PER_CHANNEL;
 
-                handle->buffer_ptr[i] = handle->buffer[i];
-                handle->audio_data_size += SACD_BLOCK_SIZE_PER_CHANNEL;
+                 // empty the main frame buffers
+                 memset(buffer_row_start_ptr, 0x99, SACD_BLOCK_SIZE_PER_CHANNEL); // Mandatory is 0x00. But tried with 0x99 (10011001) for reducing pop noise ( or 0x69)
+                 handle->buffer_ptr[i] = buffer_row_start_ptr;
             }
         }
     }
@@ -269,41 +284,47 @@ static int dsf_write_frame(scarletbook_output_format_t *ft, const uint8_t *buf, 
     const uint8_t *buf_ptr = buf;
     uint64_t prev_audio_data_size = handle->audio_data_size;
     int i;
+    uint8_t *buffer_row_start_ptr;
 
     while(buf_ptr < buf_end_ptr)
     {
         for (i = 0; i < handle->channel_count; i++)
         {
-            if (!handle->buffer_ptr[i])
-            {
-                handle->buffer_ptr[i] = handle->buffer[i];
-            }
+            // this is no more needed here. Pointers are initialized in dsf_create()
+            // if (handle->buffer_ptr[i]==NULL)
+            // {
+            //     handle->buffer_ptr[i] = handle->buffer[i];
+            // }
 
-            if (handle->buffer_ptr[i] < handle->buffer[i] + SACD_BLOCK_SIZE_PER_CHANNEL && 
-                handle->buffer_ptr[i] < handle->buffer[i] + len / handle->channel_count)
+            if(buf_ptr >= buf_end_ptr)break;
+
+            buffer_row_start_ptr = &handle->buffer[i][0];
+
+            if ((handle->buffer_ptr[i] < buffer_row_start_ptr + SACD_BLOCK_SIZE_PER_CHANNEL || handle->buffer_ptr[i] == buffer_row_start_ptr)) // && ///// BUG : must test here if buffer[] is empty!!!!
+                //handle->buffer_ptr[i] < handle->buffer[i] + len / handle->channel_count)  // This is never false !! Why is put it here? A miminum len of a frame is 2x 4704= 9408 bytes.
             {
                 *handle->buffer_ptr[i] = bit_reverse_table[*buf_ptr];
 
                 handle->buffer_ptr[i]++;
                 buf_ptr++;
             } 
-            else 
-            {
-                handle->sample_count += handle->buffer_ptr[i] - handle->buffer[i];
-
-				size_t bytes_w;
-                bytes_w=fwrite(handle->buffer[i], 1, SACD_BLOCK_SIZE_PER_CHANNEL, ft->fd);
-				if(bytes_w != SACD_BLOCK_SIZE_PER_CHANNEL)
+            else
+            { // the main frame buffer[] are full so must write in file.  /// BUG: it arives here if buffer[] are empty (handle->buffer_ptr[i]== handle->buffer[i])!!! This is wrong!!
+                size_t bytes_w;
+                bytes_w = fwrite(buffer_row_start_ptr, 1, SACD_BLOCK_SIZE_PER_CHANNEL, ft->fd);
+                if(bytes_w != SACD_BLOCK_SIZE_PER_CHANNEL)
 				{					
 					LOG(lm_main, LOG_ERROR, ("dsf_write_frame(): error writting buffer in file: %s", ft->filename));
 					return -1;
 				}
 
-                memset(handle->buffer[i], 0x99, SACD_BLOCK_SIZE_PER_CHANNEL); // Mandatory is 0x00. But tried with 0x99 (10011001) for reducing pop noise ( or 0x69)
-
-                handle->buffer_ptr[i] = handle->buffer[i];
+                handle->sample_count += handle->buffer_ptr[i] - buffer_row_start_ptr;
                 handle->audio_data_size += SACD_BLOCK_SIZE_PER_CHANNEL;
-	    }
+
+                // empty the main frame buffers
+                memset(buffer_row_start_ptr, 0x99, SACD_BLOCK_SIZE_PER_CHANNEL); // Mandatory is 0x00. But tried with 0x99 (10011001) for reducing pop noise ( or 0x69)
+                handle->buffer_ptr[i] = buffer_row_start_ptr;
+            }
         }
     }
 
