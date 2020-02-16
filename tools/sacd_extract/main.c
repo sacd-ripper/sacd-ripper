@@ -582,8 +582,8 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
 
         if (opts.version==1)
         {
-            fwprintf(stdout, L"sacd_extract version 0.3.9.3 built hash " SACD_RIPPER_VERSION_STRING "\n");
-            fwprintf(stdout, L"git repository: " SACD_RIPPER_REPO "\n", s_wchar);
+            fwprintf(stdout, L"sacd_extract version 0.3.9.3, built commit hash: " SACD_RIPPER_VERSION_STRING "\n");
+            fwprintf(stdout, L"git repository: " SACD_RIPPER_REPO "\n");
             size_t size = 512;
             char *buffer = (char *)calloc(size, sizeof(char));
             if (getcwd(buffer, size) != NULL)
