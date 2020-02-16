@@ -125,7 +125,6 @@ elseif(APPLE)
   set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIRARIES} -liconv -lpthread -lxml2")
 else()
   add_definitions(-D_FILE_OFFSET_BITS=64)
-  set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIRARIES} -lpthread")
+  set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIRARIES} -lpthread -lxml2")
 endif()
-
 
