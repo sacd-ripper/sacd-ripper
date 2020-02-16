@@ -21,17 +21,20 @@
 
 #ifndef VERSION_H_INCLUDED
 #define VERSION_H_INCLUDED
+#define _STRINGIZER(arg)     #arg
+#define STRINGIZER(arg)      _STRINGIZER(arg)
 
-#define SACD_RIPPER_VERSION 00309
-#define SACD_RIPPER_VERSION_STRING "3.9.3 with small changes made by EuFlo"
+//#define SACD_RIPPER_VERSION 00308
+#define SACD_RIPPER_VERSION_STRING STRINGIZER(GIT_COMMIT_HASH)
+#define SACD_RIPPER_REPO STRINGIZER(GIT_REPO_URL)
 
-#define SACD_RIPPER_VERSION_REVISION (SACD_RIPPER_VERSION / 100000) 
-#define SACD_RIPPER_VERSION_MAJOR (SACD_RIPPER_VERSION / 100 % 1000) 
-#define SACD_RIPPER_VERSION_MINOR (SACD_RIPPER_VERSION % 100) 
+//#define SACD_RIPPER_VERSION_REVISION (SACD_RIPPER_VERSION / 100000)
+//#define SACD_RIPPER_VERSION_MAJOR (SACD_RIPPER_VERSION / 100 % 1000)
+//#define SACD_RIPPER_VERSION_MINOR (SACD_RIPPER_VERSION % 100)
 
 #define SACD_RIPPER_VERSION_INFO                         \
-    "SACD Ripper release " SACD_RIPPER_VERSION_STRING " " \
-    "Copyright (c) 2010-2019 by respective authors.\n\n" \
-    "Report bugs to mr_wicked@hotmail.com\n"
+    "SACD Ripper\n" \
+    SACD_RIPPER_VERSION_STRING "\n" \
+    "Copyright (c) 2010-2020 by respective authors.\n" \
 
 #endif /* VERSION_H_INCLUDED */
