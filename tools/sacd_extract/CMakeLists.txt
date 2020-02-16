@@ -13,6 +13,35 @@ if (MINGW64 MATCHES "YES")
     SET(CMAKE_FIND_ROOT_PATH /usr/${TOOLCHAIN_PREFIX})
 endif (MINGW64 MATCHES "YES")
 
+execute_process(
+    COMMAND git describe --tags --dirty --abbrev=64
+    OUTPUT_VARIABLE GIT_COMMIT_HASH
+    RESULT_VARIABLE GIT_COMMIT_HASH_RESULT
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+execute_process(
+    COMMAND git remote get-url origin
+    OUTPUT_VARIABLE GIT_REPO_URL
+    RESULT_VARIABLE GIT_REPO_URL_RESULT
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+# Obtain git commit hash and repo url
+if(${GIT_COMMIT_HASH_RESULT} GREATER 0)
+    add_definitions("-DGIT_COMMIT_HASH=NA")
+else(${GIT_COMMIT_HASH_RESULT} GREATER 0)
+    add_definitions("-DGIT_COMMIT_HASH=${GIT_COMMIT_HASH}")
+    MESSAGE(STATUS "git commit hash: ${GIT_COMMIT_HASH}")
+endif(${GIT_COMMIT_HASH_RESULT} GREATER 0)
+
+if(${GIT_REPO_URL_RESULT} GREATER 0)
+    add_definitions("-DGIT_REPO_URL=NA")
+else(${GIT_REPO_URL_RESULT} GREATER 0)
+    add_definitions("-DGIT_REPO_URL=\"${GIT_REPO_URL}\"")
+    MESSAGE(STATUS "git repo url: ${GIT_REPO_URL}")
+endif(${GIT_REPO_URL_RESULT} GREATER 0)
+
 project(sacd_extract C)
 
 # Load some macros.
