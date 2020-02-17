@@ -693,11 +693,12 @@ int scarletbook_process_frames(scarletbook_handle_t *handle, uint8_t *read_buffe
     uint8_t *read_buffer_ptr;
     int blocks_read = blocks_read_in;
     int sector_bad_reads = 0;
-    int already_saved_last_block = 0;
+    int already_exec_read_callback_in_block = 0;
 
     read_buffer_ptr = read_buffer_ptr_blocks;
     while (blocks_read--)
-    {       
+    {      
+        already_exec_read_callback_in_block = 0; 
         //if (handle->packet_info_idx == handle->audio_sector.header.packet_info_count) 
         //{
             
@@ -749,13 +750,13 @@ int scarletbook_process_frames(scarletbook_handle_t *handle, uint8_t *read_buffe
         packet_info_idx = 0;
         handle->frame_info_idx = 0;
         frame_info_idx = 0;
-        for (packet_info_idx = 0; (packet_info_idx < handle->audio_sector.header.packet_info_count) && (sector_bad_reads == 0); packet_info_idx++)
+        for (packet_info_idx = 0; (packet_info_idx < handle->audio_sector.header.packet_info_count); packet_info_idx++) //&& (sector_bad_reads == 0)
         {
             audio_packet_info_t* packet = &handle->audio_sector.packet[packet_info_idx];
             if(packet->packet_length > MAX_PACKET_SIZE)
             {
                 sector_bad_reads = 1;
-                break;
+                continue;
             }
             switch (packet->data_type) 
             {
@@ -771,8 +772,7 @@ int scarletbook_process_frames(scarletbook_handle_t *handle, uint8_t *read_buffe
                                     (!handle->frame.dst_encoded && handle->frame.size == handle->frame.channel_count * FRAME_SIZE_64))
                                 {
                                     exec_read_callback(handle, frame_read_callback, userdata);
-                                    if(last_block)
-                                        already_saved_last_block = 1; 
+                                    already_exec_read_callback_in_block = 1;                                       
                                 } 
                             }
                         }
@@ -831,7 +831,7 @@ int scarletbook_process_frames(scarletbook_handle_t *handle, uint8_t *read_buffe
 
 //             FINALLY BIG BUG SOLVED !!!!!!!!!!!!!!
 // !!!!!!!!!!!!!!!!!!!!! THIS IS WHERE POPS AND CRACKLES ARE GENERATED !!!!!!!!!!!!!!!!!!!!!!!!
-    if (last_block && already_saved_last_block == 0)
+    if (last_block && already_exec_read_callback_in_block == 0)
     {
         // If frame is already started
         // try to save the entire last audio frame
