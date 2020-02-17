@@ -602,8 +602,9 @@ typedef struct
 
     scarletbook_audio_frame_t  frame;
     audio_sector_t             audio_sector;
-    //int                        packet_info_idx;
+    
     int                        frame_info_idx;  // added for retrieving timecode of current frame;   e.g. handle->audio_sector.frame[handle->frame_info_idx].timecode
+    int                        audio_frame_trimming;    // if 1  trimm out audioframes in trimecode interval [area_tracklist_time->start...+duration]
 } 
 scarletbook_handle_t;
 
