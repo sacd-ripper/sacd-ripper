@@ -19,14 +19,15 @@
  *
  */
 
-#define _FILE_OFFSET_BITS 64    /* large file support - linux */
 #ifndef SACD_INPUT_H_INCLUDED
 #define SACD_INPUT_H_INCLUDED
+
+#define _FILE_OFFSET_BITS 64 /* large file support - linux */
 
 #include <inttypes.h>
 
 
-//  #if defined(__MINGW32__) || defined(_WIN32)
+//  #if defined(__MINGW32__) || defined(_WIN32) 
 //  #   undef  lseek
 //  #   define lseek            _lseeki64
 //  #   undef  fseeko
