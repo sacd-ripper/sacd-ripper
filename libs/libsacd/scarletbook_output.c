@@ -346,14 +346,34 @@ static void frame_read_callback(scarletbook_handle_t *handle, uint8_t* frame_dat
     }
     else   // DSF, DSDIFF
     {
+        if (ft->sb_handle->audio_frame_trimming > 0)
+        {
+            uint64_t frame_count_time_start = TIME_FRAMECOUNT(&handle->area[ft->area].area_tracklist_time->start[ft->track]);
+            uint64_t frame_count_time_end = TIME_FRAMECOUNT(&handle->area[ft->area].area_tracklist_time->start[ft->track]) +
+                                            TIME_FRAMECOUNT(&handle->area[ft->area].area_tracklist_time->duration[ft->track]);
+            uint64_t frame_timecode = TIME_FRAMECOUNT(&handle->audio_sector.frame[handle->frame_info_idx].timecode);
 
-        uint64_t frame_count_time_start = TIME_FRAMECOUNT(&handle->area[ft->area].area_tracklist_time->start[ft->track]);
-        uint64_t frame_count_time_end = TIME_FRAMECOUNT(&handle->area[ft->area].area_tracklist_time->start[ft->track]) +
-                                        TIME_FRAMECOUNT(&handle->area[ft->area].area_tracklist_time->duration[ft->track]);
-        uint64_t frame_timecode = TIME_FRAMECOUNT(&handle->audio_sector.frame[handle->frame_info_idx].timecode);
-
-        if (frame_timecode >= frame_count_time_start &&
-            frame_timecode < frame_count_time_end)
+            if (frame_timecode >= frame_count_time_start &&
+                frame_timecode <= frame_count_time_end)
+            {
+                if (ft->dsd_encoded_export && ft->dst_encoded_import)
+                {
+                    dst_decoder_decode(ft->dst_decoder, frame_data, frame_size);
+                }
+                else
+                {
+                    int rezult;
+                    rezult = write_block(ft, frame_data, frame_size);
+                    if (rezult == -1)
+                    {
+                        ft->cb_fwprintf(stderr, L"\n ERROR in frame_read_callback():write_block()..at writting in file. \n");
+                        LOG(lm_main, LOG_ERROR, ("ERROR in frame_read_callback:write_block()...writting in file: %s  ", ft->filename));
+                        raise(SIGINT);
+                    }
+                }
+            }
+        }
+        else  // no audioframe trimming
         {
             if (ft->dsd_encoded_export && ft->dst_encoded_import)
             {
