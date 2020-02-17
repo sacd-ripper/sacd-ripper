@@ -683,7 +683,14 @@ static int dsdiff_write_frame(scarletbook_output_format_t *ft, const uint8_t *bu
 #elif defined(__lv2ppu__) || defined(__APPLE__)
             handle->frame_indexes[handle->frame_count - 1].offset = ftello(ft->fd) + DST_FRAME_DATA_CHUNK_SIZE;
 #else
+            
+            // off64_t ftello64 (FILE *stream) : If the sources are compiled with _FILE_OFFSET_BITS == 64 on a 32 bits machine this function is available under the name ftello and so transparently replaces the old interface.
+            //
+    #ifdef _FILE_OFFSET_BITS         
+            handle->frame_indexes[handle->frame_count - 1].offset = ftello(ft->fd) + DST_FRAME_DATA_CHUNK_SIZE;
+    #else
             handle->frame_indexes[handle->frame_count - 1].offset = ftello64(ft->fd) + DST_FRAME_DATA_CHUNK_SIZE;
+    #endif
 #endif
 
             nrw = fwrite(&dst_frame_data_chunk, 1, DST_FRAME_DATA_CHUNK_SIZE, ft->fd);
