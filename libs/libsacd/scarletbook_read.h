@@ -35,7 +35,7 @@ extern "C" {
  * Opens a scarletbook structure and reads in all the data.
  * Returns a handle to a completely parsed structure.
  */
-scarletbook_handle_t *scarletbook_open(sacd_reader_t *, int);
+scarletbook_handle_t *scarletbook_open(sacd_reader_t *sacd_reader);
 
 /**
  * initialize scarletbook audio frames structs
