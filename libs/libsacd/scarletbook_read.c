@@ -64,7 +64,7 @@ static int scarletbook_read_master_toc(scarletbook_handle_t *);
 static int scarletbook_read_area_toc(scarletbook_handle_t *, int);
 
 
-scarletbook_handle_t *scarletbook_open(sacd_reader_t *sacd, int title)
+scarletbook_handle_t *scarletbook_open(sacd_reader_t *sacd)
 {
     scarletbook_handle_t *sb;
 
@@ -682,7 +682,7 @@ static inline void exec_read_callback(scarletbook_handle_t *handle, frame_read_c
 }
 
 //       Extract audio frames from blocks (LSN) a.k.a audio sectors and call frame_read_callback if succes
-//       return 1 succes
+//       return nr of frames proccesed >=0 succes
 //              -1 error (has sector bad reads)
 //
 int scarletbook_process_frames(scarletbook_handle_t *handle, uint8_t *read_buffer, int blocks_read_in, int last_block, frame_read_callback_t frame_read_callback, void *userdata)
@@ -694,6 +694,7 @@ int scarletbook_process_frames(scarletbook_handle_t *handle, uint8_t *read_buffe
     //int blocks_read = blocks_read_in;
     int sector_bad_reads = 0;
     int already_exec_read_callback_in_block = 0;
+    int nr_frames_proccesed=0;
 
     read_buffer_ptr = read_buffer_ptr_blocks;
 
@@ -705,7 +706,6 @@ int scarletbook_process_frames(scarletbook_handle_t *handle, uint8_t *read_buffe
         //if (handle->packet_info_idx == handle->audio_sector.header.packet_info_count) 
         //{
             
-
             // read Audio Sector Header
             memcpy(&handle->audio_sector.header, read_buffer_ptr, AUDIO_SECTOR_HEADER_SIZE);
             read_buffer_ptr += AUDIO_SECTOR_HEADER_SIZE;
@@ -775,6 +775,7 @@ int scarletbook_process_frames(scarletbook_handle_t *handle, uint8_t *read_buffe
                                     (!handle->frame.dst_encoded && handle->frame.size == handle->frame.channel_count * FRAME_SIZE_64))
                                 {
                                     exec_read_callback(handle, frame_read_callback, userdata);
+                                    nr_frames_proccesed ++;
                                     already_exec_read_callback_in_block = 1;                                       
                                 } 
                             }
@@ -845,6 +846,7 @@ int scarletbook_process_frames(scarletbook_handle_t *handle, uint8_t *read_buffe
                     (!handle->frame.dst_encoded && handle->frame.size == handle->frame.channel_count * FRAME_SIZE_64))
                 {
                     exec_read_callback(handle, frame_read_callback, userdata);
+                    nr_frames_proccesed++;
                 }
             }  
         }            
@@ -853,7 +855,6 @@ int scarletbook_process_frames(scarletbook_handle_t *handle, uint8_t *read_buffe
     if (sector_bad_reads > 0)
         return -1;  
     else
-        return 1;
-
+        return nr_frames_proccesed;  
 }
 
