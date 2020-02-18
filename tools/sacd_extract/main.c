@@ -84,6 +84,9 @@ static struct opts_s
     int            select_tracks;
     char           selected_tracks[256]; /* scarletbook is limited to 256 tracks */
     int            dsf_nopad;
+    int            audio_frame_trimming; // if 1  trimm out audioframes in trimecode interval [area_tracklist_time->start...+duration]
+    int            artist_flag;          // if artist ==1 then the artist name is added in folder name
+    int            performer_flag;       // if performer ==1 the performer from each track is added
     int            version;
 } opts;
 
@@ -384,8 +387,11 @@ static void init(void)
     opts.output_dir         = NULL;
 	opts.output_dir_conc	= NULL;
     opts.input_device       = NULL; //"/dev/cdrom";
-    opts.version            =0;
-    opts.dsf_nopad = 0;
+    opts.version            = 0;
+    opts.dsf_nopad          = 0;
+    opts.audio_frame_trimming=0;
+    opts.artist_flag = 0;    // if artist ==1 then the artist name is added in folder name
+    opts.performer_flag = 0; // if performer ==1 the performer from each track is added
 
 #if defined(WIN32) || defined(_WIN32)
     signal(SIGINT, handle_sigint);
@@ -446,8 +452,7 @@ char ** convert_wargv_to_UTF8(int argc,wchar_t *wargv[])
 }
 #endif
 
-static int artist_flag = 0;    // if artist ==1 then the artist name is added in folder name
-static int performer_flag = 0; // if performer ==1 the performer from each track is added
+
 //   read from file sacd_extract.cfg
 //   if artist=1 then artist name will be added to the name of folder
 //   if sacd_extract.cfg didn't exist then artist will not be added ..
@@ -485,9 +490,11 @@ void read_config()
         while (fgets(content, 100, fp) != NULL)
         {
             if (strstr(content, "artist=1") != NULL)
-                artist_flag = 1;
+                opts.artist_flag = 1;
             if (strstr(content, "performer=1") != NULL)
-                performer_flag = 1;
+                opts.performer_flag = 1;
+            if (strstr(content, "audio_frame_trimming=1") != NULL)
+                opts.audio_frame_trimming = 1;
         }
         fclose(fp);
     }
@@ -510,7 +517,7 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
 #endif
 
 	char *path_output;
-    char *album_path = get_path_disc_album(handle,artist_flag);
+    char *album_path = get_path_disc_album(handle,opts.artist_flag);
 	
 	if(album_path==NULL)return NULL;
 	
@@ -590,8 +597,8 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
             {
                 wchar_t *wide_filename;
                 CHAR2WCHAR(wide_filename, buffer);
-                fwprintf(stdout, L"\n Working directory (for the app and 'sacd_extract.cfg' file): %ls; Configure settings: Artist will be inserted in folder name=%ls; Performer will be inserted in filename of track=%ls\n", 
-                   wide_filename, artist_flag > 0 ? L"yes" : L"no", performer_flag > 0 ? L"yes" : L"no");
+                fwprintf(stdout, L"\n Working directory (for the app and 'sacd_extract.cfg' file): %ls; Configure settings: Artist will be inserted in folder name=%ls; Performer will be inserted in filename of track=%ls; Audio_frames_trimming=%ls\n",
+                         wide_filename, opts.artist_flag > 0 ? L"yes" : L"no", opts.performer_flag > 0 ? L"yes" : L"no", opts.audio_frame_trimming > 0 ? L"yes" : L"no");
                 free(wide_filename);
             }
             free(buffer);
@@ -645,10 +652,12 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
         if (sacd_reader != NULL) 
         {
 
-            handle = scarletbook_open(sacd_reader, 0);
+            handle = scarletbook_open(sacd_reader);
             if (handle)
             {
-                album_filename = get_album_dir(handle, artist_flag);
+                handle->audio_frame_trimming = opts.audio_frame_trimming;
+
+                album_filename = get_album_dir(handle, opts.artist_flag);
                 
                 if (opts.print)
                 {
@@ -664,7 +673,7 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
 #else
                     char PATH_TRAILING_SLASH[2] = {'/', '\0'};
 #endif
-                    char *album_path = get_path_disc_album(handle,artist_flag);
+                    char *album_path = get_path_disc_album(handle,opts.artist_flag);
 					char *output_dir;
 					if(opts.output_dir !=NULL)
 					{
@@ -890,7 +899,7 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
                                 if (opts.select_tracks && opts.selected_tracks[i] == 0)
                                     continue;
 
-                                musicfilename = get_music_filename(handle, area_idx, i, "",performer_flag);
+                                musicfilename = get_music_filename(handle, area_idx, i, "",opts.performer_flag);
 
                                 if (opts.output_dsf)
                                 {
