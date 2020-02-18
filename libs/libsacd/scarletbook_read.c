@@ -691,12 +691,15 @@ int scarletbook_process_frames(scarletbook_handle_t *handle, uint8_t *read_buffe
     uint8_t packet_info_idx;
     uint8_t *read_buffer_ptr_blocks = read_buffer;
     uint8_t *read_buffer_ptr;
-    int blocks_read = blocks_read_in;
+    //int blocks_read = blocks_read_in;
     int sector_bad_reads = 0;
     int already_exec_read_callback_in_block = 0;
 
     read_buffer_ptr = read_buffer_ptr_blocks;
-    while (blocks_read--)
+
+    //while (blocks_read--) // BUG - the while loop  misses the last block!!!
+
+    for (int j = 0; j < blocks_read_in; j++)
     {      
         already_exec_read_callback_in_block = 0; 
         //if (handle->packet_info_idx == handle->audio_sector.header.packet_info_count) 
@@ -803,9 +806,8 @@ int scarletbook_process_frames(scarletbook_handle_t *handle, uint8_t *read_buffe
                             // buffer overflow error, try next frame..
                             handle->frame.started = 0;
 
-                            fwprintf(stderr, L"\n ERROR: scarletbook_process_frames(), buffer overflow error. Remaining blocks_read:%d\n", blocks_read);
-                            LOG(lm_main, LOG_ERROR, ("Error : scarletbook_process_frames(), buffer overflow error. Remaining blocks_read:%d", blocks_read));
-                                                       
+                            fwprintf(stderr, L"\n ERROR: scarletbook_process_frames(), buffer overflow error in blocks_read:%d\n", j);
+                            LOG(lm_main, LOG_ERROR, ("Error : scarletbook_process_frames(), buffer overflow error. in blocks_read:%d", j));                                                      
                         }
                     }
                     break;
@@ -827,7 +829,7 @@ int scarletbook_process_frames(scarletbook_handle_t *handle, uint8_t *read_buffe
         read_buffer_ptr_blocks += SACD_LSN_SIZE;
         read_buffer_ptr = read_buffer_ptr_blocks;
 
-    } // end while(blocks_read--)
+    } // end for j   // while(blocks_read--)
 
 //             FINALLY BIG BUG SOLVED !!!!!!!!!!!!!!
 // !!!!!!!!!!!!!!!!!!!!! THIS IS WHERE POPS AND CRACKLES ARE GENERATED !!!!!!!!!!!!!!!!!!!!!!!!
@@ -854,3 +856,4 @@ int scarletbook_process_frames(scarletbook_handle_t *handle, uint8_t *read_buffe
         return 1;
 
 }
+
