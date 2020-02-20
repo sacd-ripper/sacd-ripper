@@ -58,8 +58,6 @@ typedef struct
     uint8_t buffer[MAX_CHANNEL_COUNT][SACD_BLOCK_SIZE_PER_CHANNEL];
     uint8_t *buffer_ptr[MAX_CHANNEL_COUNT];
 
-    uint8_t buffer_prev[MAX_CHANNEL_COUNT][SACD_BLOCK_SIZE_PER_CHANNEL]; // used for nopad option; keep the previus data copied form buffer[]
-    uint8_t *buffer_ptr_prev[MAX_CHANNEL_COUNT];                         // used for nopad option
 } dsf_handle_t;
 
 static const uint8_t bit_reverse_table[] =
@@ -166,6 +164,8 @@ static int dsf_create_header(scarletbook_output_format_t *ft)
         return 0;
 }
 
+uint8_t buffer_prev[MAX_CHANNEL_COUNT][SACD_BLOCK_SIZE_PER_CHANNEL]; // used for nopad option; keep the previus data copied form buffer[]
+uint8_t *buffer_ptr_prev[MAX_CHANNEL_COUNT];
 
 static int dsf_create(scarletbook_output_format_t *ft)
 {
@@ -180,14 +180,14 @@ static int dsf_create(scarletbook_output_format_t *ft)
     }
 
     // If this is not the first track, carry over the leftover samples from the tail of the previous track for no zero padding.
-    if (ft->track > 0 && ft->dsf_nopad)
+    if (ft->track > 0 && ft->sb_handle->dsf_nopad)
     {
         for (int i = 0; i < handle->channel_count; i++)
         {
-            if (handle->buffer_ptr_prev[i] > handle->buffer_prev[i]) // if has something in buffer_prev[] to carry over
+            if (buffer_ptr_prev[i] > buffer_prev[i]) // if has something in buffer_prev[] to carry over
             {
-                memcpy(&handle->buffer[i][0], &handle->buffer_prev[i][0], SACD_BLOCK_SIZE_PER_CHANNEL);
-                handle->buffer_ptr[i] = &handle->buffer[i][0] + (handle->buffer_ptr_prev[i] - &handle->buffer_prev[i][0]);
+                memcpy(handle->buffer[i], buffer_prev[i], SACD_BLOCK_SIZE_PER_CHANNEL * sizeof(uint8_t));
+                handle->buffer_ptr[i] = handle->buffer[i] + (buffer_ptr_prev[i] - buffer_prev[i]);
             }
         }
     }
@@ -202,28 +202,26 @@ static int dsf_close(scarletbook_output_format_t *ft)
     int i;
 	size_t bytes_w;
 	int result=0;
-    uint8_t *buffer_row_start_ptr;
 
     // Save the remaining samples in the buffer to be attached to the beginning of the next track.  // This is mindset idea with nopad option !! Thank you!
     // This is needed for padding-less DSF generation.  This is for players that cannot handle zero-padding properly.
-    if (ft->dsf_nopad && ft->track < sb_handle->area[ft->area].area_toc->track_count - 1)
+    if (sb_handle->dsf_nopad && ft->track < sb_handle->area[ft->area].area_toc->track_count - 1)
     {
         for (i = 0; i < handle->channel_count; i++)
         {
             // if it exists some data in buffers then copy it in a special buffers for use in next track
-            buffer_row_start_ptr = &handle->buffer[i][0];
-            if (handle->buffer_ptr[i] > buffer_row_start_ptr)
+            if (handle->buffer_ptr[i] > handle->buffer[i])
             {
-                memcpy(&handle->buffer_prev[i][0], buffer_row_start_ptr, SACD_BLOCK_SIZE_PER_CHANNEL);
-                handle->buffer_ptr_prev[i] = handle->buffer_prev[i] + (handle->buffer_ptr[i] - buffer_row_start_ptr);
+                memcpy(buffer_prev[i], handle->buffer[i], SACD_BLOCK_SIZE_PER_CHANNEL);
+                buffer_ptr_prev[i] = buffer_prev[i] + (handle->buffer_ptr[i] - handle->buffer[i]);
 
                 // empty the main frame buffers
-                memset(buffer_row_start_ptr, 0x99, SACD_BLOCK_SIZE_PER_CHANNEL); // Mandatory is 0x00. But tried with 0x99 (10011001) for reducing pop noise ( or 0x69)
-                handle->buffer_ptr[i] = buffer_row_start_ptr;
+                memset(handle->buffer[i], 0x99, SACD_BLOCK_SIZE_PER_CHANNEL); // Mandatory is 0x00. But tried with 0x99 (10011001) for reducing pop noise ( or 0x69)
+                handle->buffer_ptr[i] = handle->buffer[i];
             }
             else  // very rare but happens
             {
-                handle->buffer_ptr_prev[i] = handle->buffer_prev[i]; // emtpy, nothing to carry over to the next track               
+                buffer_ptr_prev[i] = buffer_prev[i]; // emtpy, nothing to carry over to the next track               
             }
         }
     }
@@ -234,10 +232,9 @@ static int dsf_close(scarletbook_output_format_t *ft)
         for (i = 0; i < handle->channel_count; i++)
         {
              // if it exists some data in buffers then save it
-             buffer_row_start_ptr = &handle->buffer[i][0];
-             if (handle->buffer_ptr[i] > buffer_row_start_ptr)
+             if (handle->buffer_ptr[i] > handle->buffer[i])
              {
-                 bytes_w = fwrite(buffer_row_start_ptr, 1, SACD_BLOCK_SIZE_PER_CHANNEL, ft->fd);
+                 bytes_w = fwrite(handle->buffer[i], 1, SACD_BLOCK_SIZE_PER_CHANNEL, ft->fd);
                  if (bytes_w != SACD_BLOCK_SIZE_PER_CHANNEL)
                  {
                      LOG(lm_main, LOG_ERROR, ("dsf_close(): error writing last buffer %s", ft->filename));
@@ -246,12 +243,12 @@ static int dsf_close(scarletbook_output_format_t *ft)
                      break;
                  }
 
-                 handle->sample_count += handle->buffer_ptr[i] - buffer_row_start_ptr;
+                 handle->sample_count += handle->buffer_ptr[i] - handle->buffer[i];
                  handle->audio_data_size += SACD_BLOCK_SIZE_PER_CHANNEL;
 
                  // empty the main frame buffers
-                 memset(buffer_row_start_ptr, 0x99, SACD_BLOCK_SIZE_PER_CHANNEL); // Mandatory is 0x00. But tried with 0x99 (10011001) for reducing pop noise ( or 0x69)
-                 handle->buffer_ptr[i] = buffer_row_start_ptr;
+                 memset(handle->buffer[i], 0x99, SACD_BLOCK_SIZE_PER_CHANNEL); // Mandatory is 0x00. But tried with 0x99 (10011001) for reducing pop noise ( or 0x69)
+                 handle->buffer_ptr[i] = handle->buffer[i];
             }
         }
     }
