@@ -389,7 +389,7 @@ static void init(void)
     opts.input_device       = NULL; //"/dev/cdrom";
     opts.version            = 0;
     opts.dsf_nopad          = 0;
-    opts.audio_frame_trimming=0;
+    opts.audio_frame_trimming=1;  // default is On ; eliminates pauses
     opts.artist_flag = 0;    // if artist ==1 then the artist name is added in folder name
     opts.performer_flag = 0; // if performer ==1 the performer from each track is added
 
@@ -489,12 +489,12 @@ void read_config()
 
         while (fgets(content, 100, fp) != NULL)
         {
-            if (strstr(content, "artist=1") != NULL)
+            if ((strstr(content, "artist=1") != NULL) ||(strstr(content, "artist=yes") != NULL))
                 opts.artist_flag = 1;
-            if (strstr(content, "performer=1") != NULL)
+            if ((strstr(content, "performer=1") != NULL) || (strstr(content, "performer=yes") != NULL))
                 opts.performer_flag = 1;
-            if (strstr(content, "audio_frame_trimming=1") != NULL)
-                opts.audio_frame_trimming = 1;
+            if ((strstr(content, "pauses=1") != NULL) || (strstr(content, "pauses=yes") != NULL))
+                opts.audio_frame_trimming = 0;
         }
         fclose(fp);
     }
@@ -597,8 +597,8 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
             {
                 wchar_t *wide_filename;
                 CHAR2WCHAR(wide_filename, buffer);
-                fwprintf(stdout, L"\n Working directory (for the app and 'sacd_extract.cfg' file): %ls; Configure settings: Artist will be inserted in folder name=%ls; Performer will be inserted in filename of track=%ls; Audio_frames_trimming=%ls\n",
-                         wide_filename, opts.artist_flag > 0 ? L"yes" : L"no", opts.performer_flag > 0 ? L"yes" : L"no", opts.audio_frame_trimming > 0 ? L"yes" : L"no");
+                fwprintf(stdout, L"\n Working directory (for the app and 'sacd_extract.cfg' file): %ls; Configure settings: Artist will be added in folder name (artist=) %ls; Performer will be added in filename of track (performer=) %ls; Pauses included (pauses=) %ls\n",
+                         wide_filename, opts.artist_flag > 0 ? L"yes" : L"no", opts.performer_flag > 0 ? L"yes" : L"no", opts.audio_frame_trimming == 0 ? L"yes" : L"no");
                 free(wide_filename);
             }
             free(buffer);
@@ -656,6 +656,7 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
             if (handle)
             {
                 handle->audio_frame_trimming = opts.audio_frame_trimming;
+                handle->dsf_nopad = opts.dsf_nopad;
 
                 album_filename = get_album_dir(handle, opts.artist_flag);
                 
