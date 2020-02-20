@@ -1,11 +1,19 @@
-Version 0.3.9.3-23-gb562b812f5984d6d181dd21961d422c28484c0aa pre-release
+Version: 0.3.9.3-30-g045865607bafe3c5037f0a883aec82aec9c20d6d
+- fixed -z (--dsf-nopad) not working;
+- changed the name of option 'audio_frame_trimming=1' into 'pauses'. When 'pauses=1' then pauses are included in tracks.
+
+sacd_extract.exe sha256: a97c3f6d427bf26342127aa27c89f7da4883a92c2a3499edfdd5568a23c5765f
+Linux sacd_extract sha256: 2544f62c6b4e516dd929dbb5dd768021bd61c8a62d0dd7cb452579196c9da546
+
+----------------------------------------------------------------------------------------------------------
+Version: 0.3.9.3-23-gb562b812f5984d6d181dd21961d422c28484c0aa pre-release
 -  for dsf/dff option, audioframes counter is added for each tracks and compares with total duration to see if it misses one.  
 
 sacd_extract.exe sha256: 48d0902005637e06fae55f7656eddd954a87e990fda0bd04e13ba6a3b6c990d6
 Linux sacd_extract sha256: e6075ca23f7ce4cffdf804d4c49cdfb57923e32fa33c6a14b1df49250be6ab73
 
 ------------------------------------------------------------------------------------------------------------------------------------------------
-Version 0.3.9.3-17-g80f9b52d9a211b52a7b1f019b4882c81a3a4f6b7 pre-release
+Version: 0.3.9.3-17-g80f9b52d9a211b52a7b1f019b4882c81a3a4f6b7 pre-release
 
 Binaries compiled with cross compiler mingw64 for Windows (64bit) & Gnu 7.4.0 for Linux.
 - fixed infinite loop 99% when iso files are corrupted;
