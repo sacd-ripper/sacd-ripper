@@ -86,8 +86,6 @@ struct scarletbook_output_format_t
 
     scarletbook_handle_t           *sb_handle;
     fwprintf_callback_t             cb_fwprintf;
-    int                             dsf_nopad;
-    uint32_t                        count_frames; // keep the number of audio frames in a track (for verification)
 
     struct list_head                siblings;
 }; 
