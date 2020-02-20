@@ -698,7 +698,6 @@ int scarletbook_process_frames(scarletbook_handle_t *handle, uint8_t *read_buffe
 
     read_buffer_ptr = read_buffer_ptr_blocks;
 
-    //while (blocks_read--) // BUG - the while loop  misses the last block!!!
 
     for (int j = 0; j < blocks_read_in; j++)
     {      
@@ -750,10 +749,10 @@ int scarletbook_process_frames(scarletbook_handle_t *handle, uint8_t *read_buffe
             sector_bad_reads = 1;   
         }
 
-        packet_info_idx = 0;
+        
         handle->frame_info_idx = 0;
         frame_info_idx = 0;
-        for (packet_info_idx = 0; (packet_info_idx < handle->audio_sector.header.packet_info_count); packet_info_idx++) //&& (sector_bad_reads == 0)
+        for (packet_info_idx = 0; packet_info_idx < handle->audio_sector.header.packet_info_count; packet_info_idx++) //&& (sector_bad_reads == 0)
         {
             audio_packet_info_t* packet = &handle->audio_sector.packet[packet_info_idx];
             if(packet->packet_length > MAX_PACKET_SIZE)
