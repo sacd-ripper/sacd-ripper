@@ -142,7 +142,7 @@ int scarletbook_output_enqueue_track(scarletbook_output_t *output, int area, int
         output_format_ptr->channel_count = sb_handle->area[area].area_toc->channel_count;
         output_format_ptr->dst_encoded_import = sb_handle->area[area].area_toc->frame_format == FRAME_FORMAT_DST;
         output_format_ptr->dsd_encoded_export = dsd_encoded_export;
-        output_format_ptr->dsf_nopad = dsf_nopad;
+        
 
         if (handler->flags & OUTPUT_FLAG_EDIT_MASTER)
         {
@@ -151,11 +151,33 @@ int scarletbook_output_enqueue_track(scarletbook_output_t *output, int area, int
         }
         else
         {
+            // Read traks without pauses
+            //output_format_ptr->start_lsn = sb_handle->area[area].area_tracklist_offset->track_start_lsn[track];
+            //output_format_ptr->length_lsn = sb_handle->area[area].area_tracklist_offset->track_length_lsn[track];
 
-            output_format_ptr->start_lsn = sb_handle->area[area].area_tracklist_offset->track_start_lsn[track];
+            // Read all LSNs (including pauses)
+            if (track > 0)
+            {
+                output_format_ptr->start_lsn = sb_handle->area[area].area_tracklist_offset->track_start_lsn[track];
+            }
+            else
+            {
+                output_format_ptr->start_lsn = sb_handle->area[area].area_toc->track_start;
+            }
+            if (track < sb_handle->area[area].area_toc->track_count - 1)
+            {
+                output_format_ptr->length_lsn = sb_handle->area[area].area_tracklist_offset->track_start_lsn[track + 1] - output_format_ptr->start_lsn + 1;
+            }
+            else
+            {
+                output_format_ptr->length_lsn = sb_handle->area[area].area_toc->track_end - output_format_ptr->start_lsn + 1;
+            }
+            // DEBUG
+            //output_format_ptr->cb_fwprintf(stderr, L"\n Debug: Queuing: track %d, area_tracklist_offset->track_start_lsn: %d, area_tracklist_offset->track_length_lsn: %d\n", track,
+            //                               sb_handle->area[area].area_tracklist_offset->track_start_lsn[track], output_format_ptr->length_lsn = sb_handle->area[area].area_tracklist_offset->track_length_lsn[track]);
+            //output_format_ptr->cb_fwprintf(stderr, L"\n Debug: Queuing: track %d, start_lsn: %d, length_lsn: %d\n", track, output_format_ptr->start_lsn, output_format_ptr->length_lsn);
 
-            output_format_ptr->length_lsn = sb_handle->area[area].area_tracklist_offset->track_length_lsn[track];
-
+            // Do some integrity checks
             //The Track_Start_Address of a Track must be in the Track Area of
             //    the corresponding Audio Area
             if (!(output_format_ptr->start_lsn >= sb_handle->area[area].area_toc->track_start) ||
@@ -348,12 +370,12 @@ static void frame_read_callback(scarletbook_handle_t *handle, uint8_t* frame_dat
     }
     else   // DSF, DSDIFF
     {
-        if (ft->sb_handle->audio_frame_trimming > 0)
+        if (ft->sb_handle->audio_frame_trimming > 0)  // (pausese will not be included)
         {
-            uint64_t frame_count_time_start = TIME_FRAMECOUNT(&handle->area[ft->area].area_tracklist_time->start[ft->track]);
-            uint64_t frame_count_time_end = TIME_FRAMECOUNT(&handle->area[ft->area].area_tracklist_time->start[ft->track]) +
+            uint32_t frame_count_time_start = TIME_FRAMECOUNT(&handle->area[ft->area].area_tracklist_time->start[ft->track]);
+            uint32_t frame_count_time_end = TIME_FRAMECOUNT(&handle->area[ft->area].area_tracklist_time->start[ft->track]) +
                                             TIME_FRAMECOUNT(&handle->area[ft->area].area_tracklist_time->duration[ft->track]);
-            uint64_t frame_timecode = TIME_FRAMECOUNT(&handle->audio_sector.frame[handle->frame_info_idx].timecode);
+            uint32_t frame_timecode = TIME_FRAMECOUNT(&handle->audio_sector.frame[handle->frame_info_idx].timecode);
 
             if (frame_timecode >= frame_count_time_start &&
                 frame_timecode <= frame_count_time_end)
@@ -361,7 +383,7 @@ static void frame_read_callback(scarletbook_handle_t *handle, uint8_t* frame_dat
                 if (ft->dsd_encoded_export && ft->dst_encoded_import)
                 {
                     dst_decoder_decode(ft->dst_decoder, frame_data, frame_size);
-                    ft->count_frames++;
+                    ft->sb_handle->count_frames++;
                 }
                 else
                 {
@@ -373,16 +395,16 @@ static void frame_read_callback(scarletbook_handle_t *handle, uint8_t* frame_dat
                         LOG(lm_main, LOG_ERROR, ("ERROR in frame_read_callback:write_block()...writting in file: %s  ", ft->filename));
                         raise(SIGINT);
                     }
-                    ft->count_frames ++;
+                    ft->sb_handle->count_frames++;
                 }
             }
         }
-        else  // no audioframe trimming
+        else  // no audioframe trimming (pauses will be included)
         {
             if (ft->dsd_encoded_export && ft->dst_encoded_import)
             {
                 dst_decoder_decode(ft->dst_decoder, frame_data, frame_size);
-                ft->count_frames++;
+                ft->sb_handle->count_frames++;
             }
             else
             {
@@ -394,7 +416,7 @@ static void frame_read_callback(scarletbook_handle_t *handle, uint8_t* frame_dat
                     LOG(lm_main, LOG_ERROR, ("ERROR in frame_read_callback:write_block()...writting in file: %s  ", ft->filename));
                     raise(SIGINT);
                 }
-                ft->count_frames++;
+                ft->sb_handle->count_frames++;
             }
         }
 
@@ -431,8 +453,6 @@ static void *processing_thread(void *arg)
         output->stats_current_file_sectors_processed = 0;
         output->stats_current_track++;
 
-        ft->count_frames = 0;
-
         if (output->stats_track_callback)
         {
             output->stats_track_callback(ft->filename, output->stats_current_track, output->stats_total_tracks);
@@ -464,6 +484,8 @@ static void *processing_thread(void *arg)
             // what blocks do we need to process?
             ft->current_lsn = ft->start_lsn;
             end_lsn = ft->start_lsn + ft->length_lsn;
+
+            handle->count_frames = 0;
 
             sysAtomicSet(&output->stop_processing, 0);
 
@@ -504,7 +526,6 @@ static void *processing_thread(void *arg)
 
                     if (blocks_readed == 0)
                     {
-
                         output->fwprintf_callback(stdout, L"\n \n Error:blocks_readed =0, current_lsn:%d, end_lsn:%d, block_size:%d \n", ft->current_lsn, end_lsn, block_size);
                         LOG(lm_main, LOG_ERROR, ("Error:blocks_readed = 0, current_lsn:%d, end_lsn:%d, block_size:%d", ft->current_lsn, end_lsn, block_size));                        
                         sysAtomicSet(&output->stop_processing, 1);
@@ -538,6 +559,9 @@ static void *processing_thread(void *arg)
                         sacd_decrypt(ft->sb_handle->sacd, output->read_buffer, block_size);
                     }
 
+                    //debug
+                    //output->fwprintf_callback(stdout, L"\n \n Debug - scarletbook_process_frames(): block_size %d, last bloc=%d \n", block_size, ft->current_lsn == end_lsn);
+
                     // process DSD & DST frames
                     if (ft->handler.flags & OUTPUT_FLAG_DSD || ft->handler.flags & OUTPUT_FLAG_DST)
                     {
@@ -557,6 +581,9 @@ static void *processing_thread(void *arg)
 					    
                     }
 
+                    // debug
+                    //output->fwprintf_callback(stdout, L"\n \n After scarlet_processe_frames. Processed: %d audioframes\n", ft->count_frames);
+
                     // update statistics
                     if (output->stats_progress_callback)
                     {
@@ -567,20 +594,22 @@ static void *processing_thread(void *arg)
                 else
                 {
                     break;
-                }
-            }
-        }
+                } // end if (ft->current_lsn < end_lsn)
 
-        // Only for DSF/DFF : print Error if nr of processed frames != of duration (in nr of frames)
+            } // end while (sysAtomicRead(&output->stop_processing
+
+        }  // end  if (create_output_file(ft)
+
+        // Show statistics only for DSF/DFF : print Error if nr of processed frames < of duration (in nr of frames)
         if (ft->handler.flags & OUTPUT_FLAG_DSD || ft->handler.flags & OUTPUT_FLAG_DST)
         {
             uint32_t duration = (uint32_t)TIME_FRAMECOUNT(&handle->area[ft->area].area_tracklist_time->duration[ft->track]);
-            if (ft->count_frames < duration) //output->stats_current_count_frames
+            if (handle->count_frames < duration) //output->stats_current_count_frames
             {
-                output->fwprintf_callback(stdout, L"\n \n Warning:! Number of processed audioframes (%d) is smaller than number of frames in duration (%d) \n", ft->count_frames, duration);
+                output->fwprintf_callback(stdout, L"\n \n Warning:! Number of processed audioframes (%d) is smaller than number of frames in duration (%d) \n", handle->count_frames, duration);
             }
-            output->fwprintf_callback(stdout, L"\n \n Processed %d audioframes of total (duration) %d (%02d:%02d:%02d [mins:secs:frames])\n", 
-                      ft->count_frames, duration, 
+            output->fwprintf_callback(stdout, L"\n \n Processed %d audioframes. Duration specified: %d (%02d:%02d:%02d [mins:secs:frames])\n", 
+                      handle->count_frames, duration, 
                       handle->area[ft->area].area_tracklist_time->duration[ft->track].minutes, 
                       handle->area[ft->area].area_tracklist_time->duration[ft->track].seconds, 
                       handle->area[ft->area].area_tracklist_time->duration[ft->track].frames);           
