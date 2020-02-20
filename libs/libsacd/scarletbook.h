@@ -604,7 +604,9 @@ typedef struct
     audio_sector_t             audio_sector;
     
     int                        frame_info_idx;  // added for retrieving timecode of current frame;   e.g. handle->audio_sector.frame[handle->frame_info_idx].timecode
-    int                        audio_frame_trimming;    // if 1  trimm out audioframes in trimecode interval [area_tracklist_time->start...+duration]
+    int                        audio_frame_trimming;    // if No pauses included if 1.  Trimm out audioframes in trimecode interval [area_tracklist_time->start...+duration]
+    uint32_t                   count_frames;                              // keep the number of audio frames in a track (for verification)
+    int                        dsf_nopad;
 } 
 scarletbook_handle_t;
 
