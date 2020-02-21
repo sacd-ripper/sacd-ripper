@@ -97,7 +97,7 @@ typedef void (*stats_track_callback_t)(char *filename, int current_track, int to
 
 scarletbook_output_t *scarletbook_output_create(scarletbook_handle_t *, stats_track_callback_t, stats_progress_callback_t, fwprintf_callback_t);
 int scarletbook_output_destroy(scarletbook_output_t *);
-int scarletbook_output_enqueue_track(scarletbook_output_t *, int, int, char *, char *, int, int);
+int scarletbook_output_enqueue_track(scarletbook_output_t *, int, int, char *, char *, int);
 int scarletbook_output_enqueue_raw_sectors(scarletbook_output_t *, int, int, char *, char *);
 int scarletbook_output_start(scarletbook_output_t *);
 void scarletbook_output_interrupt(scarletbook_output_t *);
