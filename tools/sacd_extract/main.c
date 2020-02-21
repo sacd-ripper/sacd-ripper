@@ -656,7 +656,7 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
             if (handle)
             {
                 handle->audio_frame_trimming = opts.audio_frame_trimming;
-                handle->dsf_nopad = opts.dsf_nopad;
+                handle->dsf_nopad = opts.dsf_nopad && !opts.select_tracks;
 
                 album_filename = get_album_dir(handle, opts.artist_flag);
                 
@@ -795,7 +795,7 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
                             output = scarletbook_output_create(handle, handle_status_update_track_callback, handle_status_update_progress_callback, safe_fwprintf);
 
                             scarletbook_output_enqueue_track(output, area_idx, 0, file_path_dsdiff_unique, "dsdiff_edit_master",
-                                                            (opts.convert_dst ? 1 : handle->area[area_idx].area_toc->frame_format != FRAME_FORMAT_DST),0);
+                                                            (opts.convert_dst ? 1 : handle->area[area_idx].area_toc->frame_format != FRAME_FORMAT_DST));
 
                             free(file_path_dsdiff_unique);
 
@@ -906,13 +906,13 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
                                 {
                                     file_path = make_filename(NULL, output_dir, musicfilename, "dsf");
                                     scarletbook_output_enqueue_track(output, area_idx, i, file_path, "dsf",
-                                                                     1 /* always decode to DSD */, opts.dsf_nopad && !opts.select_tracks);
+                                                                     1 /* always decode to DSD */);
                                 }
                                 else if (opts.output_dsdiff)
                                 {
                                     file_path = make_filename(NULL, output_dir, musicfilename, "dff");
                                     scarletbook_output_enqueue_track(output, area_idx, i, file_path, "dsdiff", 
-                                        (opts.convert_dst ? 1 : handle->area[area_idx].area_toc->frame_format != FRAME_FORMAT_DST),0);
+                                        (opts.convert_dst ? 1 : handle->area[area_idx].area_toc->frame_format != FRAME_FORMAT_DST));
                                 }
                                 free(file_path);
                                 free(musicfilename);                                                   
