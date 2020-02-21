@@ -1,4 +1,4 @@
-Version: 0.3.9.3-30-g045865607bafe3c5037f0a883aec82aec9c20d6d
+Version: 0.3.9.3-30-g045865607bafe3c5037f0a883aec82aec9c20d6d pre-release
 - fixed -z (--dsf-nopad) not working;
 - changed the name of option 'audio_frame_trimming=1' into 'pauses'. When 'pauses=1' then pauses are included in tracks.
 
