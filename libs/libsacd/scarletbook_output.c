@@ -124,7 +124,7 @@ static void destroy_ripping_queue(scarletbook_output_t *output)
     }
 }
 
-int scarletbook_output_enqueue_track(scarletbook_output_t *output, int area, int track, char *file_path, char *fmt, int dsd_encoded_export, int dsf_nopad)
+int scarletbook_output_enqueue_track(scarletbook_output_t *output, int area, int track, char *file_path, char *fmt, int dsd_encoded_export)
 {
     scarletbook_format_handler_t const * handler;
     scarletbook_output_format_t * output_format_ptr;
