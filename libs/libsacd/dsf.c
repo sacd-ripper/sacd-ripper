@@ -186,7 +186,7 @@ static int dsf_create(scarletbook_output_format_t *ft)
         {
             if (buffer_ptr_prev[i] > buffer_prev[i]) // if has something in buffer_prev[] to carry over
             {
-                memcpy(handle->buffer[i], buffer_prev[i], SACD_BLOCK_SIZE_PER_CHANNEL * sizeof(uint8_t));
+                memcpy(handle->buffer[i], buffer_prev[i], SACD_BLOCK_SIZE_PER_CHANNEL);
                 handle->buffer_ptr[i] = handle->buffer[i] + (buffer_ptr_prev[i] - buffer_prev[i]);
             }
         }
