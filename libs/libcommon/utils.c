@@ -210,9 +210,12 @@ void hex_dump_to_buffer(const void *buf, int len, int rowsize,
                 int ngroups = len / groupsize;
 
                 for (j = 0; j < ngroups; j++)
-                        lx += snprintf(linebuf + lx, linebuflen - lx,
-                                        "%s%16.16llx", j ? " " : "",
-                                        (unsigned long long)*(ptr8 + j));
+#if defined(WIN32) || defined(_WIN32)
+                        lx += snprintf(linebuf + lx, linebuflen - lx, "%s%16.16I64x", j ? " " : "", *(ptr8 + j));
+#else
+                        lx += snprintf(linebuf + lx, linebuflen - lx, "%s%16.16jx", j ? " " : "", *(ptr8 + j)); //(unsigned long long) //"%s%16.16llx" 
+#endif                        
+
                 ascii_column = 17 * ngroups + 2;
                 break;
         }
