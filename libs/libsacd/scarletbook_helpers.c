@@ -88,7 +88,7 @@ int utf8cpy(char *dst, char *src, int n)
 }
 
 #define MAX_DISC_ARTIST_LEN 40
-#define MAX_ALBUM_TITLE_LEN 60
+#define MAX_ALBUM_TITLE_LEN 100
 #define MAX_TRACK_TITLE_LEN 120
 #define MAX_TRACK_ARTIST_LEN 40
 
@@ -375,15 +375,26 @@ char *get_music_filename(scarletbook_handle_t *handle, int area, int track, cons
             pos = pos1;
 		
         strncpy(track_artist, c, min(pos - c, MAX_TRACK_ARTIST_LEN));
+        sanitize_filename(track_artist);
     }
+    else
+    {
+        strncpy(track_artist, "unknown artist", min(strlen("unknown artist"), MAX_TRACK_ARTIST_LEN));
+    }
+    
 
     memset(track_title, 0, sizeof(track_title));
     c = handle->area[area].area_track_text[track].track_type_title;
     if (c)
     {
         strncpy(track_title, c, MAX_TRACK_TITLE_LEN);
+        sanitize_filename(track_title);
     }
-
+    else
+    {
+        strncpy(track_title, "unknown title", min(strlen("unknown title"), MAX_TRACK_TITLE_LEN));
+    }
+    
     if (master_text->disc_title)
         p_album_title = master_text->disc_title;
     else if (master_text->disc_title_phonetic)
@@ -400,16 +411,22 @@ char *get_music_filename(scarletbook_handle_t *handle, int area, int track, cons
         if (!pos)
             pos = p_album_title + strlen(p_album_title);
         strncpy(disc_album_title, p_album_title, min(pos - p_album_title, MAX_ALBUM_TITLE_LEN));
+        sanitize_filename(disc_album_title);
     }
-
+    else
+    {
+         strncpy(disc_album_title, "unknown album title", min(strlen("unknown album title"), MAX_ALBUM_TITLE_LEN));
+    }
+    
     snprintf(disc_album_year, sizeof(disc_album_year), "%04d", handle->master_toc->disc_date_year);
 
-    sanitize_filename(track_artist);
-    sanitize_filename(disc_album_title);
-    sanitize_filename(track_title);
-
     if (override_title && strlen(override_title) > 0)
-        return parse_format("%N - %T", track + 1, disc_album_year, track_artist, disc_album_title, override_title);
+        {
+            if(performer_flag ==0)
+                return parse_format("%N - %L -%T", track + 1, disc_album_year, track_artist, disc_album_title, override_title);
+            else
+                return parse_format("%N - %L - %A -%T", track + 1, disc_album_year, track_artist, disc_album_title, override_title);
+        }
     else if (strlen(track_artist) > 0 && strlen(track_title) > 0 && performer_flag != 0) 
         return parse_format("%N - %A - %T", track + 1, disc_album_year, track_artist, disc_album_title, track_title);
     else if (strlen(track_artist) > 0 && performer_flag != 0)  
