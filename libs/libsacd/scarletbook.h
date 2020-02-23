@@ -607,6 +607,7 @@ typedef struct
     int                        audio_frame_trimming;    // if No pauses included if 1.  Trimm out audioframes in trimecode interval [area_tracklist_time->start...+duration]
     uint32_t                   count_frames;                              // keep the number of audio frames in a track (for verification)
     int                        dsf_nopad;
+    int                        concatenate;
 } 
 scarletbook_handle_t;
 
