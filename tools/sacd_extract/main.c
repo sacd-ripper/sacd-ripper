@@ -82,11 +82,13 @@ static struct opts_s
     char           *output_dir;
 	char           *output_dir_conc;
     int            select_tracks;
-    char           selected_tracks[256]; /* scarletbook is limited to 256 tracks */
+    uint8_t        selected_tracks[256]; /* scarletbook is limited to 256 tracks */
     int            dsf_nopad;
     int            audio_frame_trimming; // if 1  trimm out audioframes in trimecode interval [area_tracklist_time->start...+duration]
     int            artist_flag;          // if artist ==1 then the artist name is added in folder name
     int            performer_flag;       // if performer ==1 the performer from each track is added
+    int            concatenate;  // concatenate consecutive tracks specified in selected_tracks
+    int            logging;  // if 1 save logs in a file
     int            version;
 } opts;
 
@@ -108,6 +110,7 @@ static int parse_options(int argc, char *argv[])
         "  -s, --output-dsf                : output as Sony DSF file\n"
         "  -z, --dsf-nopad                 : Do not zero pad DSF (cannot be used with -t)\n"
         "  -t, --select-track              : only output selected track(s) (ex. -t 1,5,13)\n"
+        "  -k, --concatenate               : concatenate consecutive selected track(s) (ex. -k -t 2,3,4)\n"
         "  -I, --output-iso                : output as RAW ISO\n"
 #ifndef SECTOR_LIMIT
         "  -w, --concurrent                : Concurrent ISO+DSF/DSDIFF processing mode\n"
@@ -137,9 +140,9 @@ static int parse_options(int argc, char *argv[])
 
 
 #ifdef SECTOR_LIMIT
-    static const char options_string[] = "2mepszIcCvi:o:y:t:P?";
+    static const char options_string[] = "2mepszkIcCvi:o:y:t:P?";
 #else
-    static const char options_string[] = "2mepszIwcCvi:o:y:t:P?";
+    static const char options_string[] = "2mepszkIwcCvi:o:y:t:P?";
 #endif
 
     static const struct option options_table[] = {
@@ -149,6 +152,7 @@ static int parse_options(int argc, char *argv[])
         {"output-dsdiff", no_argument, NULL, 'p'},
         {"output-dsf", no_argument, NULL, 's'},
         {"dsf-nopad", no_argument, NULL, 'z'},
+        {"concatenate", no_argument, NULL, 'k'},
         {"output-iso", no_argument, NULL, 'I'},
 #ifndef SECTOR_LIMIT
         {"concurrent", no_argument, NULL, 'w'}, 
@@ -196,6 +200,7 @@ static int parse_options(int argc, char *argv[])
             break;
         case 't': 
             {
+                for(int m=0;m<255;m++)opts.selected_tracks[m]=0x00;
                 int track_nr, count = 0;
                 char *track = strtok(optarg, " ,");
                 while (track != 0)
@@ -205,7 +210,7 @@ static int parse_options(int argc, char *argv[])
                     if (!track_nr)
                         continue;
                     track_nr = (track_nr - 1) & 0xff;
-                    opts.selected_tracks[track_nr] = 1;
+                    opts.selected_tracks[track_nr] = 0x01;
                     count++;
                 }
                 opts.select_tracks = count != 0;
@@ -213,7 +218,13 @@ static int parse_options(int argc, char *argv[])
             break;
         case 'z':
             opts.dsf_nopad = 1;
-            break;    
+            break;
+        case 'k': // concatenate consecutive tracks specified in selected_tracks
+            opts.concatenate = 1;
+            // must disable dsf_nopad and include pauses
+            if(opts.dsf_nopad==1)opts.dsf_nopad = 0;
+            if (opts.audio_frame_trimming == 1)opts.audio_frame_trimming = 0;        
+            break;
         case 'I': 
             //opts.output_dsdiff_em = 0; 
             //opts.output_dsdiff = 0; 
@@ -390,8 +401,11 @@ static void init(void)
     opts.version            = 0;
     opts.dsf_nopad          = 0;
     opts.audio_frame_trimming=1;  // default is On ; eliminates pauses
-    opts.artist_flag = 0;    // if artist ==1 then the artist name is added in folder name
-    opts.performer_flag = 0; // if performer ==1 the performer from each track is added
+    opts.artist_flag        = 0;    // if artist ==1 then the artist name is added in folder name
+    opts.performer_flag     = 0; // if performer ==1 the performer from each track is added
+    opts.concatenate        = 0; // concatenate consecutive tracks specified in t
+    opts.select_tracks      = 0;
+    opts.logging            = 0;
 
 #if defined(WIN32) || defined(_WIN32)
     signal(SIGINT, handle_sigint);
@@ -403,11 +417,10 @@ static void init(void)
     sigaction(SIGINT, &sa, NULL);
 #endif
 
-    init_logging();
-    g_fwprintf_lock = new_lock(0);
-
-    read_config();
+        //init_logging(1);   //init_logging(0); 0 = not create a log file
+        g_fwprintf_lock = new_lock(0);
 }
+
 void print_start_time()
 {
 	started_processing = time(0);
@@ -495,6 +508,10 @@ void read_config()
                 opts.performer_flag = 1;
             if ((strstr(content, "pauses=1") != NULL) || (strstr(content, "pauses=yes") != NULL))
                 opts.audio_frame_trimming = 0;
+            if ((strstr(content, "concatenate=1") != NULL) || (strstr(content, "concatenate=yes") != NULL))
+                { opts.concatenate = 1 ; opts.audio_frame_trimming =0;opts.dsf_nopad=0;}  // when concatenate must include all pausese and disable dsf_pad !!!
+            if ((strstr(content, "logging=1") != NULL) || (strstr(content, "logging=yes") != NULL))
+                    opts.logging = 1;
         }
         fclose(fp);
     }
@@ -579,6 +596,9 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
     if (parse_options(argc, argv))
 #endif
     {
+        read_config();
+        init_logging(opts.logging); //init_logging(0); 1= write logs in a file
+
         setlocale(LC_ALL, "");
         if (fwide(stdout, 1) < 0)
         {
@@ -597,8 +617,8 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
             {
                 wchar_t *wide_filename;
                 CHAR2WCHAR(wide_filename, buffer);
-                fwprintf(stdout, L"\n Working directory (for the app and 'sacd_extract.cfg' file): %ls; Configure settings: Artist will be added in folder name (artist=) %ls; Performer will be added in filename of track (performer=) %ls; Pauses included (pauses=) %ls\n",
-                         wide_filename, opts.artist_flag > 0 ? L"yes" : L"no", opts.performer_flag > 0 ? L"yes" : L"no", opts.audio_frame_trimming == 0 ? L"yes" : L"no");
+                fwprintf(stdout, L"\n Working directory (for the app and 'sacd_extract.cfg' file): %ls; Configure settings: Artist will be added in folder name (artist=) %ls; Performer will be added in filename of track (performer=) %ls; Pauses included (pauses=) %ls; Concatenate (concatenate=) %ls\n",
+                         wide_filename, opts.artist_flag > 0 ? L"yes" : L"no", opts.performer_flag > 0 ? L"yes" : L"no", opts.audio_frame_trimming == 0 ? L"yes" : L"no", opts.concatenate > 0 ? L"yes" : L"no");
                 free(wide_filename);
             }
             free(buffer);
@@ -655,9 +675,18 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
             handle = scarletbook_open(sacd_reader);
             if (handle)
             {
-                handle->audio_frame_trimming = opts.audio_frame_trimming;
-                handle->dsf_nopad = opts.dsf_nopad && !opts.select_tracks;
-
+                handle->concatenate = opts.concatenate;
+                if(opts.concatenate)
+                {
+                    handle->audio_frame_trimming = 0;                  
+                    handle->dsf_nopad = 0;
+                }
+                else
+                {
+                    handle->audio_frame_trimming = opts.audio_frame_trimming;
+                    handle->dsf_nopad = opts.dsf_nopad && !opts.select_tracks;
+                }
+                
                 album_filename = get_album_dir(handle, opts.artist_flag);
                 
                 if (opts.print)
@@ -892,31 +921,87 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
                             }
                             free(wide_folder);
 
-
                             output = scarletbook_output_create(handle, handle_status_update_track_callback, handle_status_update_progress_callback, safe_fwprintf);
-                            // fill the queue with items to rip
-                            for (i = 0; i < handle->area[area_idx].area_toc->track_count; i++) 
+
+                            if(opts.concatenate == 0)
                             {
-                                if (opts.select_tracks && opts.selected_tracks[i] == 0)
-                                    continue;
-
-                                musicfilename = get_music_filename(handle, area_idx, i, "",opts.performer_flag);
-
-                                if (opts.output_dsf)
+                                // fill the queue with items to rip
+                                for (i = 0; i < handle->area[area_idx].area_toc->track_count; i++)
                                 {
-                                    file_path = make_filename(NULL, output_dir, musicfilename, "dsf");
-                                    scarletbook_output_enqueue_track(output, area_idx, i, file_path, "dsf",
-                                                                     1 /* always decode to DSD */);
+                                    if (opts.select_tracks && opts.selected_tracks[i] == 0x0)
+                                        continue;
+
+                                    musicfilename = get_music_filename(handle, area_idx, i, "", opts.performer_flag);
+
+                                    if (opts.output_dsf)
+                                    {
+                                        file_path = make_filename(NULL, output_dir, musicfilename, "dsf");
+                                        scarletbook_output_enqueue_track(output, area_idx, i, file_path, "dsf",
+                                                                         1 /* always decode to DSD */);
+                                    }
+                                    else if (opts.output_dsdiff)
+                                    {
+                                        file_path = make_filename(NULL, output_dir, musicfilename, "dff");
+                                        scarletbook_output_enqueue_track(output, area_idx, i, file_path, "dsdiff",
+                                                                         (opts.convert_dst ? 1 : handle->area[area_idx].area_toc->frame_format != FRAME_FORMAT_DST));
+                                    }
+                                    free(file_path);
+                                    free(musicfilename);
                                 }
-                                else if (opts.output_dsdiff)
-                                {
-                                    file_path = make_filename(NULL, output_dir, musicfilename, "dff");
-                                    scarletbook_output_enqueue_track(output, area_idx, i, file_path, "dsdiff", 
-                                        (opts.convert_dst ? 1 : handle->area[area_idx].area_toc->frame_format != FRAME_FORMAT_DST));
-                                }
-                                free(file_path);
-                                free(musicfilename);                                                   
                             }
+                            else  // made concatenation
+                            {
+                                // fill the queue with item to rip
+                                if (opts.select_tracks)
+                                {
+                                    int first_track = handle->area[area_idx].area_toc->track_count-1;
+                                    int last_track  = 0;
+                                    // find first track and last track in list
+                                    for (i = 0; i < handle->area[area_idx].area_toc->track_count; i++)
+                                    {
+                                        if (opts.selected_tracks[i] == 0x01)
+                                        {
+                                            if (first_track > i)
+                                                first_track = i;
+                                            if (last_track <  i)
+                                                last_track = i;
+                                        }                                         
+                                    }
+
+
+                                    if ((first_track < handle->area[area_idx].area_toc->track_count)&&
+                                        (last_track < handle->area[area_idx].area_toc->track_count) )
+                                    {
+                                        char conc_string[10];
+                                        snprintf(conc_string, sizeof(conc_string), "[%02d-%02d]",first_track + 1, last_track + 1);
+
+                                        musicfilename = get_music_filename(handle, area_idx, first_track, conc_string, opts.performer_flag);
+
+                                        fwprintf(stdout, L"\n Concatenate tracks: %d to %d\n", first_track+1,last_track+1);
+                                        if (opts.output_dsf)
+                                        {
+                                            file_path = make_filename(NULL, output_dir, musicfilename, "dsf");
+                                            //file_path = get_unique_filename(NULL, output_dir, album_filename, "dsf");
+                                            scarletbook_output_enqueue_concatenate_tracks(output, area_idx, first_track, file_path, "dsf",
+                                                                                          1 /* always decode to DSD */, last_track);
+                                        }
+                                        else if (opts.output_dsdiff)
+                                        {
+                                            file_path = make_filename(NULL, output_dir, musicfilename, "dff");
+                                            //file_path = get_unique_filename(NULL, output_dir, album_filename, "dff");
+                                            scarletbook_output_enqueue_concatenate_tracks(output, area_idx, first_track, file_path, "dsdiff",
+                                                                                          (opts.convert_dst ? 1 : handle->area[area_idx].area_toc->frame_format != FRAME_FORMAT_DST), last_track);
+                                        }
+                                        free(file_path);
+                                        free(musicfilename);
+                                    
+                                    }
+                                }
+                                else  // no tracks specified
+                                {
+                                    fwprintf(stdout, L"\n\n Warning! Concatenation activated but no tracks speficed!\n");
+                                }                                                                                                  
+                            }                          
 
                             free(output_dir);
 
