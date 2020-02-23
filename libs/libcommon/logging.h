@@ -28,7 +28,7 @@
 extern "C" {
 #endif
 
-void init_logging();
+void init_logging(int yes);
 void destroy_logging();
 
 extern log_module_info_t * lm_main; 
