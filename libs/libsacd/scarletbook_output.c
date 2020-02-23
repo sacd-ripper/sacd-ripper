@@ -151,27 +151,32 @@ int scarletbook_output_enqueue_track(scarletbook_output_t *output, int area, int
         }
         else
         {
-            // Read traks without pauses
-            //output_format_ptr->start_lsn = sb_handle->area[area].area_tracklist_offset->track_start_lsn[track];
-            //output_format_ptr->length_lsn = sb_handle->area[area].area_tracklist_offset->track_length_lsn[track];
-
-            // Read all LSNs (including pauses)
-            if (track > 0)
+            // Read tracks without pauses
+            if(sb_handle->audio_frame_trimming)
             {
                 output_format_ptr->start_lsn = sb_handle->area[area].area_tracklist_offset->track_start_lsn[track];
+                output_format_ptr->length_lsn = sb_handle->area[area].area_tracklist_offset->track_length_lsn[track];
             }
-            else
+            else //// Read all LSNs (including pauses)
             {
-                output_format_ptr->start_lsn = sb_handle->area[area].area_toc->track_start;
+                if (track > 0)
+                {
+                    output_format_ptr->start_lsn = sb_handle->area[area].area_tracklist_offset->track_start_lsn[track];
+                }
+                else
+                {
+                    output_format_ptr->start_lsn = sb_handle->area[area].area_toc->track_start;
+                }
+                if (track < sb_handle->area[area].area_toc->track_count - 1)
+                {
+                    output_format_ptr->length_lsn = sb_handle->area[area].area_tracklist_offset->track_start_lsn[track + 1] - output_format_ptr->start_lsn + 1;
+                }
+                else
+                {
+                    output_format_ptr->length_lsn = sb_handle->area[area].area_toc->track_end - output_format_ptr->start_lsn + 1;
+                }
             }
-            if (track < sb_handle->area[area].area_toc->track_count - 1)
-            {
-                output_format_ptr->length_lsn = sb_handle->area[area].area_tracklist_offset->track_start_lsn[track + 1] - output_format_ptr->start_lsn + 1;
-            }
-            else
-            {
-                output_format_ptr->length_lsn = sb_handle->area[area].area_toc->track_end - output_format_ptr->start_lsn + 1;
-            }
+
             // DEBUG
             //output_format_ptr->cb_fwprintf(stderr, L"\n Debug: Queuing: track %d, area_tracklist_offset->track_start_lsn: %d, area_tracklist_offset->track_length_lsn: %d\n", track,
             //                               sb_handle->area[area].area_tracklist_offset->track_start_lsn[track], output_format_ptr->length_lsn = sb_handle->area[area].area_tracklist_offset->track_length_lsn[track]);
@@ -233,6 +238,88 @@ int scarletbook_output_enqueue_raw_sectors(scarletbook_output_t *output, int sta
         output_format_ptr->length_lsn = length_lsn;
 
         LOG(lm_main, LOG_NOTICE, ("Queuing raw: %s, start_lsn: %d, length_lsn: %d", file_path, start_lsn, length_lsn));
+
+        list_add_tail(&output_format_ptr->siblings, &output->ripping_queue);
+
+        return 0;
+    }
+    return -1;
+}
+
+int scarletbook_output_enqueue_concatenate_tracks(scarletbook_output_t *output, int area, int track, char *file_path, char *fmt, int dsd_encoded_export, int last_track)
+{
+    scarletbook_format_handler_t const *handler;
+    scarletbook_output_format_t *output_format_ptr;
+    scarletbook_handle_t *sb_handle = output->sb_handle;
+
+
+    if ((handler = find_output_format(fmt)))
+    {
+        output_format_ptr = calloc(sizeof(scarletbook_output_format_t), 1);
+        output_format_ptr->sb_handle = sb_handle;
+        output_format_ptr->cb_fwprintf = output->fwprintf_callback;
+        output_format_ptr->area = area;
+        output_format_ptr->track = track;
+        output_format_ptr->handler = *handler;
+        output_format_ptr->filename = strdup(file_path);
+        output_format_ptr->channel_count = sb_handle->area[area].area_toc->channel_count;
+        output_format_ptr->dst_encoded_import = sb_handle->area[area].area_toc->frame_format == FRAME_FORMAT_DST;
+        output_format_ptr->dsd_encoded_export = dsd_encoded_export;
+
+        // read with pauses only
+        // find the start lsn
+        if (track > 0)
+        {
+            output_format_ptr->start_lsn = sb_handle->area[area].area_tracklist_offset->track_start_lsn[track];
+        }
+        else
+        {
+            output_format_ptr->start_lsn = sb_handle->area[area].area_toc->track_start;
+        }
+      
+        if (last_track < sb_handle->area[area].area_toc->track_count - 1)
+        {
+            output_format_ptr->length_lsn = sb_handle->area[area].area_tracklist_offset->track_start_lsn[last_track + 1] - output_format_ptr->start_lsn + 1;
+        }
+        else
+        {
+            output_format_ptr->length_lsn = sb_handle->area[area].area_toc->track_end - output_format_ptr->start_lsn + 1;
+        }
+
+        // DEBUG
+        //output_format_ptr->cb_fwprintf(stderr, L"\n Debug: Queuing concatenation: track %d, start_lsn: %d, length_lsn: %d\n", track, output_format_ptr->start_lsn, output_format_ptr->length_lsn);
+
+        // Do some integrity checks
+        //The Track_Start_Address of a Track must be in the Track Area of
+        //    the corresponding Audio Area
+        if (!(output_format_ptr->start_lsn >= sb_handle->area[area].area_toc->track_start) ||
+            !(output_format_ptr->start_lsn <= sb_handle->area[area].area_toc->track_end))
+        {
+            LOG(lm_main, LOG_NOTICE, ("Queuing error: track_start_lsn is not is area! area: %d, track %d, start_lsn: %d, length_lsn: %d", area, track, output_format_ptr->start_lsn, output_format_ptr->length_lsn));
+            output_format_ptr->cb_fwprintf(stderr, L"\n Queuing error: track_start_lsn is not is area! area: %d, track %d, start_lsn: %d, length_lsn: %d\n", area, track, output_format_ptr->start_lsn, output_format_ptr->length_lsn);
+            }
+
+            //  For 1 ≤ track < N_Tracks the following equation must be true:
+            //        Track_Start_Address[track+1] ≥ Track_Start_Address[track] + Track_Length[track] - 1
+            if (track < sb_handle->area[area].area_toc->track_count - 1)
+            {
+                if (!(sb_handle->area[area].area_tracklist_offset->track_start_lsn[track + 1] >= sb_handle->area[area].area_tracklist_offset->track_start_lsn[track] + sb_handle->area[area].area_tracklist_offset->track_length_lsn[track] - 1))
+                {
+                    LOG(lm_main, LOG_NOTICE, ("Queuing error: equation not valid! area: %d, track %d, start_lsn: %d, length_lsn: %d", area, track, output_format_ptr->start_lsn, output_format_ptr->length_lsn));
+                    output_format_ptr->cb_fwprintf(stderr, L"\n Queuing error: equation not valid(beetween track_start_lsn and track_length_lsn)! area: %d, track %d, start_lsn: %d, length_lsn: %d\n", area, track, output_format_ptr->start_lsn, output_format_ptr->length_lsn);
+                }
+            }
+            else
+            {
+                if (!(sb_handle->area[area].area_toc->track_end >= sb_handle->area[area].area_tracklist_offset->track_start_lsn[track] + sb_handle->area[area].area_tracklist_offset->track_length_lsn[track] - 1))
+                {
+                    LOG(lm_main, LOG_NOTICE, ("Queuing error: equation not valid! area: %d, track %d, start_lsn: %d, length_lsn: %d", area, track, output_format_ptr->start_lsn, output_format_ptr->length_lsn));
+                    output_format_ptr->cb_fwprintf(stderr, L"\n Queuing error: equation not valid(beetween track_start_lsn and track_length_lsn)! area: %d, track %d, start_lsn: %d, length_lsn: %d\n", area, track, output_format_ptr->start_lsn, output_format_ptr->length_lsn);
+                }
+            }
+
+
+        LOG(lm_main, LOG_NOTICE, ("Queuing: concatenation %s, area: %d, track %d, start_lsn: %d, length_lsn: %d, dst_encoded_import: %d, dsd_encoded_export: %d", file_path, area, track, output_format_ptr->start_lsn, output_format_ptr->length_lsn, output_format_ptr->dst_encoded_import, output_format_ptr->dsd_encoded_export));
 
         list_add_tail(&output_format_ptr->siblings, &output->ripping_queue);
 
@@ -601,18 +688,31 @@ static void *processing_thread(void *arg)
         }  // end  if (create_output_file(ft)
 
         // Show statistics only for DSF/DFF : print Error if nr of processed frames < of duration (in nr of frames)
-        if (ft->handler.flags & OUTPUT_FLAG_DSD || ft->handler.flags & OUTPUT_FLAG_DST)
+        if (ft->handler.flags & OUTPUT_FLAG_DSD || ft->handler.flags & OUTPUT_FLAG_DST )
         {
-            uint32_t duration = (uint32_t)TIME_FRAMECOUNT(&handle->area[ft->area].area_tracklist_time->duration[ft->track]);
-            if (handle->count_frames < duration) //output->stats_current_count_frames
+            if(handle->concatenate == 0)
             {
-                output->fwprintf_callback(stdout, L"\n \n Warning:! Number of processed audioframes (%d) is smaller than number of frames in duration (%d) \n", handle->count_frames, duration);
+                uint32_t duration = (uint32_t)TIME_FRAMECOUNT(&handle->area[ft->area].area_tracklist_time->duration[ft->track]);
+                if (handle->count_frames < duration) //output->stats_current_count_frames
+                {
+                    output->fwprintf_callback(stdout, L"\n \n Warning:! Number of processed audioframes (%d) is smaller than number of frames in duration (%d) \n", handle->count_frames, duration);
+                }
+                output->fwprintf_callback(stdout, L"\n \n Processed %d audioframes. Duration specified: %d (%02d:%02d:%02d [mins:secs:frames])\n",
+                                          handle->count_frames, duration,
+                                          handle->area[ft->area].area_tracklist_time->duration[ft->track].minutes,
+                                          handle->area[ft->area].area_tracklist_time->duration[ft->track].seconds,
+                                          handle->area[ft->area].area_tracklist_time->duration[ft->track].frames);
             }
-            output->fwprintf_callback(stdout, L"\n \n Processed %d audioframes. Duration specified: %d (%02d:%02d:%02d [mins:secs:frames])\n", 
-                      handle->count_frames, duration, 
-                      handle->area[ft->area].area_tracklist_time->duration[ft->track].minutes, 
-                      handle->area[ft->area].area_tracklist_time->duration[ft->track].seconds, 
-                      handle->area[ft->area].area_tracklist_time->duration[ft->track].frames);           
+            else
+            {
+                int count_sec = (int)(handle->count_frames / SACD_FRAME_RATE);
+                output->fwprintf_callback(stdout, L"\n \n Processed %d audioframes. Total duration: %02d:%02d:%02d [mins:secs:frames] \n",
+                                          handle->count_frames,
+                                          (int)count_sec / 60,
+                                          (int)count_sec % 60,
+                                          (int)handle->count_frames % SACD_FRAME_RATE);
+            }
+                      
         }
 
         if (sysAtomicRead(&output->stop_processing) == 1)
