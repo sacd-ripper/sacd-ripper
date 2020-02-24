@@ -356,6 +356,7 @@ int id3_set_text__performer(struct id3_frame *, char *);
 char *id3_get_text_desc(struct id3_frame *);
 int id3_get_text_number(struct id3_frame *);
 int id3_set_text(struct id3_frame *, char *);
+int id3_set_text_utf8(struct id3_frame *, char *);
 int id3_set_text_number(struct id3_frame *, int);
 int id3_frame_is_text(struct id3_frame *frame);
 
