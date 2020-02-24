@@ -29,7 +29,7 @@
 
 #include "scarletbook.h"
 
-#include <id3.h>
+#include "id3.h"
 #include <genre.dat>
 
 int scarletbook_id3_tag_render(scarletbook_handle_t *handle, uint8_t *buffer, int area, int track)
@@ -79,10 +79,10 @@ int scarletbook_id3_tag_render(scarletbook_handle_t *handle, uint8_t *buffer, in
     // TIT2 track title
     if (handle->area[area].area_track_text[track].track_type_title)
     {
-        char *track_type_title = charset_convert(handle->area[area].area_track_text[track].track_type_title, strlen(handle->area[area].area_track_text[track].track_type_title), "UTF-8", "ISO-8859-1");
+        //char *track_type_title = charset_convert(handle->area[area].area_track_text[track].track_type_title, strlen(handle->area[area].area_track_text[track].track_type_title), "UTF-8", "ISO-8859-1");
         frame = id3_add_frame(tag, ID3_TIT2);
-        id3_set_text(frame, track_type_title);
-        free(track_type_title);
+        id3_set_text_utf8(frame, handle->area[area].area_track_text[track].track_type_title);
+        //free(track_type_title);
     }
     else
     {
@@ -101,9 +101,9 @@ int scarletbook_id3_tag_render(scarletbook_handle_t *handle, uint8_t *buffer, in
         if (album_title)
         {
             frame = id3_add_frame(tag, ID3_TIT2);
-            album_title = charset_convert(album_title, strlen(album_title), "UTF-8", "ISO-8859-1");
-            id3_set_text(frame, album_title);
-            free(album_title);
+            //album_title = charset_convert(album_title, strlen(album_title), "UTF-8", "ISO-8859-1");
+            id3_set_text_utf8(frame, album_title);
+            //free(album_title);
         }
     }
     // TPE2 is widely used as album artist
@@ -111,64 +111,68 @@ int scarletbook_id3_tag_render(scarletbook_handle_t *handle, uint8_t *buffer, in
     {
         char *album_artist = handle->master_text.album_artist;
         frame = id3_add_frame(tag, ID3_TPE2);
-        album_artist = charset_convert(album_artist, strlen(album_artist), "UTF-8", "ISO-8859-1");
-        id3_set_text(frame, album_artist);
-        free(album_artist);
+        //album_artist = charset_convert(album_artist, strlen(album_artist), "UTF-8", "ISO-8859-1");
+        id3_set_text_utf8(frame, album_artist);
+        //free(album_artist);
     }
     if (&handle->area[area].area_isrc_genre->isrc[track])
     {
-        char isrc[12];
-        char *isrc_conv;
+        char isrc[16];
+        //char *isrc_conv;
         memcpy(isrc, handle->area[area].area_isrc_genre->isrc[track].country_code, 2);
         memcpy(isrc + 2, handle->area[area].area_isrc_genre->isrc[track].owner_code, 3);
         memcpy(isrc + 5, handle->area[area].area_isrc_genre->isrc[track].recording_year, 2);
         memcpy(isrc + 7, handle->area[area].area_isrc_genre->isrc[track].designation_code, 5);
+        isrc[12]=0x00;
 
         frame = id3_add_frame(tag, ID3_TSRC);
-        isrc_conv = charset_convert(isrc, 12, "UTF-8", "ISO-8859-1");
-        id3_set_text(frame, isrc_conv);
-        free(isrc_conv);
+        //isrc_conv = charset_convert(isrc, 12, "UTF-8", "ISO-8859-1");
+        //id3_set_text(frame, isrc_conv);
+        id3_set_text_utf8(frame, isrc);
+        //free(isrc_conv);
     }
     if (handle->master_text.album_publisher){
         char *publisher = handle->master_text.album_publisher;
         frame = id3_add_frame(tag, ID3_TPUB);
-        publisher = charset_convert(publisher, strlen(publisher), "UTF-8", "ISO-8859-1");
-        id3_set_text(frame, publisher);
-        free(publisher);
+        //publisher = charset_convert(publisher, strlen(publisher), "UTF-8", "ISO-8859-1");
+        id3_set_text_utf8(frame, publisher);
+        //free(publisher);
     }
     if (handle->master_text.album_copyright){
         char *copyright = handle->master_text.album_copyright;
         frame = id3_add_frame(tag, ID3_TCOP);
-        copyright = charset_convert(copyright, strlen(copyright), "UTF-8", "ISO-8859-1");
-        id3_set_text(frame, copyright);
-        free(copyright);
+        //copyright = charset_convert(copyright, strlen(copyright), "UTF-8", "ISO-8859-1");
+        id3_set_text_utf8(frame, copyright);
+        //free(copyright);
     }
     if (handle->master_toc){
         master_toc_t *mtoc = handle->master_toc;
         char str[64];
-        char *str_conv;
+        //char *str_conv;
         sprintf(str, "%d/%d", mtoc->album_sequence_number, mtoc->album_set_size);
         frame = id3_add_frame(tag, ID3_TPOS);
-        str_conv = charset_convert(str, strlen(str), "UTF-8", "ISO-8859-1");
-        id3_set_text(frame,str_conv);
-        free(str_conv);
+        //str_conv = charset_convert(str, strlen(str), "UTF-8", "ISO-8859-1");
+        id3_set_text_utf8(frame,str);
+        //id3_set_text(frame, str_conv);
+        //free(str_conv);
     }
     if (handle->area[area].area_track_text[track].track_type_composer)
     {
         char *composer = handle->area[area].area_track_text[track].track_type_composer; 
         frame = id3_add_frame(tag, ID3_TCOM);
-        composer = charset_convert(composer, strlen(composer), "UTF-8", "ISO-8859-1");
-        id3_set_text(frame, composer);
-        free(composer);
+        //composer = charset_convert(composer, strlen(composer), "UTF-8", "ISO-8859-1");
+        id3_set_text_utf8(frame, composer);
+        //free(composer);
     }
     // Artist
     if (handle->area[area].area_track_text[track].track_type_performer)
     {
         char *performer = handle->area[area].area_track_text[track].track_type_performer;        
-        performer = charset_convert(performer, strlen(performer), "UTF-8", "ISO-8859-1");
+        //performer = charset_convert(performer, strlen(performer), "UTF-8", "ISO-8859-1");
 		       
 		frame = id3_add_frame(tag, ID3_TPE1);  // Artist, soloist
-		id3_set_text(frame, performer);
+		//id3_set_text(frame, performer);
+        id3_set_text_utf8(frame, performer);
 
         //frame = id3_add_frame(tag, ID3_TPE3);  // TPE3=Conductor/performer refinement;  TOPE='Original artist(s)/performer(s)' IPLS -Involved people(performer?)
         //id3_set_text(frame, performer);
@@ -177,7 +181,7 @@ int scarletbook_id3_tag_render(scarletbook_handle_t *handle, uint8_t *buffer, in
 
         frame = id3_add_frame(tag, ID3_TXXX);  // ID3_TXXX, Performer
         id3_set_text__performer(frame, performer);
-        free(performer);
+        //free(performer);
     } 
     else
     {
@@ -205,9 +209,9 @@ int scarletbook_id3_tag_render(scarletbook_handle_t *handle, uint8_t *buffer, in
         if (artist)
         {
             frame = id3_add_frame(tag, ID3_TPE1);
-            artist = charset_convert(artist, strlen(artist), "UTF-8", "ISO-8859-1");
-            id3_set_text(frame, artist);
-            free(artist);
+            //artist = charset_convert(artist, strlen(artist), "UTF-8", "ISO-8859-1");
+            id3_set_text_utf8(frame, artist);
+            //free(artist);
         }
     }
     // Title of album
@@ -227,9 +231,9 @@ int scarletbook_id3_tag_render(scarletbook_handle_t *handle, uint8_t *buffer, in
         if (album_title)
         {
             frame = id3_add_frame(tag, ID3_TALB);
-            album_title = charset_convert(album_title, strlen(album_title), "UTF-8", "ISO-8859-1");
-            id3_set_text(frame, album_title);
-            free(album_title);
+            //album_title = charset_convert(album_title, strlen(album_title), "UTF-8", "ISO-8859-1");
+            id3_set_text_utf8(frame, album_title);
+            //free(album_title);
         }
     }
     // Genre
