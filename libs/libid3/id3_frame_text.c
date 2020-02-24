@@ -248,8 +248,8 @@ int id3_set_text(struct id3_frame *frame, char *text)
 	/*
 	 * Allocate memory for new data.
 	 */
-	frame->fr_raw_size = strlen(text) + 1;
-	frame->fr_raw_data = malloc(frame->fr_raw_size + 1);
+	frame->fr_raw_size = strlen(text) + 2; // BUG - must add 1 for encoding byte and 1 byte for ending zero of string (copied in fr_data)
+	frame->fr_raw_data = calloc(frame->fr_raw_size + 1,1);
 
 	/*
 	 * Copy contents.
@@ -266,6 +266,44 @@ int id3_set_text(struct id3_frame *frame, char *text)
 	return 0;
 }
 
+/*
+ * Function id3_set_text (frame, text)
+ *
+ *    Set text for the indicated frame (only UTF-8 is currently
+ *    supported).  Return 0 upon success, or -1 if an error occured.
+ *
+ */
+int id3_set_text_utf8(struct id3_frame *frame, char *text)
+{
+	/* Type check */
+	if (frame->fr_desc->fd_idstr[0] != 'T')
+		return -1;
+
+	/*
+	 * Release memory occupied by previous data.
+	 */
+	id3_frame_clear_data(frame);
+
+	/*
+	 * Allocate memory for new data.
+	 */
+	frame->fr_raw_size = strlen(text) + 2; // BUG - must add 1 for encoding byte and 1 byte for ending zero of string (copied in fr_data)
+	frame->fr_raw_data = calloc(frame->fr_raw_size + 1,1);
+
+	/*
+	 * Copy contents.
+	 */
+	*(uint8_t *)frame->fr_raw_data = ID3_ENCODING_UTF8;
+	memcpy((uint8_t *)frame->fr_raw_data + 1, text, frame->fr_raw_size);
+
+	frame->fr_altered = 1;
+	frame->fr_owner->id3_altered = 1;
+
+	frame->fr_data = frame->fr_raw_data;
+	frame->fr_size = frame->fr_raw_size;
+
+	return 0;
+}
 
 /*
  * Function id3_set_text_number (frame, number)
@@ -412,9 +450,9 @@ int id3_set_comment(struct id3_frame *frame, char* description, char *comment)
 /*
  * Function id3_set_text__performer (frame, text)
  *
- *    Set text for the description:PREFORMER of indicated frame (only ISO-8859-1 is currently
- *    supported).  Return 0 upon success, or -1 if an error occured.
- *
+ *    Set text for the description:PREFORMER of indicated frame 
+ *   Return 0 upon success, or -1 if an error occured.
+ *         UTF-8 enconding
  */
 int id3_set_text__performer(struct id3_frame *frame, char *text)
 {
@@ -433,7 +471,7 @@ int id3_set_text__performer(struct id3_frame *frame, char *text)
 
 	// Copy contents.
 
-	*(int8_t *)frame->fr_raw_data = ID3_ENCODING_ISO_8859_1;
+	*(int8_t *)frame->fr_raw_data = ID3_ENCODING_UTF8;   //ID3_ENCODING_ISO_8859_1;
 
 	memcpy((char *)frame->fr_raw_data + 1, (char *)"PERFORMER", strlen("PERFORMER"));
 	memcpy((char *)frame->fr_raw_data + 1 + strlen("PERFORMER") +1, text, strlen(text));
