@@ -80,6 +80,9 @@ static const uint8_t bit_reverse_table[] =
         0x0f, 0x8f, 0x4f, 0xcf, 0x2f, 0xaf, 0x6f, 0xef, 0x1f, 0x9f, 0x5f, 0xdf, 0x3f, 0xbf, 0x7f, 0xff
     };
 
+static uint8_t buffer_prev[MAX_CHANNEL_COUNT][SACD_BLOCK_SIZE_PER_CHANNEL + 4]; // used for nopad option; keep the previus data copied form buffer[]
+static uint8_t *buffer_ptr_prev[MAX_CHANNEL_COUNT];
+
 static int dsf_create_header(scarletbook_output_format_t *ft)
 {
     dsd_chunk_header_t *dsd_chunk;
@@ -164,8 +167,6 @@ static int dsf_create_header(scarletbook_output_format_t *ft)
         return 0;
 }
 
-uint8_t buffer_prev[MAX_CHANNEL_COUNT][SACD_BLOCK_SIZE_PER_CHANNEL]; // used for nopad option; keep the previus data copied form buffer[]
-uint8_t *buffer_ptr_prev[MAX_CHANNEL_COUNT];
 
 static int dsf_create(scarletbook_output_format_t *ft)
 {
