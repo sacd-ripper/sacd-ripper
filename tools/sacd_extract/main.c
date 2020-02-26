@@ -122,6 +122,9 @@ static int parse_options(int argc, char *argv[])
         "  -o, --output-dir[=DIR]          : Output directory for ISO or DSDIFF Edit Master\n"
         "  -y, --output-dir-conc[=DIR]     : Output directory for DSF or DSDIFF \n"
         "  -P, --print                     : display disc and track information\n"
+        "  -A, --artist                    : artist name is added in folder name. Default is disabled\n"
+        "  -a, --performer                 : performer name is added in track filename.Default is disabled\n"
+        "  -b, --pauses                    : all pauses will be included. Default is disabled\n"
         "  -v, --version                   : Display version\n"
         "\n"
         "Help options:\n"
@@ -140,9 +143,9 @@ static int parse_options(int argc, char *argv[])
 
 
 #ifdef SECTOR_LIMIT
-    static const char options_string[] = "2mepszkIcCvi:o:y:t:P?";
+    static const char options_string[] = "2mepszkaAbIcCvi:o:y:t:P?";
 #else
-    static const char options_string[] = "2mepszkIwcCvi:o:y:t:P?";
+    static const char options_string[] = "2mepszkaAbIwcCvi:o:y:t:P?";
 #endif
 
     static const struct option options_table[] = {
@@ -153,6 +156,9 @@ static int parse_options(int argc, char *argv[])
         {"output-dsf", no_argument, NULL, 's'},
         {"dsf-nopad", no_argument, NULL, 'z'},
         {"concatenate", no_argument, NULL, 'k'},
+        {"artist", no_argument, NULL, 'A'},
+        {"performer", no_argument, NULL, 'a'},
+        {"pauses", no_argument, NULL, 'b'},
         {"output-iso", no_argument, NULL, 'I'},
 #ifndef SECTOR_LIMIT
         {"concurrent", no_argument, NULL, 'w'}, 
@@ -219,10 +225,18 @@ static int parse_options(int argc, char *argv[])
         case 'z':
             opts.dsf_nopad = 1;
             break;
+        case 'b':
+            opts.audio_frame_trimming = 0;
+            break;
+        case 'A':
+            opts.artist_flag = 1;
+            break;
+        case 'a':
+            opts.performer_flag = 1;
+            break;
         case 'k': // concatenate consecutive tracks specified in selected_tracks
             opts.concatenate = 1;
-            // must disable dsf_nopad and include pauses
-            if(opts.dsf_nopad==1)opts.dsf_nopad = 0;
+            // must enable include pauses
             if (opts.audio_frame_trimming == 1)opts.audio_frame_trimming = 0;        
             break;
         case 'I': 
@@ -508,8 +522,13 @@ void read_config()
                 opts.performer_flag = 1;
             if ((strstr(content, "pauses=1") != NULL) || (strstr(content, "pauses=yes") != NULL))
                 opts.audio_frame_trimming = 0;
+            if ((strstr(content, "nopad=1") != NULL) || (strstr(content, "nopad=yes") != NULL))
+                opts.dsf_nopad = 1;
             if ((strstr(content, "concatenate=1") != NULL) || (strstr(content, "concatenate=yes") != NULL))
-                { opts.concatenate = 1 ; opts.audio_frame_trimming =0;opts.dsf_nopad=0;}  // when concatenate must include all pausese and disable dsf_pad !!!
+            {
+                opts.concatenate = 1;
+                opts.audio_frame_trimming = 0; // when concatenate must include all pausese and disable dsf_pad !!!
+            }  
             if ((strstr(content, "logging=1") != NULL) || (strstr(content, "logging=yes") != NULL))
                     opts.logging = 1;
         }
@@ -617,8 +636,13 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
             {
                 wchar_t *wide_filename;
                 CHAR2WCHAR(wide_filename, buffer);
-                fwprintf(stdout, L"\n Working directory (for the app and 'sacd_extract.cfg' file): %ls; Configure settings: Artist will be added in folder name (artist=) %ls; Performer will be added in filename of track (performer=) %ls; Pauses included (pauses=) %ls; Concatenate (concatenate=) %ls\n",
-                         wide_filename, opts.artist_flag > 0 ? L"yes" : L"no", opts.performer_flag > 0 ? L"yes" : L"no", opts.audio_frame_trimming == 0 ? L"yes" : L"no", opts.concatenate > 0 ? L"yes" : L"no");
+                fwprintf(stdout, L"\n Working directory (for the app and 'sacd_extract.cfg' file): %ls\n", wide_filename);
+                fwprintf(stdout, L"\n Configure settings:\n");
+                fwprintf(stdout, L"\tArtist will be added in folder name (artist=) %ls\n", opts.artist_flag > 0 ? L"yes" : L"no");
+                fwprintf(stdout, L"\tPerformer will be added in filename of track (performer =) % ls\n", opts.performer_flag > 0 ? L"yes" : L"no");
+                fwprintf(stdout, L"\tPauses included (pauses =) % ls\n", opts.audio_frame_trimming == 0 ? L"yes" : L"no");
+                fwprintf(stdout, L"\tPadding-less (nopad =) % ls\n", opts.dsf_nopad != 0 ? L"yes" : L"no");
+                fwprintf(stdout, L"\tConcatenate (concatenate =) % ls\n", opts.concatenate > 0 ? L"yes" : L"no");
                 free(wide_filename);
             }
             free(buffer);
@@ -679,14 +703,15 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
                 if(opts.concatenate)
                 {
                     handle->audio_frame_trimming = 0;                  
-                    handle->dsf_nopad = 0;
+                    //handle->dsf_nopad = 0;
                 }
                 else
                 {
                     handle->audio_frame_trimming = opts.audio_frame_trimming;
-                    handle->dsf_nopad = opts.dsf_nopad && !opts.select_tracks;
+                    //handle->dsf_nopad = opts.dsf_nopad && !opts.select_tracks;
                 }
-                
+                handle->dsf_nopad = opts.dsf_nopad; // && !opts.select_tracks;
+
                 album_filename = get_album_dir(handle, opts.artist_flag);
                 
                 if (opts.print)
@@ -999,7 +1024,7 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
                                 }
                                 else  // no tracks specified
                                 {
-                                    fwprintf(stdout, L"\n\n Warning! Concatenation activated but no tracks speficed!\n");
+                                    fwprintf(stdout, L"\n\n Warning! Concatenation activated but no tracks selected!\n");
                                 }                                                                                                  
                             }                          
 
