@@ -1,3 +1,12 @@
+Version: 0.3.9.3-51-gdeed25c3d4515e9d878c3e855cb72324958aafdf pre-release
+- added concatenation option -k (--concatenate). Used in conjunction with track selection to concatenate selected tracks. Designed only for DSF format. Also, concatenate option can be set in 'sacd_extract.cfg' file as 'concatenate=1'. This allow to work ok with SACDExtracGui; Padding-less option for concatenation can be set also in 'sacd_extract.cfg' (to override the same option in SACDExtractGui which is disabled when tracks selection is enabled);  
+- fixed a bug in ID3 tag (where missing a null terminal in id3 tag text frames);
+- ID3 tag are using now UTF-8 encoding;
+- now 'artist' -A (--artist), 'performer' -a (--performer) and 'pauses' -b (--pauses) options can be declared in command line; 
+
+sacd_extract.exe sha256: e0f909748b427b9659b9393c2bc0fb8b676a98d85295b24d84b549d4265b350b
+Linux sacd_extract sha256: 3fa8e56d2a5d395b93cf4f8af50accff10dc8676367fee1229fac4e922ffc477
+----------------------------------------------------------------------------------------------------------
 Version: 0.3.9.3-30-g045865607bafe3c5037f0a883aec82aec9c20d6d pre-release
 - fixed -z (--dsf-nopad) not working;
 - changed the name of option 'audio_frame_trimming=1' into 'pauses'. When 'pauses=1' then pauses are included in tracks.
