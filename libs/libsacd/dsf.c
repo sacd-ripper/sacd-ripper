@@ -194,9 +194,10 @@ static int dsf_create(scarletbook_output_format_t *ft)
                 handle->buffer_ptr[i] = handle->buffer[i] + (buffer_ptr_prev[i] - buffer_prev[i]);
                 // empty prev buffer
                 buffer_ptr_prev[i] = &buffer_prev[i][0];
-                prev_track_no = NO_PREV_TRACK;
+                
             }
         }
+	prev_track_no = NO_PREV_TRACK;    
     }
 
     return rez;
