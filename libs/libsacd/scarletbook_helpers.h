@@ -65,7 +65,6 @@ char *get_album_dir(scarletbook_handle_t *, int artist_flag);
 char *get_music_filename(scarletbook_handle_t *, int, int, const char *, int performer_flag);
 char *get_path_disc_album(scarletbook_handle_t *handle, int artist_flag);
 int utf8cpy(char *, char *, int);
-void read_config();
 
 #ifdef __cplusplus
 };
