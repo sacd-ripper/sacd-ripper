@@ -113,7 +113,7 @@ static void scarletbook_print_master_toc(scarletbook_handle_t *handle)
     char         tmp_str[20];
     master_toc_t *mtoc = handle->master_toc;
 
-    fwprintf(stdout, L"Disc Information:\n\n");
+    fwprintf(stdout, L"\nDisc Information:\n");
     fwprintf(stdout, L"\tVersion: %2i.%02i\n", mtoc->version.major, mtoc->version.minor);
     fwprintf(stdout, L"\tCreation date: %4i-%02i-%02i\n"
             , mtoc->disc_date_year, mtoc->disc_date_month, mtoc->disc_date_day);
@@ -136,7 +136,7 @@ static void scarletbook_print_master_toc(scarletbook_handle_t *handle)
     }
     scarletbook_print_disc_text(handle);
 
-    fwprintf(stdout, L"\nAlbum Information:\n\n");
+    fwprintf(stdout, L"\nAlbum Information:\n");
     if (mtoc->disc_catalog_number)
     {
         strncpy(tmp_str, mtoc->album_catalog_number, 16);
