@@ -1,6 +1,6 @@
 Enhanced client sacd_extract for Windows(64bit) & Linux(64bit) by euflo
 
-Version: 0.3.9.3-51-gdeed25c3d4515e9d878c3e855cb72324958aafdf pre-release
+Version: 0.3.9.3-63-g077212b4b0e4aa2c1ff1cd53651cc4af85e58f3d pre-release
 
 This app is fully compatible with SACDExtractGui.
 
