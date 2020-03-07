@@ -80,7 +80,7 @@ static struct opts_s
     int            print;
     char           *input_device; /* Access method driver should use for control */
     char           *output_dir;
-	char           *output_dir_conc;
+    char           *output_dir_conc;
     int            select_tracks;
     uint8_t        selected_tracks[256]; /* scarletbook is limited to 256 tracks */
     int            dsf_nopad;
@@ -89,6 +89,7 @@ static struct opts_s
     int            performer_flag;       // if performer ==1 the performer from each track is added
     int            concatenate;  // concatenate consecutive tracks specified in selected_tracks
     int            logging;  // if 1 save logs in a file
+    int            id3_tag_mode; // id3_tag_mode;  // 0=no id3 inserted; 1 or 3 =default id3 v2.3; 2=miminal id3v2.3 tag; 4=id3v2.4;5=id3v2.4 minimal
     int            version;
 } opts;
 
@@ -102,7 +103,8 @@ static int parse_options(int argc, char *argv[])
     char *program_name = NULL;
 
     static const char help_text[] =
-        "Usage: %s [options] [outfile]\n"
+        "Usage: %s [options] -i[=FILE]\n"
+        "Options:\n"
         "  -2, --2ch-tracks                : Export two channel tracks (default)\n"
         "  -m, --mch-tracks                : Export multi-channel tracks\n"
         "  -e, --output-dsdiff-em          : output as Philips DSDIFF (Edit Master) file\n"
@@ -117,15 +119,16 @@ static int parse_options(int argc, char *argv[])
 #endif
         "  -c, --convert-dst               : convert DST to DSD\n"
         "  -C, --export-cue                : Export a CUE Sheet\n"
-        "  -i, --input[=FILE]              : set source and determine if \"iso\" image, \n"
-        "                                    device or server (ex. -i 192.168.1.10:2002)\n"
         "  -o, --output-dir[=DIR]          : Output directory for ISO or DSDIFF Edit Master\n"
         "  -y, --output-dir-conc[=DIR]     : Output directory for DSF or DSDIFF \n"
         "  -P, --print                     : display disc and track information\n"
         "  -A, --artist                    : artist name is added in folder name. Default is disabled\n"
-        "  -a, --performer                 : performer name is added in track filename.Default is disabled\n"
+        "  -a, --performer                 : performer name is added in track filename. Default is disabled\n"
         "  -b, --pauses                    : all pauses will be included. Default is disabled\n"
         "  -v, --version                   : Display version\n"
+        "\n"
+        "  -i, --input[=FILE]              : set source and determine if \"iso\" image, \n"
+        "                                    device or server (ex. -i 192.168.1.10:2002)\n"
         "\n"
         "Help options:\n"
         "  -?, --help                      : Show this help message\n"
@@ -410,7 +413,7 @@ static void init(void)
     opts.export_cue_sheet   = 0;
     opts.print              = 0;
     opts.output_dir         = NULL;
-	opts.output_dir_conc	= NULL;
+    opts.output_dir_conc	= NULL;
     opts.input_device       = NULL; //"/dev/cdrom";
     opts.version            = 0;
     opts.dsf_nopad          = 0;
@@ -420,6 +423,7 @@ static void init(void)
     opts.concatenate        = 0; // concatenate consecutive tracks specified in t
     opts.select_tracks      = 0;
     opts.logging            = 0;
+    opts.id3_tag_mode       = 1; // default id3v2.3 tag
 
 #if defined(WIN32) || defined(_WIN32)
     signal(SIGINT, handle_sigint);
@@ -482,9 +486,10 @@ char ** convert_wargv_to_UTF8(int argc,wchar_t *wargv[])
 
 //   read from file sacd_extract.cfg
 //   if artist=1 then artist name will be added to the name of folder
-//   if sacd_extract.cfg didn't exist then artist will not be added ..
-//
-void read_config()
+//   if sacd_extract.cfg didn't exist then return 0 
+//       else 1
+//    
+int read_config()
 {
     int ret;
     const char *filename_cfg = "sacd_extract.cfg"; //char str[] = "sacd_extract.cfg";
@@ -498,7 +503,7 @@ void read_config()
 #endif
 
     if (ret != 0)
-        return; // if file cfg not exists then exit
+        return 0; // if file cfg not exists then exit
 
 #if defined(WIN32) || defined(_WIN32)
     if ((fileinfo_win.st_mode & _S_IFMT) == _S_IFREG)
@@ -512,7 +517,7 @@ void read_config()
 
         fp = fopen(filename_cfg, "r");
         if (!fp)
-            return;
+            return 0;
 
         while (fgets(content, 100, fp) != NULL)
         {
@@ -531,9 +536,47 @@ void read_config()
             }  
             if ((strstr(content, "logging=1") != NULL) || (strstr(content, "logging=yes") != NULL))
                     opts.logging = 1;
+            if ((strstr(content, "id3tag=0") != NULL) || (strstr(content, "id3tag=no") != NULL)) // 0=no id3 inserted
+                opts.id3_tag_mode=0;
+            if (strstr(content, "id3tag=2") != NULL)   // 1=default id3 v2.3; 2=miminal id3v2.3 tag; 
+                opts.id3_tag_mode = 2;
+            if (strstr(content, "id3tag=4") != NULL) // 4=id3v2.4
+                opts.id3_tag_mode = 4;
+            if (strstr(content, "id3tag=5") != NULL) // 5=id3v2.4 minimal
+                opts.id3_tag_mode = 5;
         }
         fclose(fp);
+        fwprintf(stdout, L"\nFound configuration 'sacd_extract.cfg' file...\n" );
+        fwprintf(stdout, L"\tArtist will be added in folder name (artist=%d) %ls\n",opts.artist_flag, opts.artist_flag > 0 ? L"yes" : L"no");
+        fwprintf(stdout, L"\tPerformer will be added in filename of track (performer=%d) %ls\n",opts.performer_flag, opts.performer_flag > 0 ? L"yes" : L"no");
+        fwprintf(stdout, L"\tPadding-less (nopad=%d) %ls\n", opts.dsf_nopad, opts.dsf_nopad != 0 ? L"yes" : L"no");
+        fwprintf(stdout, L"\tPauses included (pauses=%d) %ls\n", !opts.audio_frame_trimming, opts.audio_frame_trimming == 0 ? L"yes" : L"no");
+        fwprintf(stdout, L"\tConcatenate (concatenate=%d) %ls\n", opts.concatenate, opts.concatenate > 0 ? L"yes" : L"no");
+        switch (opts.id3_tag_mode)
+        {
+        case 0:
+            fwprintf(stdout, L"\tID3tag no inserted (id3tag = %d) \n", opts.id3_tag_mode);
+            break;
+        case 1:
+        case 2:
+        case 3:
+            fwprintf(stdout, L"\tID3tagV2.3 (id3tag = %d) %ls\n", opts.id3_tag_mode, opts.id3_tag_mode == 2 ? L"minimal" : L"yes");
+            break;
+        case 4:
+        case 5:
+            fwprintf(stdout, L"\tID3tagV2.4 (id3tag = %d) %ls\n", opts.id3_tag_mode, opts.id3_tag_mode == 5 ? L"minimal" : L"yes");
+            break;
+        default:
+            fwprintf(stdout, L"\tID3tag (id3tag = %d)\n", opts.id3_tag_mode);
+            break;
+        }
+        return 1;
     }
+    else
+    {
+        return 0;
+    }
+    
 } // end read_config
 
 
@@ -615,20 +658,21 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
     if (parse_options(argc, argv))
 #endif
     {
-        read_config();
-        init_logging(opts.logging); //init_logging(0); 1= write logs in a file
-
         setlocale(LC_ALL, "");
         if (fwide(stdout, 1) < 0)
         {
-            fprintf(stderr, "ERROR: Output not set to wide.\n");
+            fprintf(stderr, "\nERROR: Output not set to wide.\n");
 			exit_main_flag=-1;
             goto exit_main_1;
         }
+        fwprintf(stdout, L"\nsacd_extract 0.3.9.3 enhanced by euflo ....starting!\n");
+
+        int exist_cfg = read_config();
+        init_logging(opts.logging); //init_logging(0); 1= write logs in a file
 
         if (opts.version==1)
         {
-            fwprintf(stdout, L"sacd_extract version 0.3.9.3, built commit hash: " SACD_RIPPER_VERSION_STRING "\n");
+            fwprintf(stdout, L"\nsacd_extract " SACD_RIPPER_VERSION_STRING "\n");
             fwprintf(stdout, L"git repository: " SACD_RIPPER_REPO "\n");
             size_t size = 512;
             char *buffer = (char *)calloc(size, sizeof(char));
@@ -636,14 +680,18 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
             {
                 wchar_t *wide_filename;
                 CHAR2WCHAR(wide_filename, buffer);
-                fwprintf(stdout, L"\n Working directory (for the app and 'sacd_extract.cfg' file): %ls\n", wide_filename);
-                fwprintf(stdout, L"\n Configure settings:\n");
-                fwprintf(stdout, L"\tArtist will be added in folder name (artist=) %ls\n", opts.artist_flag > 0 ? L"yes" : L"no");
-                fwprintf(stdout, L"\tPerformer will be added in filename of track (performer =) % ls\n", opts.performer_flag > 0 ? L"yes" : L"no");
-                fwprintf(stdout, L"\tPauses included (pauses =) % ls\n", opts.audio_frame_trimming == 0 ? L"yes" : L"no");
-                fwprintf(stdout, L"\tPadding-less (nopad =) % ls\n", opts.dsf_nopad != 0 ? L"yes" : L"no");
-                fwprintf(stdout, L"\tConcatenate (concatenate =) % ls\n", opts.concatenate > 0 ? L"yes" : L"no");
+                fwprintf(stdout, L"\nWorking directory (for the app and 'sacd_extract.cfg' file): %ls\n", wide_filename);
                 free(wide_filename);
+                if(!exist_cfg)  // do not repeat again the same text...as in read-config()
+                {
+                    fwprintf(stdout, L"Configuration settings:\n");
+                    fwprintf(stdout, L"\tArtist will be added in folder name (artist=%d) %ls\n", opts.artist_flag, opts.artist_flag > 0 ? L"yes" : L"no");
+                    fwprintf(stdout, L"\tPerformer will be added in filename of track (performer=%d) %ls\n", opts.performer_flag, opts.performer_flag > 0 ? L"yes" : L"no");
+                    fwprintf(stdout, L"\tPadding-less (nopad=%d) %ls\n", opts.dsf_nopad, opts.dsf_nopad != 0 ? L"yes" : L"no");
+                    fwprintf(stdout, L"\tPauses included (pauses=%d) %ls\n", !opts.audio_frame_trimming, opts.audio_frame_trimming == 0 ? L"yes" : L"no");
+                    fwprintf(stdout, L"\tConcatenate (concatenate=%d) %ls\n", opts.concatenate, opts.concatenate > 0 ? L"yes" : L"no");
+                    fwprintf(stdout, L"\tID3tag (id3tag = %d)\n", opts.id3_tag_mode);
+                }              
             }
             free(buffer);
             goto exit_main;
@@ -661,7 +709,7 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
             {
                 wchar_t *wide_filename;
                 CHAR2WCHAR(wide_filename, opts.output_dir);
-                fwprintf(stdout, L"%s doesn't exist or is not a directory.\n",wide_filename);
+                fwprintf(stdout, L"%ls doesn't exist or is not a directory.\n",wide_filename);
                 free(wide_filename);
 
 				exit_main_flag=-1;
@@ -677,7 +725,7 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
             {
                 wchar_t *wide_filename;
                 CHAR2WCHAR(wide_filename, opts.output_dir_conc);
-                fwprintf(stdout, L"%s doesn't exist or is not a directory.\n", opts.output_dir_conc);
+                fwprintf(stdout, L"%ls doesn't exist or is not a directory.\n", opts.output_dir_conc);
                 free(wide_filename);
 
                 exit_main_flag=-1;
@@ -700,17 +748,10 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
             if (handle)
             {
                 handle->concatenate = opts.concatenate;
-                if(opts.concatenate)
-                {
-                    handle->audio_frame_trimming = 0;                  
-                    //handle->dsf_nopad = 0;
-                }
-                else
-                {
-                    handle->audio_frame_trimming = opts.audio_frame_trimming;
-                    //handle->dsf_nopad = opts.dsf_nopad && !opts.select_tracks;
-                }
-                handle->dsf_nopad = opts.dsf_nopad; // && !opts.select_tracks;
+                handle->audio_frame_trimming = opts.audio_frame_trimming;  
+                handle->dsf_nopad = opts.dsf_nopad;
+                handle->id3_tag_mode=opts.id3_tag_mode;
+
 
                 album_filename = get_album_dir(handle, opts.artist_flag);
                 
