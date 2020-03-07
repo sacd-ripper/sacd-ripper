@@ -608,6 +608,7 @@ typedef struct
     uint32_t                   count_frames;                              // keep the number of audio frames in a track (for verification)
     int                        dsf_nopad;
     int                        concatenate;
+    int                        id3_tag_mode;  // 0=no id3 inserted; 1=default id3 v2.3; 2=miminal id3v2.3 tag; 4=id3v2.4;5=id3v2.4 minimal
 } 
 scarletbook_handle_t;
 
