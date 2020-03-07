@@ -82,7 +82,7 @@ static const uint8_t bit_reverse_table[] =
 
 static uint8_t buffer_prev[MAX_CHANNEL_COUNT][SACD_BLOCK_SIZE_PER_CHANNEL]; // used for nopad option; keep the previus data copied form buffer[]
 static uint8_t *buffer_ptr_prev[MAX_CHANNEL_COUNT];
-#define NO_PREV_TRACK  -1
+#define NO_PREV_TRACK  -2
 static int prev_track_no = NO_PREV_TRACK;
 
 static int dsf_create_header(scarletbook_output_format_t *ft)
@@ -155,7 +155,10 @@ static int dsf_create_header(scarletbook_output_format_t *ft)
     }
 
     {
-        handle->footer_size = scarletbook_id3_tag_render(sb_handle, handle->footer, ft->area, ft->track);
+        if(ft->sb_handle->id3_tag_mode != 0)
+            handle->footer_size = scarletbook_id3_tag_render(sb_handle, handle->footer, ft->area, ft->track);
+        else       
+            handle->footer_size=0;  // no id_tag                    
     }
 
     dsd_chunk->total_file_size = htole64(handle->header_size + handle->audio_data_size + handle->footer_size);
@@ -192,13 +195,18 @@ static int dsf_create(scarletbook_output_format_t *ft)
             {
                 memcpy(handle->buffer[i], buffer_prev[i], SACD_BLOCK_SIZE_PER_CHANNEL);
                 handle->buffer_ptr[i] = handle->buffer[i] + (buffer_ptr_prev[i] - buffer_prev[i]);
+
+                // DEBUG
+                //LOG(lm_main, LOG_NOTICE, ("Dsf_create, nopad & track>0: prev_track_no=%d, track=%d, size_prev=%d ", prev_track_no, ft->track, (int)(buffer_ptr_prev[i] - buffer_prev[i])));
                 // empty prev buffer
-                buffer_ptr_prev[i] = &buffer_prev[i][0];
-                
+                buffer_ptr_prev[i] = &buffer_prev[i][0];               
             }
         }
-	prev_track_no = NO_PREV_TRACK;    
+        prev_track_no = NO_PREV_TRACK;
     }
+
+    //DEBUG
+    //LOG(lm_main, LOG_NOTICE, ("Dsf_create: prev_track_no=%d, track=%d, size_buffer=%d ", prev_track_no, ft->track, (int)(handle->buffer_ptr[0] - handle->buffer[0])));    
 
     return rez;
 }
@@ -225,6 +233,10 @@ static int dsf_close(scarletbook_output_format_t *ft)
                     memcpy(buffer_prev[i], handle->buffer[i], SACD_BLOCK_SIZE_PER_CHANNEL);
                     buffer_ptr_prev[i] = buffer_prev[i] + (handle->buffer_ptr[i] - handle->buffer[i]);
                     prev_track_no = ft->track;
+                    
+                    //DEBUG
+                    //int size_rezult=(int)(buffer_ptr_prev[i] - buffer_prev[i]);
+                    //LOG(lm_main, LOG_NOTICE, ("Dsf_close, nopad, memcopy: prev_track_no=track=%d, size_prev=%d, full=%d[%%]", prev_track_no,size_rezult, (int)size_rezult*100/SACD_BLOCK_SIZE_PER_CHANNEL ));
 
                     // empty the main frame buffers
                     memset(handle->buffer[i], 0x00, SACD_BLOCK_SIZE_PER_CHANNEL); // Mandatory is 0x00. But tried with 0x99 (10011001) for reducing pop noise ( or 0x69)
@@ -234,10 +246,12 @@ static int dsf_close(scarletbook_output_format_t *ft)
                 {
                     buffer_ptr_prev[i] = &buffer_prev[i][0]; // emtpy, nothing to carry over to the next track
                     prev_track_no = NO_PREV_TRACK;
+                    //DEBUG
+                    //LOG(lm_main, LOG_NOTICE, ("Dsf_close, nopad, memcopy, Buffer Empty: prev_track_no=%d, track=%d", prev_track_no, ft->track));
                 }
             }
         }
-        else // in concatenation mode do not keep these remaing samples
+        else // in concatenation mode do not keep these remaining samples
             prev_track_no = NO_PREV_TRACK;
     }
     else // if dsf_nopad = 0 or is last track in dsf_nopad==1 case
@@ -261,12 +275,16 @@ static int dsf_close(scarletbook_output_format_t *ft)
                 handle->sample_count += handle->buffer_ptr[i] - handle->buffer[i];
                 handle->audio_data_size += SACD_BLOCK_SIZE_PER_CHANNEL;
 
+                //DEBUG
+                //int size_rezult=(int)(handle->buffer_ptr[i] - handle->buffer[i]);
+                //LOG(lm_main, LOG_NOTICE, ("Dsf_close: nopad=0 or last track; prev_track_no=%d, track=%d, size_buffer=%d, full=%d[%%]", prev_track_no, ft->track, size_rezult,(int)size_rezult*100/SACD_BLOCK_SIZE_PER_CHANNEL));
+
                 // empty the main frame buffers
                 memset(handle->buffer[i], 0x00, SACD_BLOCK_SIZE_PER_CHANNEL); // Mandatory is 0x00. But tried with 0x99 (10011001) for reducing pop noise ( or 0x69)
                 handle->buffer_ptr[i] = handle->buffer[i];                   
             }
         }
-        
+
         prev_track_no = NO_PREV_TRACK;
     }
 
