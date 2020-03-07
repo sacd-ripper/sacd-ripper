@@ -267,7 +267,7 @@ int id3_set_text(struct id3_frame *frame, char *text)
 }
 
 /*
- * Function id3_set_text (frame, text)
+ * Function id3_set_text_utf8 (frame, text)
  *
  *    Set text for the indicated frame (only UTF-8 is currently
  *    supported).  Return 0 upon success, or -1 if an error occured.
@@ -410,7 +410,7 @@ char *id3_get_comment(struct id3_frame *frame)
 /*
  * Function id3_set_comment (frame, comment)
  *
- *    Set comment for the indicated frame (only ISO-8859-1 is currently
+ *    Set comment for the indicated frame (only UTF-8 is currently
  *    supported).  Return 0 upon success, or -1 if an error occured.
  *
  */
@@ -428,15 +428,15 @@ int id3_set_comment(struct id3_frame *frame, char* description, char *comment)
 	/*
 	 * Allocate memory for new data.
 	 */
-	frame->fr_raw_size = strlen(description) + 1 + strlen(comment) + 1;
-	frame->fr_raw_data = malloc(frame->fr_raw_size + 1);
+	frame->fr_raw_size = 1 + strlen(description) + 1 + strlen(comment) + 1; // BUG - must add 1 for ending zero of string (copied in fr_data)
+	frame->fr_raw_data = calloc(frame->fr_raw_size + 1, sizeof(uint8_t));
 
 	/*
 	 * Copy contents.
 	 */
-	*(int8_t *) frame->fr_raw_data = ID3_ENCODING_ISO_8859_1;
-    memcpy((char *) frame->fr_raw_data + 1, description, strlen(description) + 1);
-	memcpy((char *) frame->fr_raw_data + 1 + strlen(description) + 1, comment, strlen(comment) + 1);
+	*(uint8_t *)frame->fr_raw_data =ID3_ENCODING_UTF8; // ID3_ENCODING_ISO_8859_1;
+	memcpy((uint8_t *)frame->fr_raw_data + 1, description, strlen(description));
+	memcpy((uint8_t *)frame->fr_raw_data + 1 + strlen(description) + 1, comment, strlen(comment));
 
 	frame->fr_altered = 1;
 	frame->fr_owner->id3_altered = 1;
@@ -466,15 +466,15 @@ int id3_set_text__performer(struct id3_frame *frame, char *text)
 
 	// Allocate memory for new data.
 
-	frame->fr_raw_size = strlen("PERFORMER") + strlen(text) + 2;
+	frame->fr_raw_size = strlen("PERFORMER") + strlen(text) + 3; // 1 for encoding, 1 for null description and 1 for null terminator of text
 	frame->fr_raw_data = calloc(frame->fr_raw_size + 1, sizeof(uint8_t));
 
 	// Copy contents.
 
-	*(int8_t *)frame->fr_raw_data = ID3_ENCODING_UTF8;   //ID3_ENCODING_ISO_8859_1;
+	*(uint8_t *)frame->fr_raw_data = ID3_ENCODING_UTF8; //ID3_ENCODING_ISO_8859_1;
 
-	memcpy((char *)frame->fr_raw_data + 1, (char *)"PERFORMER", strlen("PERFORMER"));
-	memcpy((char *)frame->fr_raw_data + 1 + strlen("PERFORMER") +1, text, strlen(text));
+	memcpy((uint8_t *)frame->fr_raw_data + 1, "PERFORMER", strlen("PERFORMER"));
+	memcpy((uint8_t *)frame->fr_raw_data + 1 + strlen("PERFORMER") + 1, text, strlen(text));
 
 	frame->fr_altered = 1;
 	frame->fr_owner->id3_altered = 1;
