@@ -427,7 +427,7 @@ static void init(void)
     opts.concatenate        = 0; // concatenate consecutive tracks specified in t
     opts.select_tracks      = 0;
     opts.logging            = 0;
-    opts.id3_tag_mode       = 1; // default id3v2.3 tag
+    opts.id3_tag_mode       = 4; // default id3v2. tag and UTF8 encoding
 
 #if defined(WIN32) || defined(_WIN32)
     signal(SIGINT, handle_sigint);
@@ -540,13 +540,18 @@ int read_config()
             }  
             if ((strstr(content, "logging=1") != NULL) || (strstr(content, "logging=yes") != NULL))
                     opts.logging = 1;
+
             if ((strstr(content, "id3tag=0") != NULL) || (strstr(content, "id3tag=no") != NULL)) // 0=no id3 inserted
                 opts.id3_tag_mode=0;
-            if (strstr(content, "id3tag=2") != NULL)   // 1=default id3 v2.3; 2=miminal id3v2.3 tag; 
+            if (strstr(content, "id3tag=1") != NULL) // 1=id3 v2.3;  UTF-16 encoding
+                opts.id3_tag_mode = 1;
+            if (strstr(content, "id3tag=2") != NULL)   // 2=miminal id3v2.3 tag; UTF-16 encoding
                 opts.id3_tag_mode = 2;
-            if (strstr(content, "id3tag=4") != NULL) // 4=id3v2.4
+            if (strstr(content, "id3tag=3") != NULL) // 4=id3v2.3 ; ISO_8859_1 encoding
+                opts.id3_tag_mode = 3;
+            if (strstr(content, "id3tag=4") != NULL) // 4=id3v2.4; UTF-8 encoding
                 opts.id3_tag_mode = 4;
-            if (strstr(content, "id3tag=5") != NULL) // 5=id3v2.4 minimal
+            if (strstr(content, "id3tag=5") != NULL) // 5=id3v2.4 minimal;UTF-8 encoding
                 opts.id3_tag_mode = 5;
         }
         fclose(fp);
