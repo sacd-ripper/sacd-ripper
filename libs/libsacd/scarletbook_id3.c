@@ -150,25 +150,16 @@ int scarletbook_id3_tag_render(scarletbook_handle_t *handle, uint8_t *buffer, in
     {
         master_text_t *master_text = &handle->master_text;
         char *artist = 0;
-
-        // preferably we use the title as the artist name, as disc/album artist mostly contains garbage..
-        if (master_text->album_title)
-            artist = master_text->album_title;
-        else if (master_text->album_title_phonetic)
-            artist = master_text->album_title_phonetic;
-        else if (master_text->disc_title)
-            artist = master_text->disc_title;
-        else if (master_text->disc_title_phonetic)
-            artist = master_text->disc_title_phonetic;
+       
+        if (master_text->disc_artist)
+            artist = master_text->disc_artist;
+        else if (master_text->disc_artist_phonetic)
+            artist = master_text->disc_artist_phonetic;
         else if (master_text->album_artist)
             artist = master_text->album_artist;
         else if (master_text->album_artist_phonetic)
             artist = master_text->album_artist_phonetic;
-        else if (master_text->disc_artist)
-            artist = master_text->disc_artist;
-        else if (master_text->disc_artist_phonetic)
-            artist = master_text->disc_artist_phonetic;
-
+       
         if (artist)
         {
             frame = id3_add_frame(tag, ID3_TPE1);           
