@@ -1,6 +1,6 @@
-Enhanced client sacd_extract for Windows(64bit) & Linux(64bit) by euflo
+Enhanced client sacd_extract for Windows(64bit) & Linux(64bit) & macOS by euflo
 
-Version: 0.3.9.3-63-g077212b4b0e4aa2c1ff1cd53651cc4af85e58f3d pre-release
+Version: 0.3.9.3 pre-release
 
 This app is fully compatible with SACDExtractGui.
 
@@ -71,11 +71,15 @@ nopad=1 	: padding-less option will be activated. If =0 then will be inactive.
 		Can be used even when concatenation mode is activated and tracks selection is made;
 		This option will override the padding-less option in SACDExtractGui. 
  
-id3tag=0 (or =1, =2, =4, =5)	at DSF conversion the ID3 tags will be created:
-	- (=1) in ID3V2.3 version with full metadata (Default) or with minimal medatadata* (=2);
-	- (=4) in ID3V2.4 version with full metadata  or with minimal medatadata* (=5);
-	- if =0 then ID3tag will not be created (for testing and experimental purpose).    
-
+id3tag=0 (or =1, =2, =3, =4, =5)	at DSF conversion the ID3 tags will be created:
+	-(id3tag=1) in ID3V2.3 version with full metadata. String encodings is UTF-16 with BOM (UCS-2);
+	-(id3tag=2) in ID3V2.3 version with minimal medatadata*. String encodings is UTF-16 with BOM (UCS-2);
+	-(id3tag=3) in ID3V2.3 version with full metadata. String encodings is ISO-8859-1 (ASCII);
+	-(id3tag=4) in ID3V2.4 version with full metadata. String encodings is UTF-8;
+	-(id3tag=5) in ID3V2.4 version with minimal metadata*. String encodings is UTF-8;
+	-(id3tag=0) ID3tag will not be created (for testing and experimental purpose).
+	Now the default format for ID3 tags will be ID3v2.4 format (with UTF-8 encodings). 
+	
 	*Minimal metadata contains only 4 elements: Track Title, Album Title, Artist Name and Track Number.
 
 
