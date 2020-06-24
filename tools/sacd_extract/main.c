@@ -310,8 +310,8 @@ static int parse_options(int argc, char *argv[])
                 {
 					n=n-1;
                 }
-                //opts.output_dir = strndup(start_dir, n - 1); //  strndup didn't exist in Windows
-                opts.output_dir = calloc(n+1, sizeof(char));
+                //opts.output_dir_conc = strndup(start_dir, n - 1); //  strndup didn't exist in Windows
+                opts.output_dir_conc = calloc(n+1, sizeof(char));
                 memcpy(opts.output_dir_conc, start_dir, n);                               
             }		
             break;
@@ -427,7 +427,7 @@ static void init(void)
     opts.concatenate        = 0; // concatenate consecutive tracks specified in t
     opts.select_tracks      = 0;
     opts.logging            = 0;
-    opts.id3_tag_mode       = 4; // default id3v2.4 tag and UTF8 encoding
+    opts.id3_tag_mode       = 4; // default id3v2. tag and UTF8 encoding
 
 #if defined(WIN32) || defined(_WIN32)
     signal(SIGINT, handle_sigint);
@@ -547,7 +547,7 @@ int read_config()
                 opts.id3_tag_mode = 1;
             if (strstr(content, "id3tag=2") != NULL)   // 2=miminal id3v2.3 tag; UTF-16 encoding
                 opts.id3_tag_mode = 2;
-            if (strstr(content, "id3tag=3") != NULL) // 3=id3v2.3 ; ISO_8859_1 encoding
+            if (strstr(content, "id3tag=3") != NULL) // 4=id3v2.3 ; ISO_8859_1 encoding
                 opts.id3_tag_mode = 3;
             if (strstr(content, "id3tag=4") != NULL) // 4=id3v2.4; UTF-8 encoding
                 opts.id3_tag_mode = 4;
