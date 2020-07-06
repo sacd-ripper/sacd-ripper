@@ -56,10 +56,8 @@
 #include "utils.h"
 #include "yarn.h"
 #include "version.h"
-
-#ifndef __arm__
 #include "scarletbook_xml.h"
-#endif
+
 
 
 
@@ -950,7 +948,6 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
 
                             fwprintf(stdout, L"\n\n We are done exporting CUE sheet. \n");
 
-#ifndef __arm__
                             // create file XML metadata file
                             char *metadata_file_path_unique = get_unique_filename(NULL, output_dir, album_filename, "xml");
                             if (metadata_file_path_unique == NULL)
@@ -967,8 +964,6 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
                             write_metadata_xml(handle, metadata_file_path_unique);
                             free(metadata_file_path_unique);
                             fwprintf(stdout, L"\n\n We are done exporting XML metadata. \n");
-#endif
-
                         }
 
                         if (opts.output_dsf || opts.output_dsdiff)
