@@ -124,6 +124,7 @@ And to compile libiconv on windows you can do the following:
 
 To compile on Linux use a sequence like this::
 
+    [Go to the directory you want to work in]
     git clone https://github.com/sacd-ripper/sacd-ripper.git
     cd sacd-ripper/tools/sacd_extract/
     cmake .
@@ -131,7 +132,10 @@ To compile on Linux use a sequence like this::
 
 If you want you can now copy the program
 to a directory in your PATH, such as :code:`/usr/local/bin` on most Linux
-installations
+installations::
+
+	sudo cp sacd_extract /usr/local/bin
+	[enter password if requested]
 
 SACD Ripper/Extract Usage Instructions
 ======================================
