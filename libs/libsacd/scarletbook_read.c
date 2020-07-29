@@ -135,8 +135,9 @@ scarletbook_handle_t *scarletbook_open(sacd_reader_t *sacd)
                         int res_cmp = memcmp((const void *)sb->area[sb->area_count].area_data, (const void *)sb->area[2].area_data, (size_t)((size_t)sb->master_toc->area_1_toc_size * SACD_LSN_SIZE));
                         if (res_cmp != 0x00)
                         {
-                            fwprintf(stderr, L"Warning: Area 1 (TWOCHTOC) TOC-1 did not match with Area 1 (TWOCHTOC) TOC-2. Disc has some errors !! Using TOC-2... \n");
-                            flag_use_toc2 = 1;        
+                            fwprintf(stderr, L"Warning: Area 1 (TWOCHTOC) TOC-1 did not match with Area 1 (TWOCHTOC) TOC-2. Disc has some errors !! Using TOC-1... \n");
+                            flag_use_toc1 = 1;
+                            flag_use_toc2 = 0;
                         }
                     }
                     if (flag_use_toc2 == 1)
@@ -201,8 +202,9 @@ scarletbook_handle_t *scarletbook_open(sacd_reader_t *sacd)
                         int res_cmp = memcmp((const void *)sb->area[sb->area_count].area_data, (const void *)sb->area[3].area_data, (size_t)((size_t)sb->master_toc->area_2_toc_size * SACD_LSN_SIZE));
                         if (res_cmp != 0x00)
                         {
-                            fwprintf(stderr, L"Warning: Area 1 (MULCHTOC) TOC-1 did not match with Area 1 (MULCHTOC) TOC-2. Disc has some errors !! Using TOC-2... \n");
-                            flag_use_toc2 = 1;
+                            fwprintf(stderr, L"Warning: Area 2 (MULCHTOC) TOC-1 did not match with Area 2 (MULCHTOC) TOC-2. Disc has some errors !! Using TOC-1... \n");
+                            flag_use_toc1 = 1;
+                            flag_use_toc2 = 0;
                         }
                     }
                     if (flag_use_toc2 == 1)
