@@ -942,28 +942,48 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
 
                             file_path = make_filename(NULL, NULL, album_filename, "dff");
 
-                            write_cue_sheet(handle, file_path, area_idx, cue_file_path_unique);
+							int rez_cuesheet= write_cue_sheet(handle, file_path, area_idx, cue_file_path_unique);
+							if(rez_cuesheet != -1)
+								fwprintf(stdout, L"\n\n We are done exporting CUE sheet. \n");
+							else
+								fwprintf(stdout, L"\n\n ERROR: Cannot create CUE sheet file. \n");    
+                            
                             free(cue_file_path_unique);
                             free(file_path);
 
-                            fwprintf(stdout, L"\n\n We are done exporting CUE sheet. \n");
+                            
 
                             // create file XML metadata file
                             char *metadata_file_path_unique = get_unique_filename(NULL, output_dir, album_filename, "xml");
                             if (metadata_file_path_unique == NULL)
-                                fwprintf(stderr, L"\n ERROR: cannot create get_unique_filename (==NULL) !!\n");
+                                fwprintf(stderr, L"\n ERROR: cannot create get_unique_filename XML for metadata (==NULL) !!\n");
+                            else
+                            {
+#if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
+                                char filename_long[1024];
+                                memset(filename_long, '\0', sizeof(filename_long));
+                                strcpy(filename_long, "\\\\?\\");
+                                strncat(filename_long, metadata_file_path_unique, min(1016, strlen(metadata_file_path_unique)));
+#endif
+                                wchar_t *wide_filename;
+                                CHAR2WCHAR(wide_filename, metadata_file_path_unique);
+                                fwprintf(stdout, L"\n\n Exporting metadata in XML file: [%ls] ... \n", wide_filename);
+                                free(wide_filename);
+								
+#if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
+                                write_metadata_xml(handle, filename_long);
+                                
+#else
+                                write_metadata_xml(handle, metadata_file_path_unique);
+                                
+#endif
 
+                                free(metadata_file_path_unique);
+                                fwprintf(stdout, L"\n\n We are done exporting metadata in XML file. \n");
+                            }
+                                
                             free(output_dir);
 
-                            //wchar_t *wide_filename;
-                            CHAR2WCHAR(wide_filename, metadata_file_path_unique);
-
-                            fwprintf(stdout, L"\n\n Exporting metadata XML file: [%ls] ... \n", wide_filename);
-                            free(wide_filename);
-
-                            write_metadata_xml(handle, metadata_file_path_unique);
-                            free(metadata_file_path_unique);
-                            fwprintf(stdout, L"\n\n We are done exporting XML metadata. \n");
                         }
 
                         if (opts.output_dsf || opts.output_dsdiff)
@@ -998,8 +1018,10 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
 
                             if(opts.concatenate == 0)
                             {
+                                int no_of_enqued_tracks=0;
+                                int no_total_tracks = handle->area[area_idx].area_toc->track_count;
                                 // fill the queue with items to rip
-                                for (i = 0; i < handle->area[area_idx].area_toc->track_count; i++)
+                                for (i = 0; i < no_total_tracks; i++)
                                 {
                                     if (opts.select_tracks && opts.selected_tracks[i] == 0x0)
                                         continue;
@@ -1011,15 +1033,21 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
                                         file_path = make_filename(NULL, output_dir, musicfilename, "dsf");
                                         scarletbook_output_enqueue_track(output, area_idx, i, file_path, "dsf",
                                                                          1 /* always decode to DSD */);
+                                        no_of_enqued_tracks++;                                       
                                     }
                                     else if (opts.output_dsdiff)
                                     {
                                         file_path = make_filename(NULL, output_dir, musicfilename, "dff");
                                         scarletbook_output_enqueue_track(output, area_idx, i, file_path, "dsdiff",
                                                                          (opts.convert_dst ? 1 : handle->area[area_idx].area_toc->frame_format != FRAME_FORMAT_DST));
+                                        no_of_enqued_tracks++;
                                     }
                                     free(file_path);
                                     free(musicfilename);
+                                }
+                                if ((no_of_enqued_tracks < no_total_tracks) && !opts.select_tracks)
+                                {
+                                    fwprintf(stdout, L"\n Error: Number of processed tracks %d will be smaller than total tracks %d !!\n", no_of_enqued_tracks, no_total_tracks);
                                 }
                             }
                             else  // made concatenation
@@ -1054,14 +1082,12 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
                                         if (opts.output_dsf)
                                         {
                                             file_path = make_filename(NULL, output_dir, musicfilename, "dsf");
-                                            //file_path = get_unique_filename(NULL, output_dir, album_filename, "dsf");
                                             scarletbook_output_enqueue_concatenate_tracks(output, area_idx, first_track, file_path, "dsf",
                                                                                           1 /* always decode to DSD */, last_track);
                                         }
                                         else if (opts.output_dsdiff)
                                         {
                                             file_path = make_filename(NULL, output_dir, musicfilename, "dff");
-                                            //file_path = get_unique_filename(NULL, output_dir, album_filename, "dff");
                                             scarletbook_output_enqueue_concatenate_tracks(output, area_idx, first_track, file_path, "dsdiff",
                                                                                           (opts.convert_dst ? 1 : handle->area[area_idx].area_toc->frame_format != FRAME_FORMAT_DST), last_track);
                                         }
