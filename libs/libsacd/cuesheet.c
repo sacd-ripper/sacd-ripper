@@ -45,19 +45,24 @@ static char *cue_escape(const char *src)
 
 int write_cue_sheet(scarletbook_handle_t *handle, const char *filename, int area, char *cue_filename)
 {
-    FILE *fd;
+   FILE *fd;
 
 #if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
+    char filename_long[1024];
+	memset(filename_long, '\0', sizeof(filename_long));
+    strcpy(filename_long,"\\\\?\\");
+    strncat(filename_long,cue_filename, min(1016, strlen(cue_filename)));
 
-    wchar_t *wide_filename;    
-	wide_filename = (wchar_t *)charset_convert(cue_filename, strlen(cue_filename),"UTF-8",  "UCS-2-INTERNAL" );
+    wchar_t *wide_filename;
+    wide_filename = (wchar_t *)charset_convert(filename_long, strlen(filename_long), "UTF-8", "UCS-2-INTERNAL");
     fd = _wfopen(wide_filename, L"wb");
+	
     free(wide_filename);
 #else		
     fd = fopen(cue_filename, "wb");
 #endif
 
-    if (fd == 0)
+    if (fd == NULL)
     {
         return -1;
     }
@@ -89,11 +94,21 @@ int write_cue_sheet(scarletbook_handle_t *handle, const char *filename, int area
     {
         fprintf(fd, "PERFORMER \"%s\"\n", cue_escape(handle->master_text.disc_artist));
     }
+    else if (handle->master_text.album_artist)
+    {
+        fprintf(fd, "PERFORMER \"%s\"\n", cue_escape(handle->master_text.album_artist));
+    }
+    
 
     if (handle->master_text.disc_title)
     {
         fprintf(fd, "TITLE \"%s\"\n", cue_escape(handle->master_text.disc_title));
     }
+    else if (handle->master_text.album_title)
+    {
+        fprintf(fd, "TITLE \"%s\"\n", cue_escape(handle->master_text.album_title));
+    }
+    
 
     if (strlen(handle->master_toc->disc_catalog_number) > 0)
     {
