@@ -223,7 +223,7 @@ void sacdXmlwriterFilename(scarletbook_handle_t *handle, const char *uri)
     if (handle->master_text.album_title != NULL)
         rc = xmlTextWriterWriteElement(writer, BAD_CAST "Title", BAD_CAST handle->master_text.album_title);
     else
-        rc = xmlTextWriterWriteElement(writer, BAD_CAST "Title", BAD_CAST "unknown album title");
+        rc = xmlTextWriterWriteElement(writer, BAD_CAST "Title", BAD_CAST "");
 
     if (rc < 0)
     {
@@ -547,11 +547,10 @@ void sacdXmlwriterFilename(scarletbook_handle_t *handle, const char *uri)
                 return;
             }
             if (handle->master_text.album_title != NULL)
-                rc = xmlTextWriterWriteAttribute(writer, BAD_CAST "value",
-                                                 BAD_CAST handle->master_text.album_title);
+                rc = xmlTextWriterWriteAttribute(writer, BAD_CAST "value", BAD_CAST handle->master_text.album_title);
             else
-                rc = xmlTextWriterWriteAttribute(writer, BAD_CAST "value",
-                                                 BAD_CAST "unknown album title");
+                rc = xmlTextWriterWriteAttribute(writer, BAD_CAST "value", BAD_CAST "");
+
             if (rc < 0)
             {
                 printf("testXmlwriterFilename: Error at xmlTextWriterWriteAttribute\n");
@@ -583,8 +582,7 @@ void sacdXmlwriterFilename(scarletbook_handle_t *handle, const char *uri)
                 rc = xmlTextWriterWriteAttribute(writer, BAD_CAST "value",
                                                  BAD_CAST handle->master_text.album_artist);
             else
-                rc = xmlTextWriterWriteAttribute(writer, BAD_CAST "value",
-                                                 BAD_CAST "");
+                rc = xmlTextWriterWriteAttribute(writer, BAD_CAST "value", BAD_CAST "");
 
             if (rc < 0)
             {
@@ -866,7 +864,7 @@ void sacdXmlwriterFilename(scarletbook_handle_t *handle, const char *uri)
                 printf("testXmlwriterFilename: Error at xmlTextWriterWriteAttribute\n");
                 return;
             }
-            if (area_isrc_genre->isrc[t].country_code)
+            if (area_isrc_genre->isrc[t].country_code[0])
             {
                 strncpy(string_buf, area_isrc_genre->isrc[t].country_code, 12);
                 string_buf[12] = '\0';
@@ -900,16 +898,14 @@ void sacdXmlwriterFilename(scarletbook_handle_t *handle, const char *uri)
                 printf("testXmlwriterFilename: Error at xmlTextWriterWriteAttribute\n");
                 return;
             }
-            if (handle->area[area_idx].area_isrc_genre->isrc[t].recording_year)
+            if (handle->area[area_idx].area_isrc_genre->isrc[t].recording_year[0])
             {
                 strncpy(string_buf, handle->area[area_idx].area_isrc_genre->isrc[t].recording_year, 2);
                 string_buf[2] = '\0';
-                rc = xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "value",
-                                                       "%s", string_buf);
+                rc = xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "value","%s", string_buf);
             }
             else
-                rc = xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "value",
-                                                       "%4i", handle->master_toc->disc_date_year);
+                rc = xmlTextWriterWriteFormatAttribute(writer, BAD_CAST "value","%4i", handle->master_toc->disc_date_year);
             if (rc < 0)
             {
                 printf("testXmlwriterFilename: Error at xmlTextWriterWriteAttribute\n");
