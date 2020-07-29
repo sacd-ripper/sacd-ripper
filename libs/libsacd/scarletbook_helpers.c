@@ -93,7 +93,7 @@ int utf8cpy(char *dst, char *src, int n)
 #define MAX_TRACK_ARTIST_LEN 40
 
 //  Generates a name for a diretory from disc/album artist and album/disc title
-//  if album is muliset then adds  - 'Disc no-no total discs'
+//  if album is multiset then adds  - 'Disc number-number of total discs'
 // if artist_flag >0 then adds disc/album artist to the name of directory
 //   NOTE: caller must free the returned string!
 char *get_album_dir(scarletbook_handle_t *handle, int artist_flag)
@@ -192,7 +192,7 @@ char *get_album_dir(scarletbook_handle_t *handle, int artist_flag)
 
 //  Generates a path from disc title or album title
 //  If album has multiple discs then
-//   adds /Disc 1 of 3, /Disc 1 of 2 ....
+//   adds to Album Title + Disc 1...N ....
 // if artist_flag=1 then adds artist to the path
 //  NOTE: caller must free the returned string!
 char *get_path_disc_album(scarletbook_handle_t *handle, int artist_flag)
@@ -212,11 +212,19 @@ char *get_path_disc_album(scarletbook_handle_t *handle, int artist_flag)
         p_disc_title = master_text->disc_title;
     else if (master_text->disc_title_phonetic)
         p_disc_title = master_text->disc_title_phonetic;
-        
+    else if (master_text->album_title)                  // last resort: make it equal to album title (if exists)
+        p_disc_title =   master_text->album_title;
+    else if (master_text->album_title_phonetic)
+        p_disc_title = master_text->album_title_phonetic;
+
     if (master_text->album_title)
         p_album_title = master_text->album_title;
     else if (master_text->album_title_phonetic)
         p_album_title = master_text->album_title_phonetic;
+    else if (master_text->disc_title)                   // last resort: make it equal to disc title (if exists)
+        p_album_title = master_text->disc_title; 
+    else if (master_text->disc_title_phonetic)
+        p_album_title = master_text->disc_title_phonetic;
 
     if (master_text->disc_artist)
         p_artist = master_text->disc_artist;
@@ -235,7 +243,7 @@ char *get_path_disc_album(scarletbook_handle_t *handle, int artist_flag)
     }
     else
     {
-        strncpy(disc_title, "unknown title", min(strlen("unknown title"), MAX_ALBUM_TITLE_PATH_LEN));
+        strncpy(disc_title, "unknown disc title", min(strlen("unknown disc title"), MAX_ALBUM_TITLE_PATH_LEN));
     }
 
     memset(disc_album_title, 0,sizeof(disc_album_title));
@@ -246,7 +254,7 @@ char *get_path_disc_album(scarletbook_handle_t *handle, int artist_flag)
     }
     else
     {
-        strncpy(disc_album_title, "unknown title", min(strlen("unknown title"), MAX_ALBUM_TITLE_PATH_LEN));
+        strncpy(disc_album_title, "unknown album title", min(strlen("unknown album title"), MAX_ALBUM_TITLE_PATH_LEN));
     }
 
     memset(disc_artist, 0, sizeof(disc_artist));
@@ -353,6 +361,7 @@ char *get_music_filename(scarletbook_handle_t *handle, int area, int track, cons
     char disc_album_year[5];
     master_text_t *master_text = &handle->master_text;
     char * p_album_title = 0;
+    int performer_flag_local=performer_flag;
 
     memset(track_artist, 0, sizeof(track_artist));
     c = handle->area[area].area_track_text[track].track_type_performer;
@@ -377,9 +386,20 @@ char *get_music_filename(scarletbook_handle_t *handle, int area, int track, cons
         strncpy(track_artist, c, min(pos - c, MAX_TRACK_ARTIST_LEN));
         sanitize_filename(track_artist);
     }
-    else
+    else  // performer did not exists, try to use disc/album artist
     {
-        strncpy(track_artist, "unknown artist", min(strlen("unknown artist"), MAX_TRACK_ARTIST_LEN));
+        if (master_text->disc_artist){
+            strncpy(track_artist, master_text->disc_artist, min(strlen(master_text->disc_artist), MAX_TRACK_ARTIST_LEN));
+            sanitize_filename(track_artist);
+        }
+        else if (master_text->album_artist) {
+            strncpy(track_artist, master_text->album_artist, min(strlen(master_text->album_artist), MAX_TRACK_ARTIST_LEN));
+            sanitize_filename(track_artist);
+        }
+        else {  // nothing found to put in performer. Do not insert it all
+            //strncpy(track_artist, "unknown performer", min(strlen("unknown performer"), MAX_TRACK_ARTIST_LEN));
+            performer_flag_local = 0;
+        }           
     }
     
 
@@ -392,7 +412,7 @@ char *get_music_filename(scarletbook_handle_t *handle, int area, int track, cons
     }
     else
     {
-        strncpy(track_title, "unknown title", min(strlen("unknown title"), MAX_TRACK_TITLE_LEN));
+        strncpy(track_title, "unknown track title", min(strlen("unknown track title"), MAX_TRACK_TITLE_LEN));
     }
     
     if (master_text->disc_title)
@@ -415,21 +435,21 @@ char *get_music_filename(scarletbook_handle_t *handle, int area, int track, cons
     }
     else
     {
-         strncpy(disc_album_title, "unknown album title", min(strlen("unknown album title"), MAX_ALBUM_TITLE_LEN));
+         strncpy(disc_album_title, "unknown title", min(strlen("unknown title"), MAX_ALBUM_TITLE_LEN));
     }
     
     snprintf(disc_album_year, sizeof(disc_album_year), "%04d", handle->master_toc->disc_date_year);
 
     if (override_title && strlen(override_title) > 0)
         {
-            if(performer_flag ==0)
+            if(performer_flag_local ==0)
                 return parse_format("%N - %L -%T", track + 1, disc_album_year, track_artist, disc_album_title, override_title);
             else
                 return parse_format("%N - %L - %A -%T", track + 1, disc_album_year, track_artist, disc_album_title, override_title);
         }
-    else if (strlen(track_artist) > 0 && strlen(track_title) > 0 && performer_flag != 0) 
+    else if (strlen(track_artist) > 0 && strlen(track_title) > 0 && performer_flag_local != 0) 
         return parse_format("%N - %A - %T", track + 1, disc_album_year, track_artist, disc_album_title, track_title);
-    else if (strlen(track_artist) > 0 && performer_flag != 0)  
+    else if (strlen(track_artist) > 0 && performer_flag_local != 0)  
         return parse_format("%N - %A", track + 1, disc_album_year, track_artist, disc_album_title, track_title);
     else if (strlen(track_title) > 0)
         return parse_format("%N - %T", track + 1, disc_album_year, track_artist, disc_album_title, track_title);
