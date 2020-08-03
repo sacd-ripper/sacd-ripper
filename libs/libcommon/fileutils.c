@@ -313,9 +313,14 @@ int recursive_mkdir(char* path_and_name,char * base_dir, mode_t mode)
             charReplaced             = pos[count];
             pos[count] = '\0';
 
-#if defined(WIN32) || defined(_WIN32)
+#if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
             {
-                wchar_t *wide_path_and_name = (wchar_t *) charset_convert(path_and_name, strlen(path_and_name), "UTF-8", "UCS-2-INTERNAL");
+                char wide_path_and_name_long[1024];
+                memset(wide_path_and_name_long, '\0', sizeof(wide_path_and_name_long));
+                strcpy(wide_path_and_name_long, "\\\\?\\");
+                strncat(wide_path_and_name_long, path_and_name, min(1016, strlen(path_and_name)));
+
+                wchar_t *wide_path_and_name = (wchar_t *)charset_convert(wide_path_and_name_long, strlen(wide_path_and_name_long), "UTF-8", "UCS-2-INTERNAL");
                 rc = _wmkdir(wide_path_and_name);
                 free(wide_path_and_name);
             }
@@ -338,9 +343,14 @@ int recursive_mkdir(char* path_and_name,char * base_dir, mode_t mode)
 
 
     // in case the path doesn't have a trailing slash:
-#if defined(WIN32) || defined(_WIN32)
+#if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
     {
-        wchar_t *wide_path_and_name = (wchar_t *) charset_convert(path_and_name, strlen(path_and_name), "UTF-8", "UCS-2-INTERNAL");
+        char wide_path_and_name_long[1024];
+        memset(wide_path_and_name_long, '\0', sizeof(wide_path_and_name_long));
+        strcpy(wide_path_and_name_long, "\\\\?\\");
+        strncat(wide_path_and_name_long, path_and_name, min(1016, strlen(path_and_name)));
+
+        wchar_t *wide_path_and_name = (wchar_t *)charset_convert(wide_path_and_name_long, strlen(wide_path_and_name_long), "UTF-8", "UCS-2-INTERNAL");
         rc = _wmkdir(wide_path_and_name);
         free(wide_path_and_name);
     }
@@ -379,9 +389,14 @@ int recursive_parent_mkdir(char* path_and_name, mode_t mode)
         {
             path_and_name[count] = 0;
 
-#if defined(WIN32) || defined(_WIN32)
+#if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
             {
-                wchar_t *wide_path_and_name = (wchar_t *) charset_convert(path_and_name, strlen(path_and_name), "UTF-8", "UCS-2-INTERNAL");
+                char wide_path_and_name_long[1024];
+                memset(wide_path_and_name_long, '\0', sizeof(wide_path_and_name_long));
+                strcpy(wide_path_and_name_long, "\\\\?\\");
+                strncat(wide_path_and_name_long, path_and_name, min(1016, strlen(path_and_name)));
+
+                wchar_t *wide_path_and_name = (wchar_t *)charset_convert(wide_path_and_name_long, strlen(wide_path_and_name_long), "UTF-8", "UCS-2-INTERNAL");
                 rc = _wmkdir(wide_path_and_name);
                 free(wide_path_and_name);
             }
