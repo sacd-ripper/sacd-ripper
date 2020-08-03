@@ -41,12 +41,17 @@ int stat_wrap(const char *pathname, struct stat *buf)
 {
     int ret;
 
-#if defined(__MINGW32__) || defined(WIN32) || defined(_WIN32)
+#if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
+    char wide_path_and_name_long[1024];
+    memset(wide_path_and_name_long, '\0', sizeof(wide_path_and_name_long));
+    strcpy(wide_path_and_name_long, "\\\\?\\");
+    strncat(wide_path_and_name_long, pathname, min(1016, strlen(pathname)));
+
     // Note buf is not in _stat type so buf is untouched.
     wchar_t *w_pathname;
     struct _stat buffer;
 
-    w_pathname = (wchar_t *)charset_convert(pathname, strlen(pathname), "UTF-8", "UCS-2-INTERNAL");
+    w_pathname = (wchar_t *)charset_convert(wide_path_and_name_long, strlen(wide_path_and_name_long), "UTF-8", "UCS-2-INTERNAL");
     ret = _wstat(w_pathname, &buffer);
     free(w_pathname);
 #else
@@ -63,24 +68,27 @@ int path_dir_exists(char * path)
 {
     int path_exist=0;
     int ret=0;
-#if defined(WIN32) || defined(_WIN32) || defined(_MSC_VER)
-    struct _stat fileinfo_win;
-#else
-    struct stat fileinfo;
-#endif
 
-#if defined(WIN32) || defined(_WIN32)
+#if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
+    char wide_path_and_name_long[1024];
+    memset(wide_path_and_name_long, '\0', sizeof(wide_path_and_name_long));
+    strcpy(wide_path_and_name_long, "\\\\?\\");
+    strncat(wide_path_and_name_long, path, min(1016, strlen(path)));
+
     wchar_t *w_pathname;
-    w_pathname = (wchar_t *)charset_convert(path, strlen(path), "UTF-8", "UCS-2-INTERNAL");
+    w_pathname = (wchar_t *)charset_convert(wide_path_and_name_long, strlen(wide_path_and_name_long), "UTF-8", "UCS-2-INTERNAL");
+    struct _stat fileinfo_win;
     ret = _wstat(w_pathname, &fileinfo_win);
     free(w_pathname);
     if (ret == 0 && (fileinfo_win.st_mode & _S_IFMT) == _S_IFDIR)
      path_exist=1;
 #else
+    struct stat fileinfo;
     ret = stat(path, &fileinfo);
     if (ret == 0 && S_ISDIR(fileinfo.st_mode))
      path_exist=1;
 #endif
+
  return path_exist;
 }
 
