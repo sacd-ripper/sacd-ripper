@@ -495,14 +495,14 @@ static int scarletbook_read_area_toc(scarletbook_handle_t *handle, int area_idx)
 
     current_charset = (char *)character_set[area->area_toc->languages[sacd_text_idx].character_set & 0x07];
 
-    if (area_toc->copyright_offset)
-        area->description_phonetic = charset_convert((char *) area_toc + area_toc->copyright_offset, strlen((char *) area_toc + area_toc->copyright_offset), current_charset, "UTF-8");
-    if (area_toc->copyright_phonetic_offset)
-        area->description_phonetic = charset_convert((char *) area_toc + area_toc->copyright_phonetic_offset, strlen((char *) area_toc + area_toc->copyright_phonetic_offset), current_charset, "UTF-8");
     if (area_toc->area_description_offset)
-        area->description_phonetic = charset_convert((char *) area_toc + area_toc->area_description_offset, strlen((char *) area_toc + area_toc->area_description_offset), current_charset, "UTF-8");
+        area->description = charset_convert((char *)area_toc + area_toc->area_description_offset, strlen((char *)area_toc + area_toc->area_description_offset), current_charset, "UTF-8");
+    if (area_toc->copyright_offset)
+        area->copyright = charset_convert((char *) area_toc + area_toc->copyright_offset, strlen((char *) area_toc + area_toc->copyright_offset), current_charset, "UTF-8");
     if (area_toc->area_description_phonetic_offset)
-        area->description_phonetic = charset_convert((char *) area_toc + area_toc->area_description_phonetic_offset, strlen((char *) area_toc + area_toc->area_description_phonetic_offset), current_charset, "UTF-8");
+        area->description_phonetic = charset_convert((char *)area_toc + area_toc->area_description_phonetic_offset, strlen((char *)area_toc + area_toc->area_description_phonetic_offset), current_charset, "UTF-8");
+    if (area_toc->copyright_phonetic_offset)
+        area->copyright_phonetic = charset_convert((char *) area_toc + area_toc->copyright_phonetic_offset, strlen((char *) area_toc + area_toc->copyright_phonetic_offset), current_charset, "UTF-8");
 
     if (area_toc->version.major > SUPPORTED_VERSION_MAJOR || area_toc->version.minor > SUPPORTED_VERSION_MINOR)
     {
