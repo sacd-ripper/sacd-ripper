@@ -577,6 +577,7 @@ int read_config()
             fwprintf(stdout, L"\tID3tag (id3tag = %d)\n", opts.id3_tag_mode);
             break;
         }
+        fwprintf(stdout, L"\tLogging (logging = %d) %ls\n", opts.logging, opts.logging != 0 ? L"yes" : L"no");
         return 1;
     }
     else
@@ -589,7 +590,7 @@ int read_config()
 
 
 //   Creates directory tree like: Album title \ (Disc no..) \ Stereo (or Multich)
-//     input: hadle
+//     input: handle
 //            area_idx
 //            If there is not multichannel area Then did not add \Stereo..or Multich 
 //            base_output_dir = directory from where to start creating new directory tree
@@ -633,12 +634,53 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
         CHAR2WCHAR(wide_filename, path_output);
         fwprintf(stderr, L"\n\n Error: %s directory can't be created.\n", wide_filename);
         free(wide_filename);
-        
+
+        LOG(lm_main, LOG_ERROR, ("ERROR in main:create_path_output()...directory can't be created: %s  ", path_output));
+
         free(path_output);
         return NULL;
     }
     return path_output;
 }
+//
+//  Get the current working directory:
+//  the returned buffer must be freed after use
+//
+char * return_current_directory()
+{
+    // Get the current working directory:
+    char *buffer;
+#if defined(WIN32) || defined(_WIN32)
+    if ((buffer = _getcwd(NULL, 0)) == NULL)
+    {
+        perror("_getcwd error");
+        fwprintf(stderr, L"\n\n Error: Cannot get the working directory.\n");
+    }
+        
+#else
+
+    if((buffer = getcwd(NULL,0)) == NULL)
+    {
+        perror("_getcwd error");
+        fwprintf(stderr, L"\n\n Error: Cannot get the working directory.\n");
+    }
+#endif
+
+    if(buffer != NULL)
+    {
+        // remove the last trail
+        // strip ending slash if exists
+        size_t n= strlen(buffer);
+
+        if (buffer[n - 1] == '\\' ||
+            buffer[n - 1] == '/')
+        {
+            buffer[n - 1]='\0';
+        }
+    }
+    return buffer;
+}
+
 
 #if defined(WIN32) || defined(_WIN32)
     int wmain(int argc, wchar_t *wargv[])      
@@ -672,25 +714,30 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
 			exit_main_flag=-1;
             goto exit_main_1;
         }
-        fwprintf(stdout, L"\nsacd_extract 0.3.9.3 enhanced by euflo ....starting!\n");
+        fwprintf(stdout, L"\nsacd_extract client " SACD_RIPPER_VERSION_STRING "\n");
+        fwprintf(stdout, L"\nEnhanced by euflo ....starting!\n");
+        // Get the current (working) directory:
+        char *buffer;
+        if ((buffer = return_current_directory() ) != NULL)   
+        {
+            wchar_t *wide_filename;
+            CHAR2WCHAR(wide_filename, buffer);
+            fwprintf(stdout, L"\nCurrent (working) directory (for the app and 'sacd_extract.cfg' file): %ls\n", wide_filename);
+            free(wide_filename);
+            free(buffer);
+        }
+
 
         int exist_cfg = read_config();
         init_logging(opts.logging); //init_logging(0); 1= write logs in a file
 
         if (opts.version==1)
         {
-            fwprintf(stdout, L"\nsacd_extract " SACD_RIPPER_VERSION_STRING "\n");
+            //fwprintf(stdout, L"\n" SACD_RIPPER_VERSION_INFO "\n");
             fwprintf(stdout, L"git repository: " SACD_RIPPER_REPO "\n");
-            size_t size = 512;
-            char *buffer = (char *)calloc(size, sizeof(char));
-            if (getcwd(buffer, size) != NULL)
+
+            if(!exist_cfg)  // do not repeat again the same text...as in read-config()
             {
-                wchar_t *wide_filename;
-                CHAR2WCHAR(wide_filename, buffer);
-                fwprintf(stdout, L"\nWorking directory (for the app and 'sacd_extract.cfg' file): %ls\n", wide_filename);
-                free(wide_filename);
-                if(!exist_cfg)  // do not repeat again the same text...as in read-config()
-                {
                     fwprintf(stdout, L"Configuration settings:\n");
                     fwprintf(stdout, L"\tArtist will be added in folder name (artist=%d) %ls\n", opts.artist_flag, opts.artist_flag > 0 ? L"yes" : L"no");
                     fwprintf(stdout, L"\tPerformer will be added in filename of track (performer=%d) %ls\n", opts.performer_flag, opts.performer_flag > 0 ? L"yes" : L"no");
@@ -698,9 +745,8 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
                     fwprintf(stdout, L"\tPauses included (pauses=%d) %ls\n", !opts.audio_frame_trimming, opts.audio_frame_trimming == 0 ? L"yes" : L"no");
                     fwprintf(stdout, L"\tConcatenate (concatenate=%d) %ls\n", opts.concatenate, opts.concatenate > 0 ? L"yes" : L"no");
                     fwprintf(stdout, L"\tID3tag (id3tag = %d)\n", opts.id3_tag_mode);
-                }              
             }
-            free(buffer);
+            
             goto exit_main;
         }
 
@@ -709,6 +755,19 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
         {
             opts.two_channel = 1;
         }
+
+#if defined(WIN32) || defined(_WIN32)
+        if ((opts.output_dir == NULL) && (opts.output_dir_conc == NULL))
+        {
+            // Get the current working directory:
+            char *buffer;          
+            if ((buffer = return_current_directory()) != NULL)
+            {
+                opts.output_dir = strdup(buffer);
+                free(buffer);
+            }                                
+        }
+#endif
 
         if (opts.output_dir != NULL   ) // test if exists 
         {
