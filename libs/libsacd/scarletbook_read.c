@@ -549,49 +549,83 @@ static int scarletbook_read_area_toc(scarletbook_handle_t *handle, int area_idx)
                             track_ptr++;                         // skip unknown 0x20
                             if (*track_ptr != 0)
                             {
+                                int track_text_len=strlen(track_ptr);
+                                if (track_text_len > 255)
+                                {
+                                    fwprintf(stdout, L"\n\n Error: The lenght of track text is bigger than 255!!; area_idx=%d; track_type=0x%02x; track number=%d", area_idx, track_type, i + 1);
+                                    LOG(lm_main, LOG_ERROR, ("Error: The lenght of track text is bigger than 255!!; area_idx=%d; track_type=0x%02x; track number=%d", area_idx, track_type, i + 1));
+                                    break;
+                                }
+
+
+                                // check if exists illegal char code  
+                                // [e.g Savall - The Celtic Viol - La Viole Celtique - The Treble Viol- AVSA9865 - has incorrect char code = 0x19 in text of Composer in tracks 5,6,7,15,21 !!]
+                                char * track_ptr1 = track_ptr;
+                                for(int te=0; te < (int)strlen(track_ptr); te++)
+                                {
+                                    if(*(uint8_t*)track_ptr1 < (uint8_t)0x20)
+                                    {
+                                        *((uint8_t *)track_ptr1) = (uint8_t)0x20;
+                                        fwprintf(stdout, L"\n\n Warning: Illegal char in the track text! Corrected.; area_idx=%d; track_type=0x%02x; track number=%d\n", area_idx, track_type, i + 1);
+                                        LOG(lm_main, LOG_NOTICE, ("Warning: Illegal char in the track text! Corrected. ;area_idx=%d; track_type=0x%02x; track number=%d", area_idx, track_type, i + 1));
+                                    }                                      
+                                    track_ptr1 ++;                                         
+                                }
+
+                                char *track_text_converted_ptr = charset_convert(track_ptr, track_text_len, current_charset, "UTF-8");
+                                if(track_text_converted_ptr == NULL || strlen(track_text_converted_ptr)==0)
+                                {
+                                    fwprintf(stdout, L"\n\n Error: Cannot convert to UTF8 the track text!!; track_type=0x%02x; track number=%d", track_type, i + 1);
+                                    LOG(lm_main, LOG_ERROR, ("Error: Cannot convert to UTF8 the track text!!; track_type=0x%02x; track number=%d", track_type, i+1));
+                                }
+
                                 switch (track_type)
                                 {
                                 case TRACK_TYPE_TITLE:
-                                    area->area_track_text[i].track_type_title = charset_convert(track_ptr, strlen(track_ptr), current_charset, "UTF-8");
+                                    area->area_track_text[i].track_type_title = track_text_converted_ptr;
                                     break;
                                 case TRACK_TYPE_PERFORMER:
-                                    area->area_track_text[i].track_type_performer = charset_convert(track_ptr, strlen(track_ptr), current_charset, "UTF-8");
+                                    area->area_track_text[i].track_type_performer = track_text_converted_ptr;
                                     break;
                                 case TRACK_TYPE_SONGWRITER:
-                                    area->area_track_text[i].track_type_songwriter = charset_convert(track_ptr, strlen(track_ptr), current_charset, "UTF-8");
+                                    area->area_track_text[i].track_type_songwriter = track_text_converted_ptr;
                                     break;
                                 case TRACK_TYPE_COMPOSER:
-                                    area->area_track_text[i].track_type_composer = charset_convert(track_ptr, strlen(track_ptr), current_charset, "UTF-8");
+                                    area->area_track_text[i].track_type_composer = track_text_converted_ptr;
                                     break;
                                 case TRACK_TYPE_ARRANGER:
-                                    area->area_track_text[i].track_type_arranger = charset_convert(track_ptr, strlen(track_ptr), current_charset, "UTF-8");
+                                    area->area_track_text[i].track_type_arranger = track_text_converted_ptr;
                                     break;
                                 case TRACK_TYPE_MESSAGE:
-                                    area->area_track_text[i].track_type_message = charset_convert(track_ptr, strlen(track_ptr), current_charset, "UTF-8");
+                                    area->area_track_text[i].track_type_message = track_text_converted_ptr;
                                     break;
                                 case TRACK_TYPE_EXTRA_MESSAGE:
-                                    area->area_track_text[i].track_type_extra_message = charset_convert(track_ptr, strlen(track_ptr), current_charset, "UTF-8");
+                                    area->area_track_text[i].track_type_extra_message = track_text_converted_ptr;
                                     break;
                                 case TRACK_TYPE_TITLE_PHONETIC:
-                                    area->area_track_text[i].track_type_title_phonetic = charset_convert(track_ptr, strlen(track_ptr), current_charset, "UTF-8");
+                                    area->area_track_text[i].track_type_title_phonetic = track_text_converted_ptr;
                                     break;
                                 case TRACK_TYPE_PERFORMER_PHONETIC:
-                                    area->area_track_text[i].track_type_performer_phonetic = charset_convert(track_ptr, strlen(track_ptr), current_charset, "UTF-8");
+                                    area->area_track_text[i].track_type_performer_phonetic = track_text_converted_ptr;
                                     break;
                                 case TRACK_TYPE_SONGWRITER_PHONETIC:
-                                    area->area_track_text[i].track_type_songwriter_phonetic = charset_convert(track_ptr, strlen(track_ptr), current_charset, "UTF-8");
+                                    area->area_track_text[i].track_type_songwriter_phonetic = track_text_converted_ptr;
                                     break;
                                 case TRACK_TYPE_COMPOSER_PHONETIC:
-                                    area->area_track_text[i].track_type_composer_phonetic = charset_convert(track_ptr, strlen(track_ptr), current_charset, "UTF-8");
+                                    area->area_track_text[i].track_type_composer_phonetic = track_text_converted_ptr;
                                     break;
                                 case TRACK_TYPE_ARRANGER_PHONETIC:
-                                    area->area_track_text[i].track_type_arranger_phonetic = charset_convert(track_ptr, strlen(track_ptr), current_charset, "UTF-8");
+                                    area->area_track_text[i].track_type_arranger_phonetic = track_text_converted_ptr;
                                     break;
                                 case TRACK_TYPE_MESSAGE_PHONETIC:
-                                    area->area_track_text[i].track_type_message_phonetic = charset_convert(track_ptr, strlen(track_ptr), current_charset, "UTF-8");
+                                    area->area_track_text[i].track_type_message_phonetic = track_text_converted_ptr;
                                     break;
                                 case TRACK_TYPE_EXTRA_MESSAGE_PHONETIC:
-                                    area->area_track_text[i].track_type_extra_message_phonetic = charset_convert(track_ptr, strlen(track_ptr), current_charset, "UTF-8");
+                                    area->area_track_text[i].track_type_extra_message_phonetic = track_text_converted_ptr;
+                                    break;
+                                default:
+                                    fwprintf(stdout, L"\n\n Error: Unknown track text type!!");
+                                    LOG(lm_main, LOG_ERROR, ("Error : scarletbook_read_area_toc(), Unknown track text type: 0x%02x", track_type));
                                     break;
                                 }
                             }
