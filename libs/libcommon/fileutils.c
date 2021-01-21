@@ -72,8 +72,8 @@ int path_dir_exists(char * path)
     struct _stat fileinfo_win;
     ret = _wstat(w_pathname, &fileinfo_win);
     free(w_pathname);
-    if (ret == 0 && (fileinfo_win.st_mode & _S_IFMT) == _S_IFDIR)
-     path_exist=1;
+    if (ret == 0 && (fileinfo_win.st_mode & _S_IFMT) == _S_IFDIR) // _S_IFREG  a device or a file
+        path_exist = 1;
 #else
     struct stat fileinfo;
     ret = stat(path, &fileinfo);
@@ -107,22 +107,36 @@ char *make_filename(const char *path, const char *dir, const char *filename, con
         strncpy(string_buf, path, min(strlen(path), sizeof(string_buf) - 5)); // (-4 => making room for dot + extension!!!)
         pos += min(strlen(path), sizeof(string_buf) - 5);
 #if defined(WIN32) || defined(_WIN32)
-        string_buf[pos] = '\\';
+        if(string_buf[pos-1] != '\\'){
+            string_buf[pos] = '\\';
+            pos++;
+        }
 #else
-        string_buf[pos] = '/';
+        if(string_buf[pos-1] != '/'){
+            string_buf[pos] = '/';
+            pos++;
+        }
 #endif
-        pos++;
+        
     }
     if (dir)
     {       
         strncpy(string_buf+pos,dir,min(strlen(dir),sizeof(string_buf) -pos-5));
         pos += min(strlen(dir), sizeof(string_buf) - pos - 5);
 #if defined(WIN32) || defined(_WIN32)
-        string_buf[pos] = '\\';
+        if (string_buf[pos - 1] != '\\')
+        {
+            string_buf[pos] = '\\';
+            pos++;
+        }
 #else
-        string_buf[pos] = '/';
+        if (string_buf[pos - 1] != '/')
+        {
+            string_buf[pos] = '/';
+            pos++;
+        }
 #endif
-        pos++;      
+        
     }
 
     sanitize_filepath(string_buf);
@@ -325,9 +339,10 @@ int recursive_mkdir(char* path_and_name,char * base_dir, mode_t mode)
                 free(wide_path_and_name);
             }
 #else
-            
             rc = mkdir(path_and_name, mode);
-#endif            
+#endif
+
+            LOG(lm_main, LOG_NOTICE, ("NOTICE in fileutils:recursive_mkdir call mkdir..path_and_name: %s  ", path_and_name));
 
 #ifdef __lv2ppu__
             sysFsChmod(path_and_name, S_IFMT | 0777); 
@@ -355,9 +370,9 @@ int recursive_mkdir(char* path_and_name,char * base_dir, mode_t mode)
         free(wide_path_and_name);
     }
 #else
-    rc = mkdir(path_and_name, mode);
+    rc = mkdir(path_and_name, mode); // mode =0777  0774 // S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH
 #endif
-
+    LOG(lm_main, LOG_NOTICE, ("NOTICE in fileutils:recursive_mkdir call mkdir..path_and_name: %s  ", path_and_name));
 #ifdef __lv2ppu__
     sysFsChmod(path_and_name, S_IFMT | 0777);
 #elif !defined(_WIN32)
@@ -369,46 +384,6 @@ int recursive_mkdir(char* path_and_name,char * base_dir, mode_t mode)
         return 0;
 }
 
-// Uses mkdir() for every component of the path except the last one,
-// and returns if any of those fails with anything other than EEXIST.
-int recursive_parent_mkdir(char* path_and_name, mode_t mode)
-{
-    int count;
-    int have_component = 0;
-    int rc             = 1; // guaranteed fail unless mkdir is called
-
-
-    // find the last component and cut it off
-    for (count = strlen(path_and_name) - 1; count >= 0; count--)
-    {
-        if (path_and_name[count] != '/' && path_and_name[count] != '\\')
-            have_component = 1;
-
-        if ((path_and_name[count] == '/' && have_component) ||
-            (path_and_name[count] == '\\' && have_component) )
-        {
-            path_and_name[count] = 0;
-
-#if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
-            {
-                char wide_path_and_name_long[1024];
-                memset(wide_path_and_name_long, '\0', sizeof(wide_path_and_name_long));
-                strcpy(wide_path_and_name_long, "\\\\?\\");
-                strncat(wide_path_and_name_long, path_and_name, min(1016, strlen(path_and_name)));
-
-                wchar_t *wide_path_and_name = (wchar_t *)charset_convert(wide_path_and_name_long, strlen(wide_path_and_name_long), "UTF-8", "UCS-2-INTERNAL");
-                rc = _wmkdir(wide_path_and_name);
-                free(wide_path_and_name);
-            }
-#else
-            rc = mkdir(path_and_name, 0777); // 0774 // S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH
-#endif
-            path_and_name[count] = '/';
-        }
-    }
-
-    return rc;
-}
 
 char *get_unique_path(char *dir, char *file, const char *ext)
 {
@@ -470,56 +445,33 @@ char * get_unique_filename(char *dev,char *dir, char *file, char *ext)
     return total_path;
 }
 
-// Construct an unique directory
-//
-//  *device -  device path
-//  **dir - directory
-//  NOTE: in case device is not NULL it removes trailing slash in returned string
-//  NOTE: caller must free the returned string!
-//
-char * get_unique_dir(char *device, char *dir)
-{ 
+static void trim_dots(char *s)
+{
+    char *p = s;
+    int l = strlen(p);
 
-    int dir_exists = 0, count = 1;
-    int len = strlen(dir) + 10;
+    while (p[l - 1] == '.')
+        p[--l] = 0;
+    while (*p && *p == '.')
+        ++p, --l;
 
-    char *device_dir = make_filename(device, dir , NULL,NULL);
-
-    dir_exists  = path_dir_exists(device_dir);
-    while (dir_exists == 1)
-    {
-        free(device_dir);
-        
-        char *dir_copy = calloc(len, sizeof(char));
-        snprintf(dir_copy, len, "%s (%d)", dir, count++);
-
-        device_dir = make_filename(device, dir_copy, NULL, NULL);
-        dir_exists = path_dir_exists(device_dir);
-        if (count > 20)
-            break; // loop must be stoped somewhere
-    }
-       
-        
-        // Remove the trailing slash
-#if defined(WIN32) || defined(_WIN32)
-        if (device_dir[strlen(device_dir) - 1] == '\\')
-        {
-#else
-        if (device_dir[strlen(device_dir) - 1] == '/')
-        {
-#endif
-            device_dir[strlen(device_dir) - 1] = '\0';
-        }
-
-    return device_dir;
+    memmove(s, p, l + 1);
 }
 
+/*
+For  FAT32 invalid char are:
+     0x00-0x1F 0x7F " * / : < > ? \ | + , . ; = [ ] (in some environments also: ! @; 
+     NTFS invalid char are:
+     0x00-0x1F 0x7F " * / : < > ? \ | 
+     Mac HSF:   : 
+     Most most UNIX file systems :  / null
+*/
 void sanitize_filename(char *f)
 {
     const char unsafe_chars[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d,
                                  0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a,
-                                 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x22, 0x2a, 0x2f, 0x3a, 0x3c, 0x3e, 0x3f, 0x5c,
-                                 0x7c, 0x7f, 0x00};
+                                 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x22, 0x2a, 0x2f, 0x3a, 0x3c, 0x3e, 0x3f, 0x5b, 0x5d, 0x5c,  // added '['=5b, ']'=5d
+                                 0x7c, 0x7f, 0xab, 0xbb, 0x00};  // added '<<'=0ab and '>>'=0bb
 
     char *c = f;
 
@@ -529,28 +481,19 @@ void sanitize_filename(char *f)
     for (; *c; c++)
     {
         if (strchr(unsafe_chars, *c))
-            *c = ' ';
+            *c = '_';
     }
-    replace_double_space_with_single(f);
+    //replace_double_space_with_single(f);
+    trim_dots(f);
     trim_whitespace(f);
-}
-
-static void trim_dots(char * s) 
-{
-    char * p = s;
-    int l = strlen(p);
-
-    while(p[l - 1] == '.') p[--l] = 0;
-    while(*p && *p == '.') ++p, --l;
-
-    memmove(s, p, l + 1);
+    
 }
 
 void sanitize_filepath(char *f)
 {
     const char unsafe_chars[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d,
                                  0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a,
-                                 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x22, 0x2a, 0x3c, 0x3e, 0x3f, 0x7c, 0x7f, 0x00};
+                                 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x22, 0x2a, 0x3c, 0x3e, 0x3f, 0x7c, 0x7f, 0xab, 0xbb, 0x00}; // added '<<'=[0ab] and '>>'=[0bb]
 
     char *c = f;
 
@@ -560,11 +503,10 @@ void sanitize_filepath(char *f)
     for (; *c; c++)
     {
         if (strchr(unsafe_chars, *c))
-            *c = ' ';
+            *c = '_';
     }
-    replace_double_space_with_single(f);
+    //replace_double_space_with_single(f);
 
-    trim_whitespace(f);
     trim_dots(f);
     trim_whitespace(f);
 }
