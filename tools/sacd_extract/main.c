@@ -259,7 +259,7 @@ static int parse_options(int argc, char *argv[])
         case 'o':
         {
 			size_t n = strlen(optarg);
-            if (n > 2)
+            if (n >= 2)
             {     				
 				// remove double quotes if exists (especially in Windows)
 				char * start_dir;
@@ -274,11 +274,11 @@ static int parse_options(int argc, char *argv[])
 				  n = n-1;
 								 
                 // strip ending slash if exists
-                if (start_dir[n - 1] == '\\' ||
-                    start_dir[n - 1] == '/')
-                {
-					n=n-1;
-                }
+                // if (start_dir[n - 1] == '\\' ||
+                //     start_dir[n - 1] == '/')
+                // {
+				// 	n=n-1;
+                // }
                 //opts.output_dir = strndup(start_dir, n - 1); //  strndup didn't exist in Windows
                 opts.output_dir = calloc(n+1, sizeof(char));
                 memcpy(opts.output_dir, start_dir, n);                               
@@ -288,7 +288,7 @@ static int parse_options(int argc, char *argv[])
         case 'y': 
         {
 			size_t n = strlen(optarg);
-            if (n > 2)
+            if (n >= 2)
             {     				
 				// remove double quotes if exists (especially in Windows)
 				char * start_dir;
@@ -303,11 +303,11 @@ static int parse_options(int argc, char *argv[])
 				  n = n-1;
 								 
                 // strip ending slash if exists
-                if (start_dir[n - 1] == '\\' ||
-                    start_dir[n - 1] == '/')
-                {
-					n=n-1;
-                }
+                // if (start_dir[n - 1] == '\\' ||
+                //     start_dir[n - 1] == '/')
+                // {
+				// 	n=n-1;
+                // }
                 //opts.output_dir_conc = strndup(start_dir, n - 1); //  strndup didn't exist in Windows
                 opts.output_dir_conc = calloc(n+1, sizeof(char));
                 memcpy(opts.output_dir_conc, start_dir, n);                               
@@ -592,7 +592,7 @@ int read_config()
 //   Creates directory tree like: Album title \ (Disc no..) \ Stereo (or Multich)
 //     input: handle
 //            area_idx
-//            If there is not multichannel area Then did not add \Stereo..or Multich 
+//            If there is not multichannel area then it did not add \Stereo..or Multich 
 //            base_output_dir = directory from where to start creating new directory tree
 //
 char *create_path_output(scarletbook_handle_t *handle, int area_idx, char * base_output_dir)
@@ -610,9 +610,11 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
 	
 	if(base_output_dir !=NULL)
 	{
-      path_output = calloc(strlen(base_output_dir) + 1 + strlen(album_path) + 20, sizeof(char));
-	  strncpy(path_output, base_output_dir, strlen(base_output_dir));
-	  strncat(path_output, PATH_TRAILING_SLASH,1);
+      size_t size_base_output_dir =   strlen(base_output_dir);
+      path_output = calloc(size_base_output_dir + 1 + strlen(album_path) + 20, sizeof(char));
+      strncpy(path_output, base_output_dir, size_base_output_dir);
+      if (base_output_dir[size_base_output_dir-1] != '/' && base_output_dir[size_base_output_dir-1] != '\\')
+          strncat(path_output, PATH_TRAILING_SLASH, 1);
 	}
 	else
 	  path_output = calloc(strlen(album_path) + 20, sizeof(char));
@@ -640,6 +642,8 @@ char PATH_TRAILING_SLASH[2] = {'/', '\0'};
         free(path_output);
         return NULL;
     }
+    LOG(lm_main, LOG_NOTICE, ("NOTICE in main:create_path_output()...directory created: %s  ", path_output));
+    LOG(lm_main, LOG_NOTICE, ("NOTICE in main:create_path_output()...base_output_dir: %s  ", base_output_dir));
     return path_output;
 }
 //
@@ -666,18 +670,18 @@ char * return_current_directory()
     }
 #endif
 
-    if(buffer != NULL)
-    {
-        // remove the last trail
-        // strip ending slash if exists
-        size_t n= strlen(buffer);
+    // if(buffer != NULL)
+    // {
+    //     // remove the last trail
+    //     // strip ending slash if exists
+    //     size_t n= strlen(buffer);
 
-        if (buffer[n - 1] == '\\' ||
-            buffer[n - 1] == '/')
-        {
-            buffer[n - 1]='\0';
-        }
-    }
+    //     if (buffer[n - 1] == '\\' ||
+    //         buffer[n - 1] == '/')
+    //     {
+    //         buffer[n - 1]='\0';
+    //     }
+    // }
     return buffer;
 }
 
@@ -839,10 +843,12 @@ char * return_current_directory()
 					char *output_dir;
 					if(opts.output_dir !=NULL)
 					{
-						output_dir = calloc(strlen(opts.output_dir) + 1 + strlen(album_path) + 1, sizeof(char));
-						strncpy(output_dir, opts.output_dir, strlen(opts.output_dir));
-						strncat(output_dir, PATH_TRAILING_SLASH, 1);
-					}
+                        size_t size_output_dir=strlen(opts.output_dir);
+                        output_dir = calloc(size_output_dir + 1 + strlen(album_path) + 1, sizeof(char));
+                        strncpy(output_dir, opts.output_dir, size_output_dir);
+                        if (opts.output_dir[size_output_dir-1] != '/' && opts.output_dir[size_output_dir-1] != '\\')
+                            strncat(output_dir, PATH_TRAILING_SLASH, 1);
+                    }
 					else
 						output_dir = calloc(strlen(album_path) + 1, sizeof(char));
 					
