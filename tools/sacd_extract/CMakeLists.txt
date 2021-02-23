@@ -2,6 +2,14 @@
 
 cmake_minimum_required(VERSION 2.6)
 
+# Force to compile for Mac OS X 10.13. target (if you want the app run on all OS X versions).
+# Without this adding, if build is made on a MacOS 10.15 or newer, then the app will not run on systems older than 10.15.
+# You can delete this if you don't care about the Mac OS X 10.15 incompatibilty problem. 
+if (APPLE)
+set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum OS X deployment version" FORCE)
+set(ENV{MACOSX_DEPLOYMENT_TARGET} 10.13)
+endif()
+
 # Mingw-w64 support
 OPTION(MINGW64 "Mingw-w64" NO)
 if (MINGW64 MATCHES "YES")
