@@ -49,6 +49,14 @@
 #include "scarletbook_read.h"
 #include "sacd_reader.h"
 
+#if defined(WIN32) || defined(_WIN32)
+
+#define CHAR2WCHAR(dst, src) dst = (wchar_t *)charset_convert(src, strlen(src), "UTF-8", "UCS-2-INTERNAL")
+#else
+
+#define CHAR2WCHAR(dst, src) dst = (wchar_t *)charset_convert(src, strlen(src), "UTF-8", "WCHAR_T")
+#endif
+
 #define WRITE_CACHE_SIZE 1 * 1024 * 1024
 
 extern scarletbook_format_handler_t const * dsdiff_format_fn(void);
@@ -438,7 +446,11 @@ static void frame_error_callback(int frame_count, int frame_error_code, const ch
 {
     scarletbook_output_format_t *ft = (scarletbook_output_format_t *) userdata;
 
-    ft->cb_fwprintf(stderr, L"\n ERROR %s in frame: %d\n", frame_error_message, frame_count);
+    wchar_t *wide_frame_error_mesage;
+    CHAR2WCHAR(wide_frame_error_mesage, frame_error_message);
+    ft->cb_fwprintf(stderr, L"\n ERROR in dst_decoder: %s in frame: %d\n", wide_frame_error_mesage, frame_count); //frame_error_message
+    free(wide_frame_error_mesage);
+    LOG(lm_main, LOG_ERROR, ("ERROR in dst_decoder: %s in frame: %d", frame_error_message, frame_count));
 }
 
 static void frame_read_callback(scarletbook_handle_t *handle, uint8_t* frame_data, size_t frame_size, void *userdata)
@@ -451,6 +463,7 @@ static void frame_read_callback(scarletbook_handle_t *handle, uint8_t* frame_dat
         if (ft->dsd_encoded_export && ft->dst_encoded_import) 
         {
             dst_decoder_decode(ft->dst_decoder, frame_data, frame_size);
+			ft->sb_handle->count_frames++;
         }
         else
         {
@@ -458,10 +471,11 @@ static void frame_read_callback(scarletbook_handle_t *handle, uint8_t* frame_dat
             rezult = write_block(ft, frame_data, frame_size);
             if (rezult == -1)
             {
-                ft->cb_fwprintf(stderr, L"\n ERROR in frame_read_callback():write_block()..at writting in file. \n");
+                ft->cb_fwprintf(stderr, L"\n ERROR in frame_read_callback():write_block()..at writting in dsdiff master file. \n");
                 LOG(lm_main, LOG_ERROR, ("ERROR in frame_read_callback:write_block()...writting in file: %s  ", ft->filename));
                 raise(SIGINT);
             }
+			ft->sb_handle->count_frames++;
         }
     }
     else   // DSF, DSDIFF
@@ -469,12 +483,13 @@ static void frame_read_callback(scarletbook_handle_t *handle, uint8_t* frame_dat
         if (ft->sb_handle->audio_frame_trimming > 0)  // (pausese will not be included)
         {
             uint32_t frame_count_time_start = TIME_FRAMECOUNT(&handle->area[ft->area].area_tracklist_time->start[ft->track]);
-            uint32_t frame_count_time_end = TIME_FRAMECOUNT(&handle->area[ft->area].area_tracklist_time->start[ft->track]) +
+            uint32_t frame_count_time_end = frame_count_time_start +
                                             TIME_FRAMECOUNT(&handle->area[ft->area].area_tracklist_time->duration[ft->track]);
-            uint32_t frame_timecode = TIME_FRAMECOUNT(&handle->audio_sector.frame[handle->frame_info_idx].timecode);
+            //uint32_t frame_timecode = TIME_FRAMECOUNT(&handle->audio_sector.frame[handle->frame_info_idx].timecode);
+            uint32_t frame_timecode = TIME_FRAMECOUNT(&handle->frame.timecode);
 
             if (frame_timecode >= frame_count_time_start &&
-                frame_timecode <= frame_count_time_end)
+                frame_timecode < frame_count_time_end)
             {
                 if (ft->dsd_encoded_export && ft->dst_encoded_import)
                 {
@@ -487,7 +502,7 @@ static void frame_read_callback(scarletbook_handle_t *handle, uint8_t* frame_dat
                     rezult = write_block(ft, frame_data, frame_size);
                     if (rezult == -1)
                     {
-                        ft->cb_fwprintf(stderr, L"\n ERROR in frame_read_callback():write_block()..at writting in file. \n");
+                        ft->cb_fwprintf(stderr, L"\n ERROR in frame_read_callback():write_block()..at writting in dsf/dsdiff file. \n");
                         LOG(lm_main, LOG_ERROR, ("ERROR in frame_read_callback:write_block()...writting in file: %s  ", ft->filename));
                         raise(SIGINT);
                     }
@@ -663,9 +678,17 @@ static void *processing_thread(void *arg)
                     // process DSD & DST frames
                     if (ft->handler.flags & OUTPUT_FLAG_DSD || ft->handler.flags & OUTPUT_FLAG_DST)
                     {
-                       int rezult_proc_frames =  scarletbook_process_frames(ft->sb_handle, output->read_buffer, block_size, ft->current_lsn == end_lsn, frame_read_callback, ft);
-                       if (rezult_proc_frames < 0)
+                       int rezult_proc_frames =  scarletbook_process_frames(ft->sb_handle, output->read_buffer, block_size, ft->current_lsn >= end_lsn, frame_read_callback, ft);
+                       if (rezult_proc_frames < 0){
+                           LOG(lm_main, LOG_ERROR, ("Error in return of scarlet_process_frames!, current_lsn:%d, end_lsn:%d, block_size:%d", ft->current_lsn, end_lsn, block_size));
                            output->fwprintf_callback(stdout, L"\n \n Error in processing frames! \n");
+                       }
+                       if (ft->current_lsn >= end_lsn){
+                           LOG(lm_main, LOG_NOTICE, ("End track no. %d. After last call to scarletbook_process_frames. current_lsn >= end_lsn, current_lsn:%d, end_lsn:%d, block_size:%d", ft->track, ft->current_lsn, end_lsn, block_size));
+                           uint32_t frame_count_time_start = TIME_FRAMECOUNT(&handle->area[ft->area].area_tracklist_time->start[ft->track]);
+                           uint32_t frame_count_time_end = frame_count_time_start +  TIME_FRAMECOUNT(&handle->area[ft->area].area_tracklist_time->duration[ft->track]);
+                           LOG(lm_main, LOG_NOTICE, ("End track. After last call to scarletbook_process_frames. frame_count_time_start:%u, frame_count_time_end:%u", frame_count_time_start, frame_count_time_end));
+                       }
                     }
                     // ISO output is written without frame processing                        
                     else if (ft->handler.flags & OUTPUT_FLAG_RAW)
@@ -700,25 +723,48 @@ static void *processing_thread(void *arg)
         else  // error in creating file
         {
 			no_tracks_with_errors++;
-            output->fwprintf_callback(stdout, L"\n \n ERROR: Cannot create output file for current track number %d of total %d !!", output->stats_current_track, output->stats_total_tracks);           			
+            output->fwprintf_callback(stdout, L"\n \n ERROR: Cannot create output file for current track number %d of total %d !!", output->stats_current_track, output->stats_total_tracks);
+            LOG(lm_main, LOG_ERROR, ("ERROR: Cannot create output file for current track number %d of total %d !!", output->stats_current_track, output->stats_total_tracks));
         }
-        
 
-        // Show statistics only for DSF/DFF : print Error if nr of processed frames < of duration (in nr of frames)
+        // Show statistics only for DFF-edit-master : print Error if nr of processed frames < of duration (nr of frames)
+        if (ft->handler.flags & OUTPUT_FLAG_EDIT_MASTER)
+        {
+            int count_sec = (int)(handle->count_frames / SACD_FRAME_RATE);
+            uint32_t duration = (uint32_t)TIME_FRAMECOUNT(&handle->area[ft->area].area_toc->total_playtime);
+            output->fwprintf_callback(stdout, L"\n \n Processed %d audioframes (%02d:%02d:%02d [mins:secs:frames]). Total playing time specified:%d (%02d:%02d:%02d [mins:secs:frames])\n",
+                                      handle->count_frames,
+                                      (int)count_sec / 60,
+                                      (int)count_sec % 60,
+                                      (int)handle->count_frames % SACD_FRAME_RATE,
+                                      duration,
+                                      handle->area[ft->area].area_toc->total_playtime.minutes,
+                                      handle->area[ft->area].area_toc->total_playtime.seconds,
+                                      handle->area[ft->area].area_toc->total_playtime.frames);
+            if (handle->count_frames < duration) 
+            {
+                LOG(lm_main, LOG_NOTICE, ("Warning: Number of processed audioframes (%d) is smaller than number of frames in duration (%d)", handle->count_frames, duration));
+                output->fwprintf_callback(stdout, L"\n \n Warning: Number of processed audioframes (%d) is smaller than number of frames in duration (%d) \n", handle->count_frames, duration);
+            }
+        }
+        else
+        // Show statistics only for DSF/DFF : print Error if nr of processed frames < of duration (nr of frames)
         if (ft->handler.flags & OUTPUT_FLAG_DSD || ft->handler.flags & OUTPUT_FLAG_DST )
         {
             if(handle->concatenate == 0)
             {
                 uint32_t duration = (uint32_t)TIME_FRAMECOUNT(&handle->area[ft->area].area_tracklist_time->duration[ft->track]);
-                if (handle->count_frames < duration) //output->stats_current_count_frames
-                {
-                    output->fwprintf_callback(stdout, L"\n \n Warning: Number of processed audioframes (%d) is smaller than number of frames in duration (%d) \n", handle->count_frames, duration);
-                }
+
                 output->fwprintf_callback(stdout, L"\n \n Processed %d audioframes. Duration specified: %d (%02d:%02d:%02d [mins:secs:frames])\n",
                                           handle->count_frames, duration,
                                           handle->area[ft->area].area_tracklist_time->duration[ft->track].minutes,
                                           handle->area[ft->area].area_tracklist_time->duration[ft->track].seconds,
                                           handle->area[ft->area].area_tracklist_time->duration[ft->track].frames);
+                if (handle->count_frames < duration) //output->stats_current_count_frames
+                {
+                    LOG(lm_main, LOG_NOTICE, ("Warning: Number of processed audioframes (%d) is smaller than number of frames in duration (%d)", handle->count_frames, duration));
+                    output->fwprintf_callback(stdout, L"\n \n Warning: Number of processed audioframes (%d) is smaller than number of frames in duration (%d) \n", handle->count_frames, duration);
+                }
             }
             else
             {
@@ -735,6 +781,7 @@ static void *processing_thread(void *arg)
         if (sysAtomicRead(&output->stop_processing) == 1)
         {
             output->fwprintf_callback(stdout, L"\n ...stop processing\n");
+            LOG(lm_main, LOG_NOTICE, ("...stop processing"));
             // make a copy of the filename
             //char *file_to_remove = strdup(ft->filename);
 
@@ -750,7 +797,8 @@ static void *processing_thread(void *arg)
 			if (no_tracks_with_errors > 0)
 			{
 				output->fwprintf_callback(stdout, L"\n \n Error: (%d) track(s) has errors !!", no_tracks_with_errors);
-			}
+                LOG(lm_main, LOG_ERROR, ("Error: (%d) track(s) has errors !!", no_tracks_with_errors));
+            }
 
             // remove the file being worked on
 #ifdef __lv2ppu__
