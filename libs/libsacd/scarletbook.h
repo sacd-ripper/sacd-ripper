@@ -475,7 +475,7 @@ typedef struct
 }
 ATTRIBUTE_PACKED area_tracklist_time_t; //area_tracklist_time_duration_t
 
-#define TIME_FRAMECOUNT(m) ((m)->minutes * 60 * SACD_FRAME_RATE + (m)->seconds * SACD_FRAME_RATE + (m)->frames)
+#define TIME_FRAMECOUNT(m) ((uint32_t)(m)->minutes * 60 * SACD_FRAME_RATE + (uint32_t)(m)->seconds * SACD_FRAME_RATE + (m)->frames)
 
 typedef struct
 {
@@ -583,6 +583,14 @@ typedef struct scarletbook_audio_frame_t
     int                 channel_count;
 
     int                 dst_encoded;
+
+    struct
+    {
+        uint8_t minutes;
+        uint8_t seconds;
+        uint8_t frames;
+    } ATTRIBUTE_PACKED timecode;
+
 } 
 scarletbook_audio_frame_t;
 
