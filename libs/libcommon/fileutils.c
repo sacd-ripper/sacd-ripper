@@ -318,6 +318,8 @@ int recursive_mkdir(char* path_and_name,char * base_dir, mode_t mode)
 
     path_and_name_length = strlen(pos);
 
+    LOG(lm_main, LOG_NOTICE, ("NOTICE in fileutils:recursive_mkdir before call mkdir..path_and_name: %s; base_dir:%s; path_and_name_length:%d", path_and_name, base_dir, path_and_name_length));
+
     for (count = 0; count < path_and_name_length; count++)
     {
         if (pos[count] == '/' || pos[count] == '\\')
@@ -342,7 +344,7 @@ int recursive_mkdir(char* path_and_name,char * base_dir, mode_t mode)
             rc = mkdir(path_and_name, mode);
 #endif
 
-            LOG(lm_main, LOG_NOTICE, ("NOTICE in fileutils:recursive_mkdir call mkdir..path_and_name: %s  ", path_and_name));
+            LOG(lm_main, LOG_NOTICE, ("NOTICE in fileutils:recursive_mkdir after call mkdir..path_and_name: %s  ", path_and_name));
 
 #ifdef __lv2ppu__
             sysFsChmod(path_and_name, S_IFMT | 0777); 
@@ -372,7 +374,7 @@ int recursive_mkdir(char* path_and_name,char * base_dir, mode_t mode)
 #else
     rc = mkdir(path_and_name, mode); // mode =0777  0774 // S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH
 #endif
-    LOG(lm_main, LOG_NOTICE, ("NOTICE in fileutils:recursive_mkdir call mkdir..path_and_name: %s  ", path_and_name));
+    LOG(lm_main, LOG_NOTICE, ("NOTICE in fileutils:recursive_mkdir after call mkdir..path_and_name: %s  ", path_and_name));
 #ifdef __lv2ppu__
     sysFsChmod(path_and_name, S_IFMT | 0777);
 #elif !defined(_WIN32)
@@ -461,17 +463,26 @@ static void trim_dots(char *s)
 /*
 For  FAT32 invalid char are:
      0x00-0x1F 0x7F " * / : < > ? \ | + , . ; = [ ] (in some environments also: ! @; 
+
+     0x00-0x1F 0x7F(DEL)
+     "(0x22)  *(0x2a)  +(0x2b)  ,(0x2c)  .(0x2e)  /(0x2f)  :(0x3a)  ;(0x3b)  <(0x3c) =(0x3d) >(0x3e)  ?(0x3f)  [(0x5b)   ](0x5d)   \(0x5c)  |(0x7c)
+      (in some environments also: !=(0x21),  @ (0x40); 
+
      NTFS invalid char are:
      0x00-0x1F 0x7F " * / : < > ? \ | 
      Mac HSF:   : 
      Most most UNIX file systems :  / null
+  
+    BUG BUG !!  IF input text is UTF-8 encoded then
+     function will not work if unsafe_chars hex codes are greater than 0x7F, e.g. 0xab ('<<') !!
+
 */
 void sanitize_filename(char *f)
 {
     const char unsafe_chars[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d,
                                  0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a,
                                  0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x22, 0x2a, 0x2f, 0x3a, 0x3c, 0x3e, 0x3f, 0x5b, 0x5d, 0x5c,  // added '['=5b, ']'=5d
-                                 0x7c, 0x7f, 0xab, 0xbb, 0x00};  // added '<<'=0ab and '>>'=0bb
+                                 0x7c, 0x7f, 0x00};  //  '<<'=0xab and '>>'=0xbb !! <--removed because don't works ok with UTF8 string if > 0x7f !!
 
     char *c = f;
 
@@ -483,17 +494,29 @@ void sanitize_filename(char *f)
         if (strchr(unsafe_chars, *c))
             *c = '_';
     }
-    //replace_double_space_with_single(f);
+    
     trim_dots(f);
     trim_whitespace(f);
     
 }
 
+/*
+For  FAT32 invalid char are:
+     0x00-0x1F 0x7F(DEL)
+     "(0x22)  *(0x2a)  +(0x2b)  ,(0x2c)  .(0x2e)  /(0x2f)  :(0x3a)   <(0x3c)  >(0x3e)   ?(0x3f)  ;(0x3b)  =(0x3d)  [(0x5b)   ](0x5d)   \(0x5c)  |(0x7c)
+     (in some environments also: !=(0x21),  @ (0x40); 
+
+   NTFS invalid char are:
+     0x00-0x1F 0x7F " * / : < > ? \ | 
+   Mac HSF:   : 
+   Most most UNIX file systems :  / null
+*/
+
 void sanitize_filepath(char *f)
 {
     const char unsafe_chars[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d,
                                  0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a,
-                                 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x22, 0x2a, 0x3c, 0x3e, 0x3f, 0x7c, 0x7f, 0xab, 0xbb, 0x00}; // added '<<'=[0ab] and '>>'=[0bb]
+                                 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x22, 0x2a, 0x3c, 0x3e, 0x3f, 0x7c, 0x7f, 0x00};
 
     char *c = f;
 
@@ -504,8 +527,7 @@ void sanitize_filepath(char *f)
     {
         if (strchr(unsafe_chars, *c))
             *c = '_';
-    }
-    //replace_double_space_with_single(f);
+    }  
 
     trim_dots(f);
     trim_whitespace(f);
