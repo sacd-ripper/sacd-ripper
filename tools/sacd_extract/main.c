@@ -330,6 +330,7 @@ static int parse_options(int argc, char *argv[])
             break;
         }
     }
+    free(program_name);
 
     return 1;
 }
@@ -724,9 +725,9 @@ char * return_current_directory()
         char *buffer;
         if ((buffer = return_current_directory() ) != NULL)   
         {
-            wchar_t *wide_filename;
+            char *wide_filename;
             CHAR2WCHAR(wide_filename, buffer);
-            fwprintf(stdout, L"\nCurrent (working) directory (for the app and 'sacd_extract.cfg' file): %ls\n", wide_filename);
+            fwprintf(stdout, L"\nCurrent (working) directory (for the app and 'sacd_extract.cfg' file): %ls\n", (wchar_t *)wide_filename);
             free(wide_filename);
             free(buffer);
         }
@@ -734,6 +735,8 @@ char * return_current_directory()
 
         int exist_cfg = read_config();
         init_logging(opts.logging); //init_logging(0); 1= write logs in a file
+
+        LOG(lm_main, LOG_NOTICE, ("sacd_extract Version: %s  ", SACD_RIPPER_VERSION_STRING));
 
         if (opts.version==1)
         {
@@ -829,7 +832,24 @@ char * return_current_directory()
                 {
                     scarletbook_print(handle);
                 }
-               
+
+                uint32_t total_sectors = sacd_get_total_sectors(sacd_reader); // get the real full size of disc [number of sectors] or file [number of SACD_LSN_SIZE]
+
+                // made some checks on the total size of iso/disc
+                uint32_t area1_sectors_max = handle->master_toc->area_1_toc_2_start + handle->master_toc->area_1_toc_size;
+                uint32_t area2_sectors_max = handle->master_toc->area_2_toc_2_start + handle->master_toc->area_2_toc_size;
+                uint32_t max_sectors = area2_sectors_max > area1_sectors_max ? area2_sectors_max : area1_sectors_max;
+
+                if (max_sectors <= total_sectors)
+                {
+
+                    fwprintf(stdout, L"\nThe size of sacd is ok (sectors=%d). Size is: %llu bytes, %.3f GB (gigabyte) \n", total_sectors, (u_int64_t)total_sectors * SACD_LSN_SIZE, (double)total_sectors * SACD_LSN_SIZE / (1000 * 1000 * 1000));
+                }
+                else
+                {
+                    fwprintf(stdout, L"\nWarning: the reported size (sectors) of sacd is not ok (sectors=%u) < (max_sectors=%u) !\n", total_sectors, max_sectors);
+                }
+
                 if (opts.output_iso)
                 {
                     // create the output folder
@@ -869,7 +889,7 @@ char * return_current_directory()
 
                     output = scarletbook_output_create(handle, handle_status_update_track_callback, handle_status_update_progress_callback, safe_fwprintf);
 
-                    uint32_t total_sectors = sacd_get_total_sectors(sacd_reader);
+                    
 #ifdef SECTOR_LIMIT
 #define FAT32_SECTOR_LIMIT 2090000
                     uint32_t sector_size = FAT32_SECTOR_LIMIT;
