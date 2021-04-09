@@ -843,7 +843,7 @@ char * return_current_directory()
                 if (max_sectors <= total_sectors)
                 {
 
-                    fwprintf(stdout, L"\nThe size of sacd is ok (sectors=%d). Size is: %llu bytes, %.3f GB (gigabyte) \n", total_sectors, (u_int64_t)total_sectors * SACD_LSN_SIZE, (double)total_sectors * SACD_LSN_SIZE / (1000 * 1000 * 1000));
+                    fwprintf(stdout, L"\nThe size of sacd is ok (sectors=%d). Size is: %llu bytes, %.3f GB (gigabyte) \n", total_sectors, (uint64_t)total_sectors * SACD_LSN_SIZE, (double)total_sectors * SACD_LSN_SIZE / (1000 * 1000 * 1000));
                 }
                 else
                 {
