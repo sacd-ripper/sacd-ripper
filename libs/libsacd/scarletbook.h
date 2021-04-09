@@ -74,96 +74,88 @@
 
 #define MAX_PROCESSING_BLOCK_SIZE      512
 
-enum
+enum frame_format_t
 {
-      FRAME_FORMAT_DST         = 0               // maybe to add FRAME_FORMAT_INVALID -1
-    , FRAME_FORMAT_DSD_3_IN_14 = 2
-    , FRAME_FORMAT_DSD_3_IN_16 = 3
-} 
-frame_format_t;
+    FRAME_FORMAT_DST = 0, // maybe to add FRAME_FORMAT_INVALID -1
+    FRAME_FORMAT_DSD_3_IN_14 = 2,
+    FRAME_FORMAT_DSD_3_IN_16 = 3
+};
 
-enum
+enum character_set_t
 {
-      CHAR_SET_UNKNOWN       = 0
-    , CHAR_SET_ISO646        = 1    // ISO 646 (IRV), no escape sequences allowed
-    , CHAR_SET_ISO8859_1     = 2    // ISO 8859-1, no escape sequences allowed
-    , CHAR_SET_RIS506        = 3    // MusicShiftJIS, per RIS-506 (RIAJ), Music Shift-JIS Kanji
-    , CHAR_SET_KSC5601       = 4    // Korean KSC 5601-1987
-    , CHAR_SET_GB2312        = 5    // Chinese GB 2312-80
-    , CHAR_SET_BIG5          = 6    // Big5
-    , CHAR_SET_ISO8859_1_ESC = 7    // ISO 8859-1, single byte set escape sequences allowed
-} 
-character_set_t;
+    CHAR_SET_UNKNOWN       = 0,
+    CHAR_SET_ISO646        = 1,    // ISO 646 (IRV), no escape sequences allowed
+    CHAR_SET_ISO8859_1     = 2,    // ISO 8859-1, no escape sequences allowed
+    CHAR_SET_RIS506        = 3,    // MusicShiftJIS, per RIS-506 (RIAJ), Music Shift-JIS Kanji
+    CHAR_SET_KSC5601       = 4,    // Korean KSC 5601-1987
+    CHAR_SET_GB2312        = 5,    // Chinese GB 2312-80
+    CHAR_SET_BIG5          = 6,    // Big5
+    CHAR_SET_ISO8859_1_ESC = 7    // ISO 8859-1, single byte set escape sequences allowed
+};
 
 // string representation for character sets
 extern const char *character_set[];
 
 extern const char *album_genre[];
 
-enum
-{
-      GENRE_NOT_USED               = 0       // 12
-    , GENRE_NOT_DEFINED            = 1       // 12
-    , GENRE_ADULT_CONTEMPORARY     = 2       // 12
-    , GENRE_ALTERNATIVE_ROCK       = 3       // 40
-    , GENRE_CHILDRENS_MUSIC        = 4       // 12
-    , GENRE_CLASSICAL              = 5       // 32
-    , GENRE_CONTEMPORARY_CHRISTIAN = 6       // 140
-    , GENRE_COUNTRY                = 7       // 2
-    , GENRE_DANCE                  = 8       // 3
-    , GENRE_EASY_LISTENING         = 9       // 98
-    , GENRE_EROTIC                 = 10      // 12
-    , GENRE_FOLK                   = 11      // 80
-    , GENRE_GOSPEL                 = 12      // 38
-    , GENRE_HIP_HOP                = 13      // 7
-    , GENRE_JAZZ                   = 14      // 8
-    , GENRE_LATIN                  = 15      // 86
-    , GENRE_MUSICAL                = 16      // 77
-    , GENRE_NEW_AGE                = 17      // 10
-    , GENRE_OPERA                  = 18      // 103
-    , GENRE_OPERETTA               = 19      // 104
-    , GENRE_POP_MUSIC              = 20      // 13
-    , GENRE_RAP                    = 21      // 15
-    , GENRE_REGGAE                 = 22      // 16
-    , GENRE_ROCK_MUSIC             = 23      // 17
-    , GENRE_RHYTHM_AND_BLUES       = 24      // 14
-    , GENRE_SOUND_EFFECTS          = 25      // 37
-    , GENRE_SOUND_TRACK            = 26      // 24
-    , GENRE_SPOKEN_WORD            = 27      // 101
-    , GENRE_WORLD_MUSIC            = 28      // 12
-    , GENRE_BLUES                  = 29      // 0
-} 
-genre_t;
+enum genre_t {
+	GENRE_NOT_USED               = 0,       // 12
+	GENRE_NOT_DEFINED            = 1,       // 12
+	GENRE_ADULT_CONTEMPORARY     = 2,       // 12
+	GENRE_ALTERNATIVE_ROCK       = 3,       // 40
+	GENRE_CHILDRENS_MUSIC        = 4,       // 12
+	GENRE_CLASSICAL              = 5,       // 32
+	GENRE_CONTEMPORARY_CHRISTIAN = 6,       // 140
+	GENRE_COUNTRY                = 7,       // 2
+	GENRE_DANCE                  = 8,       // 3
+	GENRE_EASY_LISTENING         = 9,       // 98
+	GENRE_EROTIC                 = 10,      // 12
+	GENRE_FOLK                   = 11,      // 80
+	GENRE_GOSPEL                 = 12,      // 38
+	GENRE_HIP_HOP                = 13,      // 7
+	GENRE_JAZZ                   = 14,      // 8
+	GENRE_LATIN                  = 15,      // 86
+	GENRE_MUSICAL                = 16,      // 77
+	GENRE_NEW_AGE                = 17,      // 10
+	GENRE_OPERA                  = 18,      // 103
+	GENRE_OPERETTA               = 19,      // 104
+	GENRE_POP_MUSIC              = 20,      // 13
+	GENRE_RAP                    = 21,      // 15
+	GENRE_REGGAE                 = 22,      // 16
+	GENRE_ROCK_MUSIC             = 23,      // 17
+	GENRE_RHYTHM_AND_BLUES       = 24,      // 14
+	GENRE_SOUND_EFFECTS          = 25,      // 37
+	GENRE_SOUND_TRACK            = 26,      // 24
+	GENRE_SPOKEN_WORD            = 27,      // 101
+	GENRE_WORLD_MUSIC            = 28,      // 12
+	GENRE_BLUES                  = 29       // 0
+};
 
-enum
-{
-      CATEGORY_NOT_USED = 0
-    , CATEGORY_GENERAL  = 1
-    , CATEGORY_JAPANESE = 2
-}                 
-category_t;
+enum category_t {
+	CATEGORY_NOT_USED = 0,
+	CATEGORY_GENERAL  = 1,
+	CATEGORY_JAPANESE = 2
+};
 
 extern const char *album_category[];
 
-enum
-{
-      TRACK_TYPE_TITLE                  = 0x01
-    , TRACK_TYPE_PERFORMER              = 0x02
-    , TRACK_TYPE_SONGWRITER             = 0x03
-    , TRACK_TYPE_COMPOSER               = 0x04
-    , TRACK_TYPE_ARRANGER               = 0x05
-    , TRACK_TYPE_MESSAGE                = 0x06
-    , TRACK_TYPE_EXTRA_MESSAGE          = 0x07
+enum track_type_t {
+	TRACK_TYPE_TITLE                  = 0x01,
+	TRACK_TYPE_PERFORMER              = 0x02,
+	TRACK_TYPE_SONGWRITER             = 0x03,
+	TRACK_TYPE_COMPOSER               = 0x04,
+	TRACK_TYPE_ARRANGER               = 0x05,
+	TRACK_TYPE_MESSAGE                = 0x06,
+	TRACK_TYPE_EXTRA_MESSAGE          = 0x07,
 
-    , TRACK_TYPE_TITLE_PHONETIC         = 0x81
-    , TRACK_TYPE_PERFORMER_PHONETIC     = 0x82
-    , TRACK_TYPE_SONGWRITER_PHONETIC    = 0x83
-    , TRACK_TYPE_COMPOSER_PHONETIC      = 0x84
-    , TRACK_TYPE_ARRANGER_PHONETIC      = 0x85
-    , TRACK_TYPE_MESSAGE_PHONETIC       = 0x86
-    , TRACK_TYPE_EXTRA_MESSAGE_PHONETIC = 0x87
-} 
-track_type_t;
+	TRACK_TYPE_TITLE_PHONETIC         = 0x81,
+	TRACK_TYPE_PERFORMER_PHONETIC     = 0x82,
+	TRACK_TYPE_SONGWRITER_PHONETIC    = 0x83,
+	TRACK_TYPE_COMPOSER_PHONETIC      = 0x84,
+	TRACK_TYPE_ARRANGER_PHONETIC      = 0x85,
+	TRACK_TYPE_MESSAGE_PHONETIC       = 0x86,
+	TRACK_TYPE_EXTRA_MESSAGE_PHONETIC = 0x87
+};
 
 #if PRAGMA_PACK
 #pragma pack(1)
@@ -437,20 +429,20 @@ typedef struct
 }
 ATTRIBUTE_PACKED area_tracklist_offset_t;
 
-typedef struct
-{
-    uint8_t minutes;
-    uint8_t seconds;
-    uint8_t frames;
-#if defined(__BIG_ENDIAN__)
-    uint8_t extra_use : 3;
-    uint8_t reserved : 5;
-#else
-    uint8_t reserved : 5;
-    uint8_t extra_use : 3;
-#endif
-} 
-ATTRIBUTE_PACKED area_tracklist_time_start_t;
+// typedef struct
+// {
+//     uint8_t minutes;
+//     uint8_t seconds;
+//     uint8_t frames;
+// #if defined(__BIG_ENDIAN__)
+//     uint8_t extra_use : 3;
+//     uint8_t reserved : 5;
+// #else
+//     uint8_t reserved : 5;
+//     uint8_t extra_use : 3;
+// #endif
+// } 
+// ATTRIBUTE_PACKED area_tracklist_time_start_t;
 
 typedef struct
 {
@@ -473,25 +465,23 @@ typedef struct
     uint8_t track_flags_ilp : 1;
 #endif
 }
-ATTRIBUTE_PACKED area_tracklist_time_t; //area_tracklist_time_duration_t
+ATTRIBUTE_PACKED area_tracklist_time_t; // used to be  area_tracklist_time_duration_t but now is common with area_tracklist_time_start_t
 
 #define TIME_FRAMECOUNT(m) ((uint32_t)(m)->minutes * 60 * SACD_FRAME_RATE + (uint32_t)(m)->seconds * SACD_FRAME_RATE + (m)->frames)
 
 typedef struct
 {
     char                        id[8];                           // SACDTRL2
-    area_tracklist_time_t       start[255];
-    area_tracklist_time_t       duration[255];
+    area_tracklist_time_t       start[255];    // used to have type of  area_tracklist_time_start_t
+    area_tracklist_time_t       duration[255];  // used to have type of  area_tracklist_time_duration_t
 } 
 ATTRIBUTE_PACKED area_tracklist_t;
 
-enum
-{
-      DATA_TYPE_AUDIO           = 2
-    , DATA_TYPE_SUPPLEMENTARY   = 3
-    , DATA_TYPE_PADDING         = 7
-} 
-audio_packet_data_type_t;
+enum audio_packet_data_type_t {
+	DATA_TYPE_AUDIO         = 2,
+	DATA_TYPE_SUPPLEMENTARY = 3,
+	DATA_TYPE_PADDING       = 7
+};
 
 // It's no use to make a little & big endian struct. On little 
 // endian systems this needs to be filled manually anyway.
@@ -573,7 +563,7 @@ typedef struct
 }
 scarletbook_area_t;
 
-typedef struct scarletbook_audio_frame_t
+typedef struct
 {
     uint8_t            *data;     // must be allocated MAX_DST_SIZE  ; (1024 * 64)
     int                 size;
