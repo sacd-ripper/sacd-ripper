@@ -92,9 +92,14 @@ int utf8cpy(char *dst, char *src, int n)
 #define MAX_TRACK_TITLE_LEN 120
 #define MAX_TRACK_ARTIST_LEN 40
 
-//  Generates a name for a directory from disc/album artist and album/disc title
-//  if album is multiset then adds  - 'Disc number-number of total discs'
-// if artist_flag >0 then adds disc/album artist to the name of directory
+//  Generates a name for a directory or filename from disc/album artist and album/disc title
+//  Useful for iso, cue, xml, DFF edit master files
+//    if album is multiset then adds
+//         ' (disc number-number_of_total discs)'
+//    if artist_flag >0 then adds disc/album artist to the name of directory
+//       'artist - title'
+//      or
+//       'artist - title (disc number-number_of_total discs)'
 //   NOTE: caller must free the returned string!
 
 char *get_album_dir(scarletbook_handle_t *handle, int artist_flag)
@@ -116,14 +121,31 @@ char *get_album_dir(scarletbook_handle_t *handle, int artist_flag)
     else if (master_text->album_artist_phonetic)
         p_artist = master_text->album_artist_phonetic;
 
-    if (master_text->disc_title)
-        p_album_title = master_text->disc_title;
-    else if (master_text->disc_title_phonetic)
-        p_album_title = master_text->disc_title_phonetic;
-    else if (master_text->album_title)
-        p_album_title = master_text->album_title;
-    else if (master_text->album_title_phonetic)
-        p_album_title = master_text->album_title_phonetic;
+
+    if (handle->master_toc->album_set_size > 1) // If there is a set of discs
+    {
+        // in case of multiset, album_title  must be used first, instead of disc_title
+        if (master_text->album_title)
+            p_album_title = master_text->album_title;
+        else if (master_text->album_title_phonetic)
+            p_album_title = master_text->album_title_phonetic;
+        else if (master_text->disc_title)
+            p_album_title = master_text->disc_title;
+        else if (master_text->disc_title)
+            p_album_title = master_text->disc_title_phonetic;
+    }
+    else
+    {
+        if (master_text->disc_title)
+            p_album_title = master_text->disc_title;
+        else if (master_text->disc_title_phonetic)
+            p_album_title = master_text->disc_title_phonetic;
+        else if (master_text->album_title)
+            p_album_title = master_text->album_title;
+        else if (master_text->album_title_phonetic)
+            p_album_title = master_text->album_title_phonetic;
+    }
+
 
     memset(disc_artist, 0, sizeof(disc_artist));
     if (p_artist)
@@ -169,9 +191,15 @@ char *get_album_dir(scarletbook_handle_t *handle, int artist_flag)
     if (handle->master_toc->album_set_size > 1) // Set of discs
     {       
         snprintf(multiset_s, sizeof(multiset_s), " (disc %d-%d)", handle->master_toc->album_sequence_number, handle->master_toc->album_set_size);
+        disc_album_title_final = (char *)malloc(strlen(disc_album_title) + strlen(multiset_s) + 1);
+        sprintf(disc_album_title_final, "%s%s", disc_album_title, multiset_s);
     }
-    disc_album_title_final = (char *)malloc(strlen(disc_album_title) + strlen(multiset_s) + 1);
-    sprintf(disc_album_title_final, "%s%s", disc_album_title, multiset_s);
+    else
+    {
+        disc_album_title_final = (char *)malloc(strlen(disc_album_title) + 1);
+        sprintf(disc_album_title_final, "%s", disc_album_title);
+    }
+
 
     snprintf(disc_album_year, sizeof(disc_album_year), "%04u", handle->master_toc->disc_date_year);
 
@@ -194,11 +222,14 @@ char *get_album_dir(scarletbook_handle_t *handle, int artist_flag)
     return albumdir;
 }
 
-
-//  Generates a path from disc title or album title
-//  If album has multiple discs then
-//   adds to Album Title + Disc 1...N ....
-// if artist_flag=1 then adds artist to the path
+//  Generates a path from disc title/album title.
+//  Useful for dsf, dff files.
+//  the only difference from get_album_dir is:
+//    if album has multiple discs then
+//       inserts a new component into path \Disc 1...N
+// if artist_flag=1 then adds artist to the path like this:
+//    artist - title
+//    artist - title\Disc 1...N
 //  NOTE: caller must free the returned string!
 char *get_path_disc_album(scarletbook_handle_t *handle, int artist_flag)
 {
@@ -214,15 +245,29 @@ char *get_path_disc_album(scarletbook_handle_t *handle, int artist_flag)
     char *disc_album_title_final=NULL;
     
 
-    if (master_text->disc_title)
-        p_album_title = master_text->disc_title;
-    else if (master_text->disc_title_phonetic)
-        p_album_title = master_text->disc_title_phonetic;
-    else if (master_text->album_title)
-        p_album_title = master_text->album_title;
-    else if (master_text->album_title_phonetic)
-        p_album_title = master_text->album_title_phonetic;
-
+    if (handle->master_toc->album_set_size > 1) // If there is a set of discs
+    {
+        // in case of multiset, album_title  must be used first, instead of disc_title
+        if (master_text->album_title)
+            p_album_title = master_text->album_title;
+        else if (master_text->album_title_phonetic)
+            p_album_title = master_text->album_title_phonetic;
+        else if (master_text->disc_title)
+            p_album_title = master_text->disc_title;
+        else if (master_text->disc_title)
+            p_album_title = master_text->disc_title_phonetic;
+    }
+    else
+    {
+        if (master_text->disc_title)
+            p_album_title = master_text->disc_title;
+        else if (master_text->disc_title_phonetic)
+            p_album_title = master_text->disc_title_phonetic;
+        else if (master_text->album_title)
+            p_album_title = master_text->album_title;
+        else if (master_text->album_title_phonetic)
+            p_album_title = master_text->album_title_phonetic;
+    }
 
     if (master_text->disc_artist)
         p_artist = master_text->disc_artist;
