@@ -194,7 +194,6 @@ char *get_album_dir(scarletbook_handle_t *handle, int artist_flag)
     return albumdir;
 }
 
-#define MAX_ALBUM_TITLE_PATH_LEN 511
 
 //  Generates a path from disc title or album title
 //  If album has multiple discs then
@@ -203,34 +202,27 @@ char *get_album_dir(scarletbook_handle_t *handle, int artist_flag)
 //  NOTE: caller must free the returned string!
 char *get_path_disc_album(scarletbook_handle_t *handle, int artist_flag)
 {
-    char disc_title[MAX_ALBUM_TITLE_PATH_LEN + 1];
-    char disc_album_title[MAX_ALBUM_TITLE_PATH_LEN + 1];
+    //char disc_title[MAX_ALBUM_TITLE_LEN + 1];
+    char disc_album_title[MAX_ALBUM_TITLE_LEN + 1];
     char disc_artist[MAX_DISC_ARTIST_LEN + 1];
 
     master_text_t *master_text = &handle->master_text;
      
-    char *p_disc_title = NULL;
+    //char *p_disc_title = NULL;
     char *p_album_title = NULL;
     char *p_artist = NULL;
     char *disc_album_title_final=NULL;
     
-    if (master_text->disc_title)
-        p_disc_title = master_text->disc_title;
-    else if (master_text->disc_title_phonetic)
-        p_disc_title = master_text->disc_title_phonetic;
-    else if (master_text->album_title)                  // last resort: make it equal to album title (if exists)
-        p_disc_title =   master_text->album_title;
-    else if (master_text->album_title_phonetic)
-        p_disc_title = master_text->album_title_phonetic;
 
-    if (master_text->album_title)
+    if (master_text->disc_title)
+        p_album_title = master_text->disc_title;
+    else if (master_text->disc_title_phonetic)
+        p_album_title = master_text->disc_title_phonetic;
+    else if (master_text->album_title)
         p_album_title = master_text->album_title;
     else if (master_text->album_title_phonetic)
         p_album_title = master_text->album_title_phonetic;
-    else if (master_text->disc_title)                   // last resort: make it equal to disc title (if exists)
-        p_album_title = master_text->disc_title; 
-    else if (master_text->disc_title_phonetic)
-        p_album_title = master_text->disc_title_phonetic;
+
 
     if (master_text->disc_artist)
         p_artist = master_text->disc_artist;
@@ -241,26 +233,16 @@ char *get_path_disc_album(scarletbook_handle_t *handle, int artist_flag)
     else if (master_text->album_artist_phonetic)
         p_artist = master_text->album_artist_phonetic;
 
-    memset(disc_title, 0, sizeof(disc_title));
-    if (p_disc_title)
-    {
-        strncpy(disc_title, p_disc_title, min(strlen(p_disc_title), MAX_ALBUM_TITLE_PATH_LEN));
-        sanitize_filename(disc_title);
-    }
-    else
-    {
-        strncpy(disc_title, "unknown disc title", min(strlen("unknown disc title"), MAX_ALBUM_TITLE_PATH_LEN));
-    }
 
     memset(disc_album_title, 0,sizeof(disc_album_title));
     if (p_album_title)
     {
-        strncpy(disc_album_title, p_album_title, min(strlen(p_album_title), MAX_ALBUM_TITLE_PATH_LEN));
+        strncpy(disc_album_title, p_album_title, min(strlen(p_album_title), MAX_ALBUM_TITLE_LEN));
         sanitize_filename(disc_album_title);
     }
     else
     {
-        strncpy(disc_album_title, "unknown album title", min(strlen("unknown album title"), MAX_ALBUM_TITLE_PATH_LEN));
+        strncpy(disc_album_title, "unknown album title", min(strlen("unknown album title"), MAX_ALBUM_TITLE_LEN));
     }
 
     memset(disc_artist, 0, sizeof(disc_artist));
@@ -342,14 +324,14 @@ char *get_path_disc_album(scarletbook_handle_t *handle, int artist_flag)
         // {
         if (artist_flag !=0 && strlen(disc_artist) > 0) // add artist name
         {
-            disc_album_title_final = (char *)calloc(strlen(disc_artist) + 3 + strlen(disc_title) + 1, sizeof(char));
+            disc_album_title_final = (char *)calloc(strlen(disc_artist) + 3 + strlen(disc_album_title) + 1, sizeof(char));
             strncpy(disc_album_title_final, disc_artist, strlen(disc_artist));
             strncat(disc_album_title_final, " - ", 3);
-            strncat(disc_album_title_final, disc_title, strlen(disc_title));
+            strncat(disc_album_title_final, disc_album_title, strlen(disc_album_title));
         }
         else{
-            disc_album_title_final = (char *)calloc(strlen(disc_title)  + 1, sizeof(char));
-            strncat(disc_album_title_final, disc_title, strlen(disc_title));
+            disc_album_title_final = (char *)calloc(strlen(disc_album_title) + 1, sizeof(char));
+            strncat(disc_album_title_final, disc_album_title, strlen(disc_album_title));
         }
         
                     
