@@ -84,8 +84,36 @@ int path_dir_exists(char * path)
  return path_exist;
 }
 
+/*
 
-// construct a filename from various parts
+Mac OS X operating systems, Oracle Solaris operating systems, AIX operating systems: 
+The maximum number of characters for a file name is 255. 
+The maximum combined length of the file name and path name is 1024 characters. 
+The Unicode representation of a character can occupy several bytes, so the maximum number of characters that a file name might contain can vary.
+
+Linux: The maximum length for a file name is 255 bytes. The maximum combined length of both the file name and path name is 4096 bytes. 
+This length matches the PATH_MAX that is supported by the operating system. 
+The Unicode representation of a character can occupy several bytes, so the maximum number of characters that comprises a path and file name can vary. 
+The actual limitation is the number of bytes in the path and file components, which might correspond to an equal number of characters.
+
+Linux: For archive or retrieve operations, the maximum length that you can specify for a path and file name (combined) remains at 1024 bytes.
+
+Windows operating systems:
+The maximum number of bytes for a file name and file path when combined is 6255. 
+However, the file name itself cannot exceed 255 bytes. 
+Furthermore, directory names (including the directory delimiter) within a path are limited to 255 bytes
+
+See 
+https://www.ibm.com/docs/en/spectrum-protect/8.1.11?topic=parameters-file-specification-syntax
+https://www.quora.com/What-is-the-longest-file-path-allowed-for-Linux
+
+*/
+
+#define MAX_BUFF_FULL_PATH_LEN 1024
+#define MAX_FILENAME_LEN 255
+
+
+// construct a filename path from various parts/components 
 //
 // path - the path the file is placed in (don't include a trailing '/')
 // dir - the parent directory of the file (don't include a trailing '/')
@@ -98,7 +126,7 @@ char *make_filename(const char *path, const char *dir, const char *filename, con
 {
     char * ret = NULL;
     int  pos   = 0;
-    char string_buf[1024];  // keep the full path
+    char string_buf[MAX_BUFF_FULL_PATH_LEN];  // keep the full path
 
     memset(string_buf,0,sizeof(string_buf));
 
@@ -121,7 +149,7 @@ char *make_filename(const char *path, const char *dir, const char *filename, con
     }
     if (dir)
     {       
-        strncpy(string_buf+pos,dir,min(strlen(dir),sizeof(string_buf) -pos-5));
+        strncpy(string_buf+pos,dir,min(strlen(dir), sizeof(string_buf) -pos-5));
         pos += min(strlen(dir), sizeof(string_buf) - pos - 5);
 #if defined(WIN32) || defined(_WIN32)
         if (string_buf[pos - 1] != '\\')
@@ -143,14 +171,15 @@ char *make_filename(const char *path, const char *dir, const char *filename, con
 
     if (filename)
     {
-        char filename_duplicate[512];
+        char filename_duplicate[MAX_FILENAME_LEN];
         memset(filename_duplicate, 0, sizeof(filename_duplicate));
         strncpy(filename_duplicate, filename, min(strlen(filename), sizeof(filename_duplicate) - 1));
         sanitize_filename(filename_duplicate);
 
         strncpy(string_buf + pos, filename_duplicate, min(strlen(filename_duplicate), sizeof(string_buf) - pos - 5)); 
         pos += min(strlen(filename_duplicate), sizeof(string_buf) - pos - 5);
-        }
+    }
+
     if (extension)
     {
         string_buf[pos] = '.';
@@ -299,8 +328,8 @@ char * parse_format(const char * format, int tracknum, const char * year, const 
 //  input: path_and_name (including base_dir)
 //         base_dir (from where to start creating directories)
 //         base_dir can be NULL
-// returns if any of those fails with anything other than EEXIST.
-//
+// returns -1 if any of those fails with anything other than EEXIST.
+//  0 on succes
 int recursive_mkdir(char* path_and_name,char * base_dir, mode_t mode)
 {
     int  count;
@@ -331,12 +360,12 @@ int recursive_mkdir(char* path_and_name,char * base_dir, mode_t mode)
 
 #if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
             {
-                char wide_path_and_name_long[1024];
-                memset(wide_path_and_name_long, '\0', sizeof(wide_path_and_name_long));
-                strcpy(wide_path_and_name_long, "\\\\?\\");
-                strncat(wide_path_and_name_long, path_and_name, min(1016, strlen(path_and_name)));
+                char win_path_and_name_long[MAX_BUFF_FULL_PATH_LEN];
+                memset(win_path_and_name_long, '\0', MAX_BUFF_FULL_PATH_LEN);
+                strcpy(win_path_and_name_long, "\\\\?\\");
+                strncat(win_path_and_name_long, path_and_name, min(MAX_BUFF_FULL_PATH_LEN-8, strlen(path_and_name)));
 
-                wchar_t *wide_path_and_name = (wchar_t *)charset_convert(wide_path_and_name_long, strlen(wide_path_and_name_long), "UTF-8", "UCS-2-INTERNAL");
+                wchar_t *wide_path_and_name = (wchar_t *)charset_convert(win_path_and_name_long, strlen(win_path_and_name_long), "UTF-8", "UCS-2-INTERNAL");
                 rc = _wmkdir(wide_path_and_name);
                 free(wide_path_and_name);
             }
@@ -344,7 +373,7 @@ int recursive_mkdir(char* path_and_name,char * base_dir, mode_t mode)
             rc = mkdir(path_and_name, mode);
 #endif
 
-            LOG(lm_main, LOG_NOTICE, ("NOTICE in fileutils:recursive_mkdir after call mkdir..path_and_name: %s  ", path_and_name));
+            LOG(lm_main, LOG_NOTICE, ("NOTICE in fileutils:recursive_mkdir after call mkdir..path_and_name: %s; return=%d", path_and_name, rc));
 
 #ifdef __lv2ppu__
             sysFsChmod(path_and_name, S_IFMT | 0777); 
@@ -362,19 +391,19 @@ int recursive_mkdir(char* path_and_name,char * base_dir, mode_t mode)
     // in case the path doesn't have a trailing slash:
 #if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
     {
-        char wide_path_and_name_long[1024];
-        memset(wide_path_and_name_long, '\0', sizeof(wide_path_and_name_long));
-        strcpy(wide_path_and_name_long, "\\\\?\\");
-        strncat(wide_path_and_name_long, path_and_name, min(1016, strlen(path_and_name)));
+        char win_path_and_name_long[MAX_BUFF_FULL_PATH_LEN];
+        memset(win_path_and_name_long, '\0', MAX_BUFF_FULL_PATH_LEN);
+        strcpy(win_path_and_name_long, "\\\\?\\");
+        strncat(win_path_and_name_long, path_and_name, min(MAX_BUFF_FULL_PATH_LEN-8, strlen(path_and_name)));
 
-        wchar_t *wide_path_and_name = (wchar_t *)charset_convert(wide_path_and_name_long, strlen(wide_path_and_name_long), "UTF-8", "UCS-2-INTERNAL");
+        wchar_t *wide_path_and_name = (wchar_t *)charset_convert(win_path_and_name_long, strlen(win_path_and_name_long), "UTF-8", "UCS-2-INTERNAL");
         rc = _wmkdir(wide_path_and_name);
         free(wide_path_and_name);
     }
 #else
     rc = mkdir(path_and_name, mode); // mode =0777  0774 // S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH
 #endif
-    LOG(lm_main, LOG_NOTICE, ("NOTICE in fileutils:recursive_mkdir after call mkdir..path_and_name: %s  ", path_and_name));
+    LOG(lm_main, LOG_NOTICE, ("NOTICE in fileutils:recursive_mkdir after call mkdir..path_and_name: %s; return=%d  ", path_and_name, rc));
 #ifdef __lv2ppu__
     sysFsChmod(path_and_name, S_IFMT | 0777);
 #elif !defined(_WIN32)
