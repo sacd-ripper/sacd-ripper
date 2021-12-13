@@ -32,6 +32,7 @@
 #include <utils.h>
 
 #include "cuesheet.h"
+#include "scarletbook_helpers.h"
 
 static char *cue_escape(const char *src) 
 {
@@ -43,7 +44,7 @@ static char *cue_escape(const char *src)
     return ret;
 }
 
-int write_cue_sheet(scarletbook_handle_t *handle, const char *filename, int area, char *cue_filename)
+int write_cue_sheet(scarletbook_handle_t *handle, const char *filename, int area_idx, char *cue_filename)
 {
    FILE *fd;
 
@@ -90,6 +91,10 @@ int write_cue_sheet(scarletbook_handle_t *handle, const char *filename, int area
         fprintf(fd, "REM DISC %d / %d\n", handle->master_toc->album_sequence_number, handle->master_toc->album_set_size);
     }
 
+    
+    fprintf(fd, "REM AREA: %s\n", get_speaker_config_string(handle->area[area_idx].area_toc));
+    
+
     if (handle->master_text.disc_artist)
     {
         fprintf(fd, "PERFORMER \"%s\"\n", cue_escape(handle->master_text.disc_artist));
@@ -112,36 +117,36 @@ int write_cue_sheet(scarletbook_handle_t *handle, const char *filename, int area
 
     if (strlen(handle->master_toc->disc_catalog_number) > 0)
     {
-        fprintf(fd, "CATALOG %s\n", cue_escape(substr(handle->master_toc->disc_catalog_number, 0, 16)));
+        fprintf(fd, "CATALOG \"%s\"\n", cue_escape(substr(handle->master_toc->disc_catalog_number, 0, 16)));
     }
 
     fprintf(fd, "FILE \"%s\" WAVE\n", cue_escape(filename));
     {
-        int track, track_count = handle->area[area].area_toc->track_count;
+        int track, track_count = handle->area[area_idx].area_toc->track_count;
         uint64_t prev_abs_end = 0;
 
         for (track = 0; track < track_count; track++)
         {
-            area_tracklist_time_t *time = &handle->area[area].area_tracklist_time->start[track];
+            area_tracklist_time_t *time = &handle->area[area_idx].area_tracklist_time->start[track];
 
             fprintf(fd, "  TRACK %02d AUDIO\n", track + 1);
             
-            if (handle->area[area].area_track_text[track].track_type_title)
+            if (handle->area[area_idx].area_track_text[track].track_type_title)
             {
-                fprintf(fd, "      TITLE \"%s\"\n", cue_escape(handle->area[area].area_track_text[track].track_type_title));
+                fprintf(fd, "      TITLE \"%s\"\n", cue_escape(handle->area[area_idx].area_track_text[track].track_type_title));
             }
 
-            if (handle->area[area].area_track_text[track].track_type_performer)
+            if (handle->area[area_idx].area_track_text[track].track_type_performer)
             {
-                fprintf(fd, "      PERFORMER \"%s\"\n", cue_escape(handle->area[area].area_track_text[track].track_type_performer));
+                fprintf(fd, "      PERFORMER \"%s\"\n", cue_escape(handle->area[area_idx].area_track_text[track].track_type_performer));
             }
 
-            if (*handle->area[area].area_isrc_genre->isrc[track].country_code)
+            if (*handle->area[area_idx].area_isrc_genre->isrc[track].country_code)
             {
-                fprintf(fd, "      ISRC %s\n", cue_escape(substr(handle->area[area].area_isrc_genre->isrc[track].country_code, 0, 12)));
+                fprintf(fd, "      ISRC %s\n", cue_escape(substr(handle->area[area_idx].area_isrc_genre->isrc[track].country_code, 0, 12)));
             }
 
-            if ((uint64_t) TIME_FRAMECOUNT(&handle->area[area].area_tracklist_time->start[track]) > prev_abs_end)
+            if ((uint64_t) TIME_FRAMECOUNT(&handle->area[area_idx].area_tracklist_time->start[track]) > prev_abs_end)
             {
                 int prev_sec = (int) (prev_abs_end / SACD_FRAME_RATE);
 
@@ -153,8 +158,8 @@ int write_cue_sheet(scarletbook_handle_t *handle, const char *filename, int area
                 fprintf(fd, "      INDEX 01 %02d:%02d:%02d\n", time->minutes, time->seconds, time->frames);
             }
 
-            prev_abs_end = TIME_FRAMECOUNT(&handle->area[area].area_tracklist_time->start[track]) + 
-                             TIME_FRAMECOUNT(&handle->area[area].area_tracklist_time->duration[track]);
+            prev_abs_end = TIME_FRAMECOUNT(&handle->area[area_idx].area_tracklist_time->start[track]) + 
+                             TIME_FRAMECOUNT(&handle->area[area_idx].area_tracklist_time->duration[track]);
         }
     }
 
