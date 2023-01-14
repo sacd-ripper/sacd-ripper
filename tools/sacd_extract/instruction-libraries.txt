@@ -1,0 +1,12 @@
+Instructions for compiling libraries:
+
+LIBICONV:
+./configure --host=x86_64-w64-mingw32 --prefix=/usr/x86_64-w64-mingw32 --enable-static
+make
+sudo make install
+  
+LIBXML2:
+
+./configure --without-python --host=x86_64-w64-mingw32 --prefix=/usr/x86_64-w64-mingw32 --enable-static --with-http=no --with-ftp=no
+make
+sudo make install

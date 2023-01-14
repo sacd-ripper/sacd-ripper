@@ -352,11 +352,20 @@ int id3_set_encoding(struct id3_frame *, int8_t);
 char *id3_get_text(struct id3_frame *);
 char *id3_get_comment(struct id3_frame *);
 int id3_set_comment(struct id3_frame *, char *, char *);
+int id3_set_text__performer(struct id3_frame *, char *);
+int id3_set_text__performer_UTF8(struct id3_frame *, char *);
+int id3_set_text__performer_UTF16(struct id3_frame *, char *);
 char *id3_get_text_desc(struct id3_frame *);
 int id3_get_text_number(struct id3_frame *);
 int id3_set_text(struct id3_frame *, char *);
+int id3_set_text_utf8(struct id3_frame *, char *);
+int id3_set_text_utf16(struct id3_frame *, char *);
 int id3_set_text_number(struct id3_frame *, int);
 int id3_frame_is_text(struct id3_frame *frame);
+uint8_t *id3_encodeUTF8_to_ASCII_text(const char *);
+uint8_t *id3_encodeUTF8_to_UTF16_text(const char *);
+int id3_set_text_wraper(struct id3_frame *, char *, int);
+int id3_set_text__performer_wraper(struct id3_frame *, char *, int);
 
 #if 0
 /* From id3_frame_content.c */

@@ -29,7 +29,7 @@
 #undef PRAGMA_PACK_BEGIN
 #undef PRAGMA_PACK_END
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) &&  !defined(__MINGW32__)
 #if __GNUC__ > 2 || (__GNUC__ == 2 && __GNUC_MINOR__ >= 95)
 #define ATTRIBUTE_PACKED    __attribute__ ((packed))
 #define PRAGMA_PACK         0
@@ -64,7 +64,8 @@
 #define MAX_CHANNEL_COUNT              6
 #define MAX_DST_SIZE                   (1024 * 64)
 #define SAMPLES_PER_FRAME              588
-#define FRAME_SIZE_64                 (SAMPLES_PER_FRAME * 64 / 8)
+#define FRAME_SIZE_64                  4704    // (SAMPLES_PER_FRAME * 64 / 8)   // = 4704 bytes for fs=2822400 for uncompressed frame
+#define MAX_PACKET_SIZE                2045
 #define SUPPORTED_VERSION_MAJOR        1
 #define SUPPORTED_VERSION_MINOR        20
 
@@ -73,96 +74,88 @@
 
 #define MAX_PROCESSING_BLOCK_SIZE      512
 
-enum
+enum frame_format_t
 {
-      FRAME_FORMAT_DST         = 0
-    , FRAME_FORMAT_DSD_3_IN_14 = 2
-    , FRAME_FORMAT_DSD_3_IN_16 = 3
-} 
-frame_format_t;
+    FRAME_FORMAT_DST = 0, // maybe to add FRAME_FORMAT_INVALID -1
+    FRAME_FORMAT_DSD_3_IN_14 = 2,
+    FRAME_FORMAT_DSD_3_IN_16 = 3
+};
 
-enum
+enum character_set_t
 {
-      CHAR_SET_UNKNOWN       = 0
-    , CHAR_SET_ISO646        = 1    // ISO 646 (IRV), no escape sequences allowed
-    , CHAR_SET_ISO8859_1     = 2    // ISO 8859-1, no escape sequences allowed
-    , CHAR_SET_RIS506        = 3    // MusicShiftJIS, per RIS-506 (RIAJ), Music Shift-JIS Kanji
-    , CHAR_SET_KSC5601       = 4    // Korean KSC 5601-1987
-    , CHAR_SET_GB2312        = 5    // Chinese GB 2312-80
-    , CHAR_SET_BIG5          = 6    // Big5
-    , CHAR_SET_ISO8859_1_ESC = 7    // ISO 8859-1, single byte set escape sequences allowed
-} 
-character_set_t;
+    CHAR_SET_UNKNOWN       = 0,
+    CHAR_SET_ISO646        = 1,    // ISO 646 (IRV), no escape sequences allowed
+    CHAR_SET_ISO8859_1     = 2,    // ISO 8859-1, no escape sequences allowed
+    CHAR_SET_RIS506        = 3,    // MusicShiftJIS, per RIS-506 (RIAJ), Music Shift-JIS Kanji
+    CHAR_SET_KSC5601       = 4,    // Korean KSC 5601-1987
+    CHAR_SET_GB2312        = 5,    // Chinese GB 2312-80
+    CHAR_SET_BIG5          = 6,    // Big5
+    CHAR_SET_ISO8859_1_ESC = 7    // ISO 8859-1, single byte set escape sequences allowed
+};
 
 // string representation for character sets
 extern const char *character_set[];
 
 extern const char *album_genre[];
 
-enum
-{
-      GENRE_NOT_USED               = 0       // 12
-    , GENRE_NOT_DEFINED            = 1       // 12
-    , GENRE_ADULT_CONTEMPORARY     = 2       // 12
-    , GENRE_ALTERNATIVE_ROCK       = 3       // 40
-    , GENRE_CHILDRENS_MUSIC        = 4       // 12
-    , GENRE_CLASSICAL              = 5       // 32
-    , GENRE_CONTEMPORARY_CHRISTIAN = 6       // 140
-    , GENRE_COUNTRY                = 7       // 2
-    , GENRE_DANCE                  = 8       // 3
-    , GENRE_EASY_LISTENING         = 9       // 98
-    , GENRE_EROTIC                 = 10      // 12
-    , GENRE_FOLK                   = 11      // 80
-    , GENRE_GOSPEL                 = 12      // 38
-    , GENRE_HIP_HOP                = 13      // 7
-    , GENRE_JAZZ                   = 14      // 8
-    , GENRE_LATIN                  = 15      // 86
-    , GENRE_MUSICAL                = 16      // 77
-    , GENRE_NEW_AGE                = 17      // 10
-    , GENRE_OPERA                  = 18      // 103
-    , GENRE_OPERETTA               = 19      // 104
-    , GENRE_POP_MUSIC              = 20      // 13
-    , GENRE_RAP                    = 21      // 15
-    , GENRE_REGGAE                 = 22      // 16
-    , GENRE_ROCK_MUSIC             = 23      // 17
-    , GENRE_RHYTHM_AND_BLUES       = 24      // 14
-    , GENRE_SOUND_EFFECTS          = 25      // 37
-    , GENRE_SOUND_TRACK            = 26      // 24
-    , GENRE_SPOKEN_WORD            = 27      // 101
-    , GENRE_WORLD_MUSIC            = 28      // 12
-    , GENRE_BLUES                  = 29      // 0
-} 
-genre_t;
+enum genre_t {
+	GENRE_NOT_USED               = 0,       // 12
+	GENRE_NOT_DEFINED            = 1,       // 12
+	GENRE_ADULT_CONTEMPORARY     = 2,       // 12
+	GENRE_ALTERNATIVE_ROCK       = 3,       // 40
+	GENRE_CHILDRENS_MUSIC        = 4,       // 12
+	GENRE_CLASSICAL              = 5,       // 32
+	GENRE_CONTEMPORARY_CHRISTIAN = 6,       // 140
+	GENRE_COUNTRY                = 7,       // 2
+	GENRE_DANCE                  = 8,       // 3
+	GENRE_EASY_LISTENING         = 9,       // 98
+	GENRE_EROTIC                 = 10,      // 12
+	GENRE_FOLK                   = 11,      // 80
+	GENRE_GOSPEL                 = 12,      // 38
+	GENRE_HIP_HOP                = 13,      // 7
+	GENRE_JAZZ                   = 14,      // 8
+	GENRE_LATIN                  = 15,      // 86
+	GENRE_MUSICAL                = 16,      // 77
+	GENRE_NEW_AGE                = 17,      // 10
+	GENRE_OPERA                  = 18,      // 103
+	GENRE_OPERETTA               = 19,      // 104
+	GENRE_POP_MUSIC              = 20,      // 13
+	GENRE_RAP                    = 21,      // 15
+	GENRE_REGGAE                 = 22,      // 16
+	GENRE_ROCK_MUSIC             = 23,      // 17
+	GENRE_RHYTHM_AND_BLUES       = 24,      // 14
+	GENRE_SOUND_EFFECTS          = 25,      // 37
+	GENRE_SOUND_TRACK            = 26,      // 24
+	GENRE_SPOKEN_WORD            = 27,      // 101
+	GENRE_WORLD_MUSIC            = 28,      // 12
+	GENRE_BLUES                  = 29       // 0
+};
 
-enum
-{
-      CATEGORY_NOT_USED = 0
-    , CATEGORY_GENERAL  = 1
-    , CATEGORY_JAPANESE = 2
-}                 
-category_t;
+enum category_t {
+	CATEGORY_NOT_USED = 0,
+	CATEGORY_GENERAL  = 1,
+	CATEGORY_JAPANESE = 2
+};
 
 extern const char *album_category[];
 
-enum
-{
-      TRACK_TYPE_TITLE                  = 0x01
-    , TRACK_TYPE_PERFORMER              = 0x02
-    , TRACK_TYPE_SONGWRITER             = 0x03
-    , TRACK_TYPE_COMPOSER               = 0x04
-    , TRACK_TYPE_ARRANGER               = 0x05
-    , TRACK_TYPE_MESSAGE                = 0x06
-    , TRACK_TYPE_EXTRA_MESSAGE          = 0x07
+enum track_type_t {
+	TRACK_TYPE_TITLE                  = 0x01,
+	TRACK_TYPE_PERFORMER              = 0x02,
+	TRACK_TYPE_SONGWRITER             = 0x03,
+	TRACK_TYPE_COMPOSER               = 0x04,
+	TRACK_TYPE_ARRANGER               = 0x05,
+	TRACK_TYPE_MESSAGE                = 0x06,
+	TRACK_TYPE_EXTRA_MESSAGE          = 0x07,
 
-    , TRACK_TYPE_TITLE_PHONETIC         = 0x81
-    , TRACK_TYPE_PERFORMER_PHONETIC     = 0x82
-    , TRACK_TYPE_SONGWRITER_PHONETIC    = 0x83
-    , TRACK_TYPE_COMPOSER_PHONETIC      = 0x84
-    , TRACK_TYPE_ARRANGER_PHONETIC      = 0x85
-    , TRACK_TYPE_MESSAGE_PHONETIC       = 0x86
-    , TRACK_TYPE_EXTRA_MESSAGE_PHONETIC = 0x87
-} 
-track_type_t;
+	TRACK_TYPE_TITLE_PHONETIC         = 0x81,
+	TRACK_TYPE_PERFORMER_PHONETIC     = 0x82,
+	TRACK_TYPE_SONGWRITER_PHONETIC    = 0x83,
+	TRACK_TYPE_COMPOSER_PHONETIC      = 0x84,
+	TRACK_TYPE_ARRANGER_PHONETIC      = 0x85,
+	TRACK_TYPE_MESSAGE_PHONETIC       = 0x86,
+	TRACK_TYPE_EXTRA_MESSAGE_PHONETIC = 0x87
+};
 
 #if PRAGMA_PACK
 #pragma pack(1)
@@ -190,8 +183,8 @@ ATTRIBUTE_PACKED genre_table_t;
  */
 typedef struct
 {
-    char    language_code[2];                 // ISO639-2 Language code
-    uint8_t character_set;                    // char_set_t, 1 (ISO 646)
+    char    language_code[2];                 // ISO639-2 Language code , "en"
+    uint8_t character_set;                    // char_set_t, 1 (ISO 646),  2 (ISO 8859-1)
     uint8_t reserved;
 }
 ATTRIBUTE_PACKED locale_table_t;
@@ -216,10 +209,10 @@ typedef struct
     char           album_catalog_number[16];  // 0x00 when empty, else padded with spaces for short strings
     genre_table_t  album_genre[4];
     uint8_t        reserved03[8];
-    uint32_t       area_1_toc_1_start;
-    uint32_t       area_1_toc_2_start;
-    uint32_t       area_2_toc_1_start;
-    uint32_t       area_2_toc_2_start;
+    uint32_t       area_1_toc_1_start;   /*LSN for AREA_TOC_1 of 2 channel */
+    uint32_t       area_1_toc_2_start;   /*LSN for AREA_TOC_2 of 2 channel */
+    uint32_t       area_2_toc_1_start;   /*LSN for AREA_TOC_1 of M channel */
+    uint32_t       area_2_toc_2_start;   /*LSN for AREA_TOC_1 of M channel */
 #if defined(__BIG_ENDIAN__)
     uint8_t        disc_type_hybrid     : 1;
     uint8_t        disc_type_reserved   : 7;
@@ -228,15 +221,15 @@ typedef struct
     uint8_t        disc_type_hybrid     : 1;
 #endif
     uint8_t        reserved04[3];
-    uint16_t       area_1_toc_size;
-    uint16_t       area_2_toc_size;
+    uint16_t       area_1_toc_size;  /*Length in Sectors of AREA_TOC of  2ch */
+    uint16_t       area_2_toc_size;  /*Length in Sectors of AREA_TOC of M channel  */
     char           disc_catalog_number[16];   // 0x00 when empty, else padded with spaces for short strings
     genre_table_t  disc_genre[4];
     uint16_t       disc_date_year;
     uint8_t        disc_date_month;
     uint8_t        disc_date_day;
     uint8_t        reserved05[4];
-    uint8_t        text_area_count;
+    uint8_t        text_area_count;       // can be ZERO very seldom
     uint8_t        reserved06[7];
     locale_table_t locales[MAX_LANGUAGE_COUNT];
 }
@@ -316,59 +309,59 @@ typedef struct
     } ATTRIBUTE_PACKED version;               // 1.20 / 0x0114
     uint16_t       size;                      // ex. 40 (total size of TOC)
     uint8_t        reserved01[4];
-    uint32_t       max_byte_rate;
+    uint32_t       max_byte_rate;             /*up is for A_TOC_0_Header */ /*Max Average Byte Rate of Multiplexed Frames*/
     uint8_t        sample_frequency;          // 0x04 = (64 * 44.1 kHz) (physically there can be no other values, or..? :)
 #if defined(__BIG_ENDIAN__)
-    uint8_t        reserved02   : 4;
+    uint8_t        reserved02   : 4;           //     uchar area_flags;
     uint8_t        frame_format : 4;
 #else
     uint8_t        frame_format : 4;
     uint8_t        reserved02   : 4;
 #endif
     uint8_t        reserved03[10];
-    uint8_t        channel_count;
+    uint8_t        channel_count;           // uchar N_channels; /* the num of audio channels for each frame */ 
 #if defined(__BIG_ENDIAN__)
-    uint8_t        loudspeaker_config : 5;
+    uint8_t        loudspeaker_config : 5;  //      uchar area_config;    
     uint8_t        extra_settings : 3;
 #else
     uint8_t        extra_settings : 3;
     uint8_t        loudspeaker_config : 5;
 #endif
-    uint8_t        max_available_channels;
+    uint8_t        max_available_channels;    //uchar max_ok_channels;
     uint8_t        area_mute_flags;
     uint8_t        reserved04[12];
 #if defined(__BIG_ENDIAN__)
-    uint8_t        reserved05 : 4;
+    uint8_t        reserved05 : 4;    // uchar area_copy_mng;
     uint8_t        track_attribute : 4;
 #else
     uint8_t        track_attribute : 4;
     uint8_t        reserved05 : 4;
 #endif
     uint8_t        reserved06[15];
-    struct
+    struct                                  // uchar total_play_time[3];
     {
         uint8_t minutes;
         uint8_t seconds;
         uint8_t frames;
     } ATTRIBUTE_PACKED total_playtime;
     uint8_t        reserved07;
-    uint8_t        track_offset;
-    uint8_t        track_count;
+    uint8_t        track_offset;    /* track offset of a disc is from an album */ 
+    uint8_t        track_count;    /*The tracks number in the current audio area*/
     uint8_t        reserved08[2];
-    uint32_t       track_start;
-    uint32_t       track_end;
+    uint32_t       track_start;     /* uint track_start_addr;   */
+    uint32_t       track_end;       /* uint track_end_addr;   */
     uint8_t        text_area_count;
     uint8_t        reserved09[7];
     locale_table_t languages[10];
-    uint16_t       track_text_offset;
+    uint16_t       track_text_offset; /*up is for Area_Data*/
     uint16_t       index_list_offset;
     uint16_t       access_list_offset;
-    uint8_t        reserved10[10];
-    uint16_t       area_description_offset;
+    uint8_t        reserved10[10];     // char reserved7[8];  // /*up is for List_pointer */
+    uint16_t       area_description_offset;   
     uint16_t       copyright_offset;
     uint16_t       area_description_phonetic_offset;
     uint16_t       copyright_phonetic_offset;
-    uint8_t        data[1896];
+    uint8_t        data[1896];    // area_text[1904]
 }
 ATTRIBUTE_PACKED area_toc_t;
 
@@ -436,6 +429,21 @@ typedef struct
 }
 ATTRIBUTE_PACKED area_tracklist_offset_t;
 
+// typedef struct
+// {
+//     uint8_t minutes;
+//     uint8_t seconds;
+//     uint8_t frames;
+// #if defined(__BIG_ENDIAN__)
+//     uint8_t extra_use : 3;
+//     uint8_t reserved : 5;
+// #else
+//     uint8_t reserved : 5;
+//     uint8_t extra_use : 3;
+// #endif
+// } 
+// ATTRIBUTE_PACKED area_tracklist_time_start_t;
+
 typedef struct
 {
     uint8_t minutes;
@@ -457,25 +465,23 @@ typedef struct
     uint8_t track_flags_ilp : 1;
 #endif
 }
-ATTRIBUTE_PACKED area_tracklist_time_t;
+ATTRIBUTE_PACKED area_tracklist_time_t; // used to be  area_tracklist_time_duration_t but now is common with area_tracklist_time_start_t
 
-#define TIME_FRAMECOUNT(m) ((m)->minutes * 60 * SACD_FRAME_RATE + (m)->seconds * SACD_FRAME_RATE + (m)->frames)
+#define TIME_FRAMECOUNT(m) ((uint32_t)(m)->minutes * 60 * SACD_FRAME_RATE + (uint32_t)(m)->seconds * SACD_FRAME_RATE + (m)->frames)
 
 typedef struct
 {
     char                        id[8];                           // SACDTRL2
-    area_tracklist_time_t       start[255];
-    area_tracklist_time_t       duration[255];
+    area_tracklist_time_t       start[255];    // used to have type of  area_tracklist_time_start_t
+    area_tracklist_time_t       duration[255];  // used to have type of  area_tracklist_time_duration_t
 } 
 ATTRIBUTE_PACKED area_tracklist_t;
 
-enum
-{
-      DATA_TYPE_AUDIO           = 2
-    , DATA_TYPE_SUPPLEMENTARY   = 3
-    , DATA_TYPE_PADDING         = 7
-} 
-audio_packet_data_type_t;
+enum audio_packet_data_type_t {
+	DATA_TYPE_AUDIO         = 2,
+	DATA_TYPE_SUPPLEMENTARY = 3,
+	DATA_TYPE_PADDING       = 7
+};
 
 // It's no use to make a little & big endian struct. On little 
 // endian systems this needs to be filled manually anyway.
@@ -518,15 +524,15 @@ ATTRIBUTE_PACKED audio_frame_info_t;
 typedef struct
 {
 #if defined(__BIG_ENDIAN__)
-    uint8_t packet_info_count : 3;
-    uint8_t frame_info_count  : 3;
+    uint8_t packet_info_count : 3; // N_Packets
+    uint8_t frame_info_count  : 3; // N_Frame_Starts
     uint8_t reserved          : 1;
     uint8_t dst_encoded       : 1;
 #else
     uint8_t dst_encoded       : 1;
     uint8_t reserved          : 1;
-    uint8_t frame_info_count  : 3;
-    uint8_t packet_info_count : 3;
+    uint8_t frame_info_count  : 3;  // N_Frame_Starts
+    uint8_t packet_info_count : 3;  // N_Packets
 #endif
 }
 ATTRIBUTE_PACKED audio_frame_header_t;
@@ -557,9 +563,9 @@ typedef struct
 }
 scarletbook_area_t;
 
-typedef struct scarletbook_audio_frame_t
+typedef struct
 {
-    uint8_t            *data;
+    uint8_t            *data;     // must be allocated MAX_DST_SIZE  ; (1024 * 64)
     int                 size;
     int                 started;
 
@@ -567,6 +573,14 @@ typedef struct scarletbook_audio_frame_t
     int                 channel_count;
 
     int                 dst_encoded;
+
+    struct
+    {
+        uint8_t minutes;
+        uint8_t seconds;
+        uint8_t frames;
+    } ATTRIBUTE_PACKED timecode;
+
 } 
 scarletbook_audio_frame_t;
 
@@ -582,11 +596,17 @@ typedef struct
     int                        twoch_area_idx;
     int                        mulch_area_idx;
     int                        area_count;
-    scarletbook_area_t         area[2];
+    scarletbook_area_t         area[4];   // added for backup 2 more areas:  2= TWOCHTOC  TOC-2;    3 =MULCHTOC  TOC-2
 
     scarletbook_audio_frame_t  frame;
     audio_sector_t             audio_sector;
-    int                        packet_info_idx;
+    
+    int                        frame_info_idx;  // added for retrieving timecode of current frame;   e.g. handle->audio_sector.frame[handle->frame_info_idx].timecode
+    int                        audio_frame_trimming;    // if No pauses included if 1.  Trimm out audioframes in trimecode interval [area_tracklist_time->start...+duration]
+    uint32_t                   count_frames;                              // keep the number of audio frames in a track (for verification)
+    int                        dsf_nopad;
+    int                        concatenate;
+    int                        id3_tag_mode;  // 0=no id3 inserted; 1=default id3 v2.3; 2=miminal id3v2.3 tag; 4=id3v2.4;5=id3v2.4 minimal
 } 
 scarletbook_handle_t;
 

@@ -1,6 +1,55 @@
 # CMake build file for SACD Extract
 
 cmake_minimum_required(VERSION 2.6)
+
+# Force to compile for Mac OS X 10.13. target (if you want the app run on all OS X versions).
+# Without this adding, if build is made on a MacOS 10.15 or newer, then the app will not run on systems older than 10.15.
+# You can delete this if you don't care about the Mac OS X 10.15 incompatibilty problem. 
+if (APPLE)
+set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum OS X deployment version" FORCE)
+set(ENV{MACOSX_DEPLOYMENT_TARGET} 10.13)
+endif()
+
+# Mingw-w64 support
+OPTION(MINGW64 "Mingw-w64" NO)
+if (MINGW64 MATCHES "YES")
+    MESSAGE(STATUS "Mingw-w64 mode enabled")
+    SET(CMAKE_SYSTEM_NAME Windows)
+    SET(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
+    SET(TOOLCHAIN_PREFIX x86_64-w64-mingw32)
+    SET(CMAKE_C_COMPILER ${TOOLCHAIN_PREFIX}-gcc)
+    SET(CMAKE_FIND_ROOT_PATH /usr/${TOOLCHAIN_PREFIX})
+endif (MINGW64 MATCHES "YES")
+
+execute_process(
+    COMMAND git describe --tags --dirty --abbrev=64
+    OUTPUT_VARIABLE GIT_COMMIT_HASH
+    RESULT_VARIABLE GIT_COMMIT_HASH_RESULT
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+execute_process(
+    COMMAND git remote get-url origin
+    OUTPUT_VARIABLE GIT_REPO_URL
+    RESULT_VARIABLE GIT_REPO_URL_RESULT
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+# Obtain git commit hash and repo url
+if(${GIT_COMMIT_HASH_RESULT} GREATER 0)
+    add_definitions("-DGIT_COMMIT_HASH=NA")
+else(${GIT_COMMIT_HASH_RESULT} GREATER 0)
+    add_definitions("-DGIT_COMMIT_HASH=${GIT_COMMIT_HASH}")
+    MESSAGE(STATUS "git commit hash: ${GIT_COMMIT_HASH}")
+endif(${GIT_COMMIT_HASH_RESULT} GREATER 0)
+
+if(${GIT_REPO_URL_RESULT} GREATER 0)
+    add_definitions("-DGIT_REPO_URL=NA")
+else(${GIT_REPO_URL_RESULT} GREATER 0)
+    add_definitions("-DGIT_REPO_URL=\"${GIT_REPO_URL}\"")
+    MESSAGE(STATUS "git repo url: ${GIT_REPO_URL}")
+endif(${GIT_REPO_URL_RESULT} GREATER 0)
+
 project(sacd_extract C)
 
 # Load some macros.
@@ -16,44 +65,29 @@ include(FindThreads)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${sacd_extract_SOURCE_DIR})
 
-if (MSVC)
-    include_directories("./win32")
-endif (MSVC)
 include_directories("../../libs/libcommon")
 include_directories("../../libs/libdstdec")
 include_directories("../../libs/libid3")
 include_directories("../../libs/libsacd")
 
+message(STATUS "libmxl2 ${LIBXML2_LIBRARIES}")
+find_package(LibXml2 REQUIRED)
+
 # Extra flags for GCC
-if (CMAKE_COMPILER_IS_GNUCC)
-  add_definitions(
-      -pipe
-      -Wall -Wextra -Wcast-align -Wpointer-arith
-      -Wno-unused-parameter -msse2)
-endif (CMAKE_COMPILER_IS_GNUCC)
+STRING(TOUPPER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_UPPER)
+if(NOT CMAKE_BUILD_TYPE_UPPER STREQUAL "DEBUG")
+  if (CMAKE_COMPILER_IS_GNUCC OR (CMAKE_C_COMPILER_ID MATCHES "Clang"))
+    add_definitions(
+        -pipe
+        -Wall -Wextra -Wcast-align -Wpointer-arith -O3
+        -Wno-unused-parameter `xml2-config --cflags --libs`)
+  endif ()
+  if(NOT CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "arm*")
+    add_definitions(
+        -msse2)
+  endif ()
+endif ()
 
-if (MSVC)
-    SET (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /MTd")
-    SET (CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /MT /D PTW32_STATIC_LIB")
-    ADD_DEFINITIONS(-D_CRT_NONSTDC_NO_DEPRECATE)
-    ADD_DEFINITIONS(-D_CRT_SECURE_NO_DEPRECATE)
-    ADD_DEFINITIONS(-D_CRT_NONSTDC_NO_WARNINGS)
-    SET (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} ws2_32.lib pthreadVC2.lib iconv.lib")
-    SET (CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} ws2_32.lib pthreadVC2_static.lib iconv.lib /NODEFAULTLIB:LIBCMT.LIB") 
-
-    # disable warnings about libiconv link directory
-    cmake_policy(SET CMP0015 NEW)
-
-    include_directories("../../libs/libiconv/include")
-    link_directories("../../libs/libiconv/lib/")
-elseif(WIN32)
-    set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIRARIES} -lpthread -lws2_32 -liconv")
-elseif(APPLE)
-  set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIRARIES} -liconv -lpthread")
-else()
-  add_definitions(-D_FILE_OFFSET_BITS=64)
-  set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIRARIES} -lpthread")
-endif()
 
 file(GLOB libcommon_headers ../../libs/libcommon/*.h)
 file(GLOB libcommon_sources ../../libs/libcommon/*.c)
@@ -82,3 +116,16 @@ add_executable(sacd_extract
     ${libid3_headers} ${libid3_sources}
     ${libsacd_headers} ${libsacd_sources}
     )
+
+if(WIN32)
+    set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIRARIES} -lpthread -lws2_32 -liconv -lxml2 -static")
+    target_compile_options(${PROJECT_NAME} PRIVATE -municode)
+    target_link_libraries(${PROJECT_NAME} -municode)
+    add_definitions(-D_FILE_OFFSET_BITS=64)
+    add_definitions(-DUNICODE -D_UNICODE -DIN_LIBXML)
+elseif(APPLE)
+  set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIRARIES} -liconv -lpthread -lxml2")
+else()
+  add_definitions(-D_FILE_OFFSET_BITS=64)
+  set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIRARIES} -lpthread -lxml2")
+endif()

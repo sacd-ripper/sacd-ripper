@@ -24,7 +24,7 @@
 
 #include <stdio.h>
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__MINGW32__)
 typedef int mode_t;
 #else
 #include <sys/stat.h>
@@ -53,7 +53,7 @@ char * parse_format(const char * format, int tracknum, const char * year, const 
 // NOTE: any of the parameters may be NULL to be omitted
 char * make_filename(const char * path, const char * dir, const char * file, const char * extension);
 
-int recursive_mkdir(char* pathAndName, mode_t mode);
+int recursive_mkdir(char *pathAndName, char *base_dir, mode_t mode);
 
 int recursive_parent_mkdir(char* pathAndName, mode_t mode);
 
@@ -61,8 +61,12 @@ void sanitize_filename(char *f);
 
 void sanitize_filepath(char *f);
 
-void get_unique_filename(char **file, const char *ext);
+char *get_unique_filename(char *dev, char *dir, char *file, char *ext);
 
-void get_unique_dir(char *device, char **dir);
+char * get_unique_path(char *dir, char *file, const char *ext);
+
+char * get_unique_dir(char *device, char *dir);
+int stat_wrap(const char *pathname, struct stat *buf);
+int path_dir_exists(char *path);
 
 #endif

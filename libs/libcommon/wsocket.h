@@ -1,5 +1,5 @@
 /*
- * Copyright ¼ 2004-2007 Diego Nehab
+ * Copyright ï¿½ 2004-2007 Diego Nehab
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -28,7 +28,7 @@
 /*=========================================================================*\
 * WinSock include files
 \*=========================================================================*/
-#include <Winsock2.h>
+#include <winsock2.h>
 
 typedef int socklen_t;
 typedef SOCKET t_socket;
@@ -39,3 +39,4 @@ typedef t_socket *p_socket;
 #endif /* WSOCKET_H */
 
 #endif
+

@@ -1,5 +1,5 @@
 /*
- * Copyright ¬ 2004-2007 Diego Nehab
+ * Copyright Â¬ 2004-2007 Diego Nehab
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -129,4 +129,3 @@ int inet_aton(const char *cp, struct in_addr *inp)
     return 1;
 }
 #endif
-

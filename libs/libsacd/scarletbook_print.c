@@ -38,23 +38,23 @@
 static const wchar_t *ucs(const char* str) 
 {
     static wchar_t buf[2048];
-#ifdef _WIN32
-    char *wchar_type = (sizeof(wchar_t) == 2) ? "UCS-2-INTERNAL" : "UCS-4-INTERNAL";
+#if defined(WIN32) || defined(_WIN32)
+    
+	char *wchar_type = "UCS-2-INTERNAL";
 #else
     char *wchar_type = "WCHAR_T";
 #endif
     wchar_t *wc = (wchar_t *) charset_convert((char *) str, strlen(str), "UTF-8", wchar_type);
-    wcscpy(buf, wc);
+    if(strlen(str) < 1024)
+		wcscpy(buf, wc);
     free(wc);
     return buf;
 }
 
 static void scarletbook_print_album_text(scarletbook_handle_t *handle)
 {
-    master_toc_t *master_toc = handle->master_toc;
-    master_text_t *master_text = &handle->master_text;
 
-    fwprintf(stdout, L"\tLocale: %c%c\n", master_toc->locales[0].language_code[0], master_toc->locales[0].language_code[1]);
+    master_text_t *master_text = &handle->master_text;
 
     if (master_text->album_title)
         fwprintf(stdout, L"\tTitle: %ls\n", ucs(master_text->album_title));
@@ -77,9 +77,17 @@ static void scarletbook_print_album_text(scarletbook_handle_t *handle)
 static void scarletbook_print_disc_text(scarletbook_handle_t *handle)
 {
     master_toc_t *master_toc = handle->master_toc;
-
     master_text_t *master_text = &handle->master_text;
-    fwprintf(stdout, L"\tLocale: %c%c\n", master_toc->locales[0].language_code[0], master_toc->locales[0].language_code[1]);
+
+    uint8_t current_charset_nr;
+    char *current_charset_name;
+    current_charset_nr = master_toc->locales[0].character_set & 0x07;
+    current_charset_name = (char *)character_set[current_charset_nr];
+
+    if (master_toc->locales[0].language_code[0] != '\0' && master_toc->locales[0].language_code[1] != '\0')
+        fwprintf(stdout, L"\tLocale: %c%c, Code character set:[%d], %ls\n", master_toc->locales[0].language_code[0], master_toc->locales[0].language_code[1], master_toc->locales[0].character_set, ucs(current_charset_name));
+    else
+        fwprintf(stdout, L"\tLocale: (zero) unspecified, asume Code character set:[%d], %ls\n",  master_toc->locales[0].character_set, ucs(current_charset_name));
 
     if (master_text->disc_title)
         fwprintf(stdout, L"\tTitle: %ls\n", ucs(master_text->disc_title));
@@ -105,7 +113,7 @@ static void scarletbook_print_master_toc(scarletbook_handle_t *handle)
     char         tmp_str[20];
     master_toc_t *mtoc = handle->master_toc;
 
-    fwprintf(stdout, L"Disc Information:\n\n");
+    fwprintf(stdout, L"\nDisc Information:\n");
     fwprintf(stdout, L"\tVersion: %2i.%02i\n", mtoc->version.major, mtoc->version.minor);
     fwprintf(stdout, L"\tCreation date: %4i-%02i-%02i\n"
             , mtoc->disc_date_year, mtoc->disc_date_month, mtoc->disc_date_day);
@@ -114,7 +122,7 @@ static void scarletbook_print_master_toc(scarletbook_handle_t *handle)
     {
         strncpy(tmp_str, mtoc->disc_catalog_number, 16);
         tmp_str[16] = '\0';
-        fwprintf(stdout, L"\tCatalog Number: %ls\n", ucs(tmp_str));
+        fwprintf(stdout, L"\tDisc Catalog Number: %ls\n", ucs(tmp_str));
     }
 
     for (i = 0; i < 4; i++)
@@ -122,18 +130,18 @@ static void scarletbook_print_master_toc(scarletbook_handle_t *handle)
         genre_table_t *t = &mtoc->disc_genre[i];
         if (t->category)
         {
-            fwprintf(stdout, L"\tCategory: %ls\n", ucs(album_category[t->category]));
-            fwprintf(stdout, L"\tGenre: %ls\n", ucs(album_genre[t->genre]));
+            fwprintf(stdout, L"\tDisc Category: %ls\n", ucs(album_category[t->category]));
+            fwprintf(stdout, L"\tDisc Genre: %ls\n", ucs(album_genre[t->genre]));
         }
     }
     scarletbook_print_disc_text(handle);
 
-    fwprintf(stdout, L"\nAlbum Information:\n\n");
+    fwprintf(stdout, L"\nAlbum Information:\n");
     if (mtoc->disc_catalog_number)
     {
         strncpy(tmp_str, mtoc->album_catalog_number, 16);
         tmp_str[16] = '\0';
-        fwprintf(stdout, L"\tCatalog Number: %ls\n", ucs(tmp_str));
+        fwprintf(stdout, L"\tAlbum Catalog Number: %ls\n", ucs(tmp_str));
     }
     fwprintf(stdout, L"\tSequence Number: %i\n", mtoc->album_sequence_number);
     fwprintf(stdout, L"\tSet Size: %i\n", mtoc->album_set_size);
@@ -143,8 +151,8 @@ static void scarletbook_print_master_toc(scarletbook_handle_t *handle)
         genre_table_t *t = &mtoc->album_genre[i];
         if (t->category)
         {
-            fwprintf(stdout, L"\tCategory: %ls\n", ucs(album_category[t->category]));
-            fwprintf(stdout, L"\tGenre: %ls\n", ucs(album_genre[t->genre]));
+            fwprintf(stdout, L"\tAlbum Category: %ls\n", ucs(album_category[t->category]));
+            fwprintf(stdout, L"\tAlbum Genre: %ls\n", ucs(album_genre[t->genre]));
         }
     }
 
@@ -154,6 +162,7 @@ static void scarletbook_print_master_toc(scarletbook_handle_t *handle)
 static void scarletbook_print_area_text(scarletbook_handle_t *handle, int area_idx)
 {
     int i;
+
     fwprintf(stdout, L"\tTrack list [%d]:\n", area_idx);
     for (i = 0; i < handle->area[area_idx].area_toc->track_count; i++)
     {
@@ -186,6 +195,12 @@ static void scarletbook_print_area_text(scarletbook_handle_t *handle, int area_i
             fwprintf(stdout, L"\t\tExtra Message[%d]: %ls\n", i, ucs(track_text->track_type_extra_message));
         if (track_text->track_type_extra_message_phonetic)
             fwprintf(stdout, L"\t\tExtra Message Phonetic[%d]: %ls\n", i, ucs(track_text->track_type_extra_message_phonetic));
+
+        area_tracklist_time_t time_start = handle->area[area_idx].area_tracklist_time->start[i];
+        area_tracklist_time_t time_duration = handle->area[area_idx].area_tracklist_time->duration[i];
+        fwprintf(stdout, L"\t\tTrack_Start_Time_Code: %02d:%02d:%02d [mins:secs:frames]\n", time_start.minutes, time_start.seconds, time_start.frames);
+        fwprintf(stdout, L"\t\tDuration: %02d:%02d:%02d [mins:secs:frames]\n", time_duration.minutes, time_duration.seconds, time_duration.frames);
+        fwprintf(stdout, L"\n");
     }
 }
 
@@ -193,13 +208,13 @@ static void scarletbook_print_area_toc(scarletbook_handle_t *handle, int area_id
 {
     int                        i;
     area_isrc_genre_t       *area_isrc_genre;
-    area_tracklist_offset_t *area_tracklist_offset;
-    area_tracklist_t        *area_tracklist_time;
+    //area_tracklist_offset_t *area_tracklist_offset;
+    //area_tracklist_t        *area_tracklist_time;
     scarletbook_area_t      *area = &handle->area[area_idx];
     area_toc_t              *area_toc = area->area_toc;
     area_isrc_genre   = area->area_isrc_genre;
-    area_tracklist_offset = area->area_tracklist_offset;
-    area_tracklist_time   = area->area_tracklist_time;
+    //area_tracklist_offset = area->area_tracklist_offset;
+    //area_tracklist_time   = area->area_tracklist_time;
 
     fwprintf(stdout, L"\tArea Information [%i]:\n\n", area_idx);
     fwprintf(stdout, L"\tVersion: %2i.%02i\n", area_toc->version.major, area_toc->version.minor);
@@ -214,6 +229,8 @@ static void scarletbook_print_area_toc(scarletbook_handle_t *handle, int area_id
         fwprintf(stdout, L"\tArea Description Phonetic: %ls\n", ucs(area->description_phonetic));
 
     fwprintf(stdout, L"\tTrack Count: %i\n", area_toc->track_count);
+    fwprintf(stdout, L"\tTotal play time: %02d:%02d:%02d [mins:secs:frames]\n", area_toc->total_playtime.minutes, area_toc->total_playtime.seconds, area_toc->total_playtime.frames);
+
     fwprintf(stdout, L"\tSpeaker config: ");
     if (area_toc->channel_count == 2 && area_toc->extra_settings == 0)
     {

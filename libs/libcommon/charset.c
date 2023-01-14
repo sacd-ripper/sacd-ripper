@@ -65,7 +65,7 @@ char* charset_convert(const char *string, size_t insize, const char *from, const
 #ifdef __lv2ppu__ 
  	if (iconv(cd, (const char **) &input, &insize, &outptr, &outleft) == (size_t) -1)
 #else
- 	if (iconv(cd, &input, &insize, &outptr, &outleft) == (size_t) -1)
+ 	if (iconv(cd,(char **) &input, &insize, &outptr, &outleft) == (size_t) -1)
 #endif
 	{
 		int used;

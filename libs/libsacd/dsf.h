@@ -29,7 +29,7 @@
 #undef PRAGMA_PACK_BEGIN
 #undef PRAGMA_PACK_END
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) && !defined(__MINGW32__)
 #if __GNUC__ > 2 || (__GNUC__ == 2 && __GNUC_MINOR__ >= 95)
 #define ATTRIBUTE_PACKED    __attribute__ ((packed))
 #define PRAGMA_PACK         0
@@ -123,7 +123,7 @@ struct data_chunk_t
 
     uint64_t chunk_data_size;
 
-    uint8_t  data[];
+    //uint8_t  data[];
 } ATTRIBUTE_PACKED;
 typedef struct data_chunk_t   data_chunk_t;
 #define DATA_CHUNK_SIZE    12U

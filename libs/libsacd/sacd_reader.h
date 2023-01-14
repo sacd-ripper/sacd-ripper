@@ -79,12 +79,12 @@ void sacd_close(sacd_reader_t *);
  *
  * sacd_read_block_raw(sacd, lb_number, block_count, data);
  */
-ssize_t sacd_read_block_raw(sacd_reader_t *, uint32_t, size_t, unsigned char *);
+uint32_t sacd_read_block_raw(sacd_reader_t *, uint32_t, uint32_t, uint8_t *);
 
 /**
  * Decrypts audio sectors, only available on PS3
  */
-int sacd_decrypt(sacd_reader_t *, uint8_t *, int);
+int sacd_decrypt(sacd_reader_t *, uint8_t *, uint32_t);
 
 /**
  * Authenticates disc, only available on PS3

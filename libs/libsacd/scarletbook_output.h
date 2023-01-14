@@ -48,7 +48,7 @@ typedef struct scarletbook_format_handler_t
     char const *description;
     char const *name;
     int (*startwrite)(scarletbook_output_format_t *ft);
-    size_t (*write)(scarletbook_output_format_t *ft, const uint8_t *buf, size_t len);
+    int (*write)(scarletbook_output_format_t *ft, const uint8_t *buf, size_t len);
     int (*stopwrite)(scarletbook_output_format_t *ft);
     int         flags;
     size_t      priv_size;
@@ -99,6 +99,7 @@ scarletbook_output_t *scarletbook_output_create(scarletbook_handle_t *, stats_tr
 int scarletbook_output_destroy(scarletbook_output_t *);
 int scarletbook_output_enqueue_track(scarletbook_output_t *, int, int, char *, char *, int);
 int scarletbook_output_enqueue_raw_sectors(scarletbook_output_t *, int, int, char *, char *);
+int scarletbook_output_enqueue_concatenate_tracks(scarletbook_output_t *output, int area, int track, char *file_path, char *fmt, int dsd_encoded_export, int last_track);
 int scarletbook_output_start(scarletbook_output_t *);
 void scarletbook_output_interrupt(scarletbook_output_t *);
 int scarletbook_output_is_busy(scarletbook_output_t *);

@@ -216,7 +216,7 @@ static void decode_thread(void *userdata)
         twist(dst_decoder->decode_have, BY, -1);
 
         /* got a job */
-        LOG(lm_main, LOG_NOTICE, ("-- decoding #%ld", job->seq));
+        //LOG(lm_main, LOG_NOTICE, ("-- decoding #%ld", job->seq));
 
         if (job->more)
         {
@@ -230,7 +230,7 @@ static void decode_thread(void *userdata)
             job->out->len = (size_t)(MAX_DSDBITS_INFRAME / 8 * dst_decoder->channel_count);
             buffer_pool_drop_space(job->in);
 
-            LOG(lm_main, LOG_NOTICE, ("-- decoded #%ld%s", job->seq, job->more ? "" : " (last)"));
+            //LOG(lm_main, LOG_NOTICE, ("-- decoded #%ld%s", job->seq, job->more ? "" : " (last)"));
         }
 
         /* insert write job in list in sorted order, alert write thread */

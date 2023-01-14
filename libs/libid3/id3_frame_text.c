@@ -226,12 +226,27 @@ int id3_get_text_number(struct id3_frame *frame)
 	return number;
 }
 
+uint8_t *id3_encodeUTF8_to_UTF16_text(const char *str)
+{
+	// UTF-16 has BOM included, but is machine dependent BE(Windows) or LE(Linux); finally we use UTF-16LE which does not have BOM included, so we must add BOM 'FE FF'
+	uint8_t *text_encoded = (uint8_t *)charset_convert(str, strlen(str), "UTF-8", "UTF-16LE"); // or UCS-2LE
+
+	return text_encoded;
+}
+
+uint8_t *id3_encodeUTF8_to_ASCII_text(const char *str)
+{
+	uint8_t *text_encoded = (uint8_t *)charset_convert(str, strlen(str), "UTF-8", "ISO-8859-1");
+
+	return text_encoded;
+}
 
 /*
  * Function id3_set_text (frame, text)
  *
- *    Set text for the indicated frame (only ISO-8859-1 is currently
- *    supported).  Return 0 upon success, or -1 if an error occured.
+ *    input text is allways UTF-8 encoded
+ *    Set text for the indicated frame in ISO-8859-1 encoding
+ *    Return 0 upon success, or -1 if an error occured.
  *
  */
 int id3_set_text(struct id3_frame *frame, char *text)
@@ -245,17 +260,21 @@ int id3_set_text(struct id3_frame *frame, char *text)
 	 */
 	id3_frame_clear_data(frame);
 
+	// convert text to ISO-8859-1
+	uint8_t *text_ascii = id3_encodeUTF8_to_ASCII_text(text);
 	/*
 	 * Allocate memory for new data.
 	 */
-	frame->fr_raw_size = strlen(text) + 1;
-	frame->fr_raw_data = malloc(frame->fr_raw_size + 1);
+	frame->fr_raw_size = strlen(text) + 2; // BUG - must add 1 for encoding byte and 1 byte for ending zero of string (copied in fr_data)
+	frame->fr_raw_data = calloc(frame->fr_raw_size + 1,1);
 
 	/*
 	 * Copy contents.
 	 */
 	*(int8_t *) frame->fr_raw_data = ID3_ENCODING_ISO_8859_1;
-	memcpy((char *) frame->fr_raw_data + 1, text, frame->fr_raw_size);
+	memcpy((char *)frame->fr_raw_data + 1, text_ascii, frame->fr_raw_size);
+
+	free(text_ascii);
 
 	frame->fr_altered = 1;
 	frame->fr_owner->id3_altered = 1;
@@ -266,6 +285,132 @@ int id3_set_text(struct id3_frame *frame, char *text)
 	return 0;
 }
 
+/*
+ * Function id3_set_text_utf8 (frame, text)
+ * 
+ *    input text is allways UTF-8 encoded
+ *    Set text for the indicated frame in  UTF-8 encoding.
+ *    Return 0 upon success, or -1 if an error occured.
+ *
+ */
+int id3_set_text_utf8(struct id3_frame *frame, char *text)
+{
+	/* Type check */
+	if (frame->fr_desc->fd_idstr[0] != 'T')
+		return -1;
+
+	/*
+	 * Release memory occupied by previous data.
+	 */
+	id3_frame_clear_data(frame);
+
+	/*
+	 * Allocate memory for new data.
+	 */
+	frame->fr_raw_size = strlen(text) + 2; // BUG - must add 1 for encoding byte and 1 byte for ending zero of string (copied in fr_raw_data)
+	frame->fr_raw_data = calloc(frame->fr_raw_size + 1, 1);
+
+	/*
+	 * Copy contents.
+	 */
+	*(uint8_t *)frame->fr_raw_data = ID3_ENCODING_UTF8;
+	memcpy((uint8_t *)frame->fr_raw_data + 1, text, frame->fr_raw_size);
+
+	frame->fr_altered = 1;
+	frame->fr_owner->id3_altered = 1;
+
+	frame->fr_data = frame->fr_raw_data;
+	frame->fr_size = frame->fr_raw_size;
+
+	return 0;
+}
+
+/*
+ * Function id3_set_text_utf16 (frame, text)
+ *
+ *    input text is allways UTF-8 encoded
+ *    Set text for the indicated frame inf UTF-16 encoding
+ *    Return 0 upon success, or -1 if an error occured.
+ *
+ */
+int id3_set_text_utf16(struct id3_frame *frame, char *text)
+{
+	/* Type check */
+	if (frame->fr_desc->fd_idstr[0] != 'T')
+		return -1;
+
+	/*
+	 * Release memory occupied by previous data.
+	 */
+	id3_frame_clear_data(frame);
+
+	// convert text to UTF16
+	uint8_t *text_utf16 = id3_encodeUTF8_to_UTF16_text(text);
+
+	/*
+	 * Allocate memory for new data.
+	 */
+	frame->fr_raw_size = 2 * strlen(text) + 5; // BUG - must add 1 for encoding byte 2 bytes for BOM, 2 byte for ending Unicode NULL (00 00) of string (copied in fr_raw_data)
+	frame->fr_raw_data = calloc(frame->fr_raw_size +1,1);
+
+	/*
+	 * Copy contents.
+	 */
+	*(uint8_t *)frame->fr_raw_data = ID3_ENCODING_UTF16;
+	uint8_t BOM_array[] = {0xff, 0xfe}; // UTF-16LE the BOM is 'FF FE'  ; UTF-16BE the BOM is 'FE FF'
+
+	memcpy((uint8_t *)frame->fr_raw_data + 1, BOM_array, 2); 
+	memcpy((uint8_t *)frame->fr_raw_data + 3, (uint8_t *)text_utf16, frame->fr_raw_size-2);
+
+	free(text_utf16);
+
+	frame->fr_altered = 1;
+	frame->fr_owner->id3_altered = 1;
+
+	frame->fr_data = frame->fr_raw_data;
+	frame->fr_size = frame->fr_raw_size;
+
+	return 0;
+}
+
+/*
+ * Function id3_set_text_wraper (frame, text, id3_tag_mode)
+ *
+ *    input text is allways UTF-8 encoded;
+ *    Set text for the indicated frame:
+ * 		- ISO-8859-1 or UTF-16 encodings for ID3v2.3 tags;
+ * 		- UTF-8 encoding for ID3v2.4 tags
+ *    Return 0 upon success, or -1 if an error occured.
+ *    This wraper is based on handle->id3_tag_mode.
+ *
+ */
+int id3_set_text_wraper(struct id3_frame *frame, char *text, int id3_tag_mode)
+{
+	int result = -1;
+
+	switch (id3_tag_mode)
+	{
+		case 1:
+		case 2:
+			/*id3v2.3 UTF-16 */
+			result = id3_set_text_utf16(frame, text);
+			break;
+		case 3:
+			/* id3v2.3 ISO_8859_1 (ASCII)*/
+			result = id3_set_text(frame, text);
+			break;
+		case 4:
+		case 5:
+			/* id3v2.4 UTF8 */
+			result = id3_set_text_utf8(frame, text);
+			break;
+		default:
+			/* 0 no id3 tag */
+			break;
+	}
+
+	return result;
+}
 
 /*
  * Function id3_set_text_number (frame, number)
@@ -372,7 +517,7 @@ char *id3_get_comment(struct id3_frame *frame)
 /*
  * Function id3_set_comment (frame, comment)
  *
- *    Set comment for the indicated frame (only ISO-8859-1 is currently
+ *    Set comment for the indicated frame (only UTF-8 is currently
  *    supported).  Return 0 upon success, or -1 if an error occured.
  *
  */
@@ -390,15 +535,15 @@ int id3_set_comment(struct id3_frame *frame, char* description, char *comment)
 	/*
 	 * Allocate memory for new data.
 	 */
-	frame->fr_raw_size = strlen(description) + 1 + strlen(comment) + 1;
-	frame->fr_raw_data = malloc(frame->fr_raw_size + 1);
+	frame->fr_raw_size = 1 + strlen(description) + 1 + strlen(comment) + 1; // BUG - must add 1 for ending zero of string (copied in fr_data)
+	frame->fr_raw_data = calloc(frame->fr_raw_size + 1, 1);
 
 	/*
 	 * Copy contents.
 	 */
-	*(int8_t *) frame->fr_raw_data = ID3_ENCODING_ISO_8859_1;
-    memcpy((char *) frame->fr_raw_data + 1, description, strlen(description) + 1);
-	memcpy((char *) frame->fr_raw_data + 1 + strlen(description) + 1, comment, strlen(comment) + 1);
+	*(uint8_t *)frame->fr_raw_data =ID3_ENCODING_UTF8; // ID3_ENCODING_ISO_8859_1;
+	memcpy((uint8_t *)frame->fr_raw_data + 1, description, strlen(description));
+	memcpy((uint8_t *)frame->fr_raw_data + 1 + strlen(description) + 1, comment, strlen(comment));
 
 	frame->fr_altered = 1;
 	frame->fr_owner->id3_altered = 1;
@@ -407,4 +552,176 @@ int id3_set_comment(struct id3_frame *frame, char* description, char *comment)
 	frame->fr_size = frame->fr_raw_size;
 
 	return 0;
+}
+
+/*
+ * Function id3_set_text__performer (frame, text)
+ *	 Input text is allways UTF-8 encoded
+ *   Set text for the description:PREFORMER of indicated frame 
+ *   Return 0 upon success, or -1 if an error occured.
+ *         ISO_8859_1 encoding
+ */
+int id3_set_text__performer(struct id3_frame *frame, char *text)
+{
+	// Type check
+	if (frame->fr_desc->fd_idstr[0] != 'T')
+		return -1;
+
+	// Release memory occupied by previous data.
+
+	id3_frame_clear_data(frame);
+
+	// convert text to ISO-8859-1
+	uint8_t *text_ascii = id3_encodeUTF8_to_ASCII_text(text);
+
+	// Allocate memory for new data.
+
+	frame->fr_raw_size = strlen("PERFORMER") + strlen(text) + 3; // 1 for encoding, 1 for null description and 1 for null terminator of text
+	frame->fr_raw_data = calloc(frame->fr_raw_size + 1, 1);
+
+	// Copy contents.
+
+	*(uint8_t *)frame->fr_raw_data = ID3_ENCODING_ISO_8859_1;
+
+	memcpy((uint8_t *)frame->fr_raw_data + 1, "PERFORMER", strlen("PERFORMER"));
+	memcpy((uint8_t *)frame->fr_raw_data + 1 + strlen("PERFORMER") + 1, text_ascii, strlen(text));
+	free(text_ascii);
+
+	frame->fr_altered = 1;
+	frame->fr_owner->id3_altered = 1;
+
+	frame->fr_data = frame->fr_raw_data;
+	frame->fr_size = frame->fr_raw_size;
+
+	return 0;
+}
+
+/*
+ * Function id3_set_text__performer (frame, text)
+ * 	 Input text is allways UTF-8 encoded
+ *   Set text for the description:PREFORMER of indicated frame 
+ *   Return 0 upon success, or -1 if an error occured.
+ *         UTF-8 encoding
+ */
+int id3_set_text__performer_utf8(struct id3_frame *frame, char *text)
+{
+	// Type check
+	if (frame->fr_desc->fd_idstr[0] != 'T')
+		return -1;
+
+	// Release memory occupied by previous data.
+
+	id3_frame_clear_data(frame);
+
+	// Allocate memory for new data.
+
+	frame->fr_raw_size = strlen("PERFORMER") + strlen(text) + 3; // 1 for encoding, 1 for null description and 1 for null terminator of text
+	frame->fr_raw_data = calloc(frame->fr_raw_size + 1, sizeof(uint8_t));
+
+	// Copy contents.
+
+	*(uint8_t *)frame->fr_raw_data = ID3_ENCODING_UTF8;
+
+	memcpy((uint8_t *)frame->fr_raw_data + 1, "PERFORMER", strlen("PERFORMER"));
+	memcpy((uint8_t *)frame->fr_raw_data + 1 + strlen("PERFORMER") + 1, text, strlen(text));
+
+	frame->fr_altered = 1;
+	frame->fr_owner->id3_altered = 1;
+
+	frame->fr_data = frame->fr_raw_data;
+	frame->fr_size = frame->fr_raw_size;
+
+	return 0;
+}
+
+/*
+ * Function id3_set_text__performer_UTF16 (frame, text)
+ *    input text is allways UTF-8 encoded
+ *    Set text for the description:PREFORMER of indicated frame 
+ *   Return 0 upon success, or -1 if an error occured.
+ *         UTF-16 encoding
+ */
+int id3_set_text__performer_UTF16(struct id3_frame *frame, char *text)
+{
+	// Type check
+	if (frame->fr_desc->fd_idstr[0] != 'T')
+		return -1;
+
+	// Release memory occupied by previous data.
+
+	id3_frame_clear_data(frame);
+
+	// Allocate memory for new data.
+
+	uint8_t *performer_utf16 = id3_encodeUTF8_to_UTF16_text("PERFORMER");
+	uint8_t *text_utf16 = id3_encodeUTF8_to_UTF16_text(text);
+
+	frame->fr_raw_size = 2 * strlen("PERFORMER") + 2 * strlen(text) + 9; // 1 for encoding, 2 for BOM, 2 for UNICODE null  description, 2 BOM, 2 for UNICODE null terminator of text
+	frame->fr_raw_data = calloc(frame->fr_raw_size + 1, sizeof(uint8_t));
+
+	// Copy contents.
+
+    int offset=0;
+	*(uint8_t *)frame->fr_raw_data = ID3_ENCODING_UTF16;
+	offset += 1;
+	uint8_t BOM_array[] = {0xff, 0xfe}; // UTF-16LE the BOM is 'FF FE'
+
+	memcpy((uint8_t *)frame->fr_raw_data + offset, BOM_array, 2);
+	offset += 2;
+	memcpy((uint8_t *)frame->fr_raw_data + offset, (uint8_t *)performer_utf16, 2 * strlen("PERFORMER")+2);
+
+	offset += (2 * strlen("PERFORMER"))+2;
+	memcpy((uint8_t *)frame->fr_raw_data + offset, BOM_array, 2);
+	offset +=2;
+	memcpy((uint8_t *)frame->fr_raw_data + offset, (uint8_t *)text_utf16, 2 * strlen(text)+2);
+
+	free(performer_utf16);
+	free(text_utf16);
+
+	frame->fr_altered = 1;
+	frame->fr_owner->id3_altered = 1;
+
+	frame->fr_data = frame->fr_raw_data;
+	frame->fr_size = frame->fr_raw_size;
+
+	return 0;
+}
+
+/*
+ * Function id3_set_text__performer_wraper (frame, text, id3_tag_mode)
+ *
+ *    input text is allways UTF-8 encoded;
+ *    Set text for the indicated frame:
+ * 		- ISO-8859-1 or UTF-16 encodings for ID3v2.3 tags;
+ * 		- UTF-8 encoding for ID3v2.4 tags
+ *    Return 0 upon success, or -1 if an error occured.
+ *    This wraper is based on handle->id3_tag_mode.
+ *
+ */
+int id3_set_text__performer_wraper(struct id3_frame *frame, char *text, int id3_tag_mode)
+{
+	int result = -1;
+
+	switch (id3_tag_mode)
+	{
+	case 1:
+	case 2:
+		/*id3v2.3 UTF-16 */
+		result = id3_set_text__performer_UTF16(frame, text);
+		break;
+	case 3:
+		/* id3v2.3 ISO_8859_1 (ASCII)*/
+		result = id3_set_text__performer(frame, text);
+		break;
+	case 4:
+	case 5:
+		/* id3v2.4 UTF8 */
+		result = id3_set_text__performer_utf8(frame, text);
+		break;
+	default:
+		/* 0 no id3 tag */
+		break;
+	}
+
+	return result;
 }

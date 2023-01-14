@@ -35,7 +35,7 @@ extern "C" {
  * Opens a scarletbook structure and reads in all the data.
  * Returns a handle to a completely parsed structure.
  */
-scarletbook_handle_t *scarletbook_open(sacd_reader_t *, int);
+scarletbook_handle_t *scarletbook_open(sacd_reader_t *sacd_reader);
 
 /**
  * initialize scarletbook audio frames structs
@@ -49,8 +49,10 @@ typedef void (*frame_read_callback_t)(scarletbook_handle_t *handle, uint8_t* fra
 
 /**
  * processes scarletbook audio frames and does a callback in case it found a frame
+ *   return -1 if errors encounters. (sector_bad_reads)
+ *            1 succes
  */
-void scarletbook_process_frames(scarletbook_handle_t *, uint8_t *, int, int, frame_read_callback_t, void *);
+int scarletbook_process_frames(scarletbook_handle_t *, uint8_t *, int, int, frame_read_callback_t, void *);
 
 /**
  * scarletbook_close(ifofile);

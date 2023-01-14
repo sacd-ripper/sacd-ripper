@@ -24,13 +24,25 @@
 
 log_module_info_t * lm_main = 0;  
 
-void init_logging()
+void init_logging(int yes)
 {
-#ifdef __lv2ppu__ 
-    setenv("LOG_MODULES", "all:5", 0); //,bufsize:16384
-#elif !defined(_WIN32)
-    setenv("LOG_MODULES", "all:3", 0); //,bufsize:16384
+    if(yes)
+    {
+// #ifdef __lv2ppu__ 
+//     setenv("LOG_MODULES", "all:5", 0); //,bufsize:16384
+// #elif !defined(_WIN32)
+//     setenv("LOG_MODULES", "all:5", 0); //,bufsize:16384
+//     //setenv("LOG_FILE","logfile-sacd_extract.txt",0);
+// #endif
+#if defined(WIN32) || defined(_WIN32)
+        putenv("LOG_MODULES=all:5");
+        putenv("LOG_FILE=logfile-sacd_extract.txt");
+#else
+        setenv("LOG_MODULES", "all:5", 0); //,bufsize:16384
+        setenv("LOG_FILE", "logfile-sacd_extract.txt", 0);
 #endif
+    }
+
     lm_main = create_log_module("main");
     log_init();
 }

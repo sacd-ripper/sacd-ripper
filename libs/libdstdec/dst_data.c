@@ -205,7 +205,7 @@ int FillBuffer(StrData* SD, uint8_t* pBuf, int32_t Size)
 int FIO_BitGetChrUnsigned(StrData* SD, int Len, unsigned char *x)
 {
   int   return_value;
-  long  tmp;
+  long  tmp=0L;
 
   return_value = -1;
   if (Len > 0)
@@ -245,7 +245,7 @@ int FIO_BitGetChrUnsigned(StrData* SD, int Len, unsigned char *x)
 int FIO_BitGetIntUnsigned(StrData* SD, int Len, int *x)
 {
   int   return_value;
-  long  tmp;
+  long  tmp=0L;
 
   return_value = -1;
   if (Len > 0)
@@ -284,7 +284,7 @@ int FIO_BitGetIntUnsigned(StrData* SD, int Len, int *x)
 int FIO_BitGetIntSigned(StrData* SD, int Len, int *x)
 {
   int   return_value;
-  long  tmp;
+  long  tmp=0L;
 
   return_value = -1;
   if (Len > 0)
@@ -329,7 +329,7 @@ int FIO_BitGetIntSigned(StrData* SD, int Len, int *x)
 int FIO_BitGetShortSigned(StrData* SD, int Len, short *x)
 {
   int   return_value;
-  long  tmp;
+  long  tmp=0L;
 
   return_value = -1;
   if (Len > 0)

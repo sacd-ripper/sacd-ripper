@@ -19,6 +19,8 @@
  *
  */
 
+#define _FILE_OFFSET_BITS 64
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
@@ -26,6 +28,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <time.h>
+#include <logging.h>
 
 #ifdef __lv2ppu__
 #include <sys/file.h>
@@ -43,7 +46,7 @@
 #include "scarletbook.h"
 #include "version.h"
 
-#define DSDFIFF_BUFFER_SIZE    1024 * 16
+#define DSDFIFF_BUFFER_SIZE    (1024 * 128)
 
 typedef struct
 {
@@ -66,10 +69,11 @@ static char *get_mtoc_title_text(scarletbook_handle_t *handle)
 {
     master_text_t *master_text = &handle->master_text;
 
-    if (master_text->album_title)
-        return master_text->album_title;
     if (master_text->disc_title)
         return master_text->disc_title;
+    if (master_text->album_title)
+        return master_text->album_title;
+
 
     return "Unknown";
 }
@@ -388,22 +392,22 @@ static int calculate_header_and_footer(scarletbook_output_format_t *ft)
             {
                 master_text_t *master_text = &sb_handle->master_text;
 
-                if (master_text->album_artist)
-                    c = master_text->album_artist;
-                else if (master_text->album_artist_phonetic)
-                    c = master_text->album_artist_phonetic;
-                else if (master_text->disc_artist)
+                if (master_text->disc_artist)
                     c = master_text->disc_artist;
                 else if (master_text->disc_artist_phonetic)
                     c = master_text->disc_artist_phonetic;
-                else if (master_text->album_title)
-                    c = master_text->album_title; 
-                else if (master_text->album_title_phonetic)
-                    c = master_text->album_title_phonetic;
+                else if (master_text->album_artist)
+                    c = master_text->album_artist;
+                else if (master_text->album_artist_phonetic)
+                    c = master_text->album_artist_phonetic;
                 else if (master_text->disc_title)
                     c = master_text->disc_title; 
                 else if (master_text->disc_title_phonetic)
                     c = master_text->disc_title_phonetic;
+                else if (master_text->album_title)
+                    c = master_text->album_title; 
+                else if (master_text->album_title_phonetic)
+                    c = master_text->album_title_phonetic;
             }
 
             if (c)
@@ -567,7 +571,12 @@ static int dsdiff_create_edit_master(scarletbook_output_format_t *ft)
     dsdiff_handle_t *handle = (dsdiff_handle_t *) ft->priv;
     handle->edit_master = 1;
     ret = calculate_header_and_footer(ft);
-    fwrite(handle->header, 1, handle->header_size, ft->fd);
+    size_t nrw=fwrite(handle->header, 1, handle->header_size, ft->fd);
+	if(nrw !=  handle->header_size)
+	{ 		        
+		LOG(lm_main, LOG_ERROR, ("dsdiff_create_edit_master(): error writing in file %s", ft->filename));
+		return -1;               				
+	}
     return ret;
 }
 
@@ -575,7 +584,12 @@ static int dsdiff_create(scarletbook_output_format_t *ft)
 {
     int ret = calculate_header_and_footer(ft);
     dsdiff_handle_t  *handle = (dsdiff_handle_t *) ft->priv;
-    fwrite(handle->header, 1, handle->header_size, ft->fd); 
+    size_t nrw=fwrite(handle->header, 1, handle->header_size, ft->fd); 
+	if(nrw !=  handle->header_size)
+	{ 		        
+		LOG(lm_main, LOG_ERROR, ("dsdiff_create(0: error writing in file %s", ft->filename));
+		return -1;               				
+	}	
     return ret;
 }
 
@@ -589,7 +603,14 @@ static int dsdiff_close(scarletbook_output_format_t *ft)
     if (handle->audio_data_size % 2)
     {
         uint8_t dummy = 0;
-        fwrite(&dummy, 1, 1, ft->fd);
+		size_t nrw;
+        nrw=fwrite(&dummy, 1, 1, ft->fd);
+		if(nrw != 1)
+		{ 		        
+			LOG(lm_main, LOG_ERROR, ("dsdiff_close(0: error writing in file %s", ft->filename));
+			return -1;               				
+		}
+			
         handle->audio_data_size += 1;
     }
 
@@ -597,11 +618,21 @@ static int dsdiff_close(scarletbook_output_format_t *ft)
     calculate_header_and_footer(ft);
 
     // append the footer
-    fwrite(handle->footer, 1, handle->footer_size, ft->fd);
-
+    size_t nrw=fwrite(handle->footer, 1, handle->footer_size, ft->fd);
+	if(nrw !=  handle->footer_size)
+	{ 		        
+		LOG(lm_main, LOG_ERROR, ("dsdiff_close(0: error writing in file %s", ft->filename));
+		return -1;               				
+	}
+		
     // write the final header
     fseek(ft->fd, 0, SEEK_SET);
-    fwrite(handle->header, 1, handle->header_size, ft->fd);
+    nrw=fwrite(handle->header, 1, handle->header_size, ft->fd);
+	if(nrw !=  handle->header_size)
+	{ 		        
+		LOG(lm_main, LOG_ERROR, ("dsdiff_close(0: error writing in file %s", ft->filename));
+		return -1;               				
+	}	
 
     if (handle->frame_indexes)
         free(handle->frame_indexes);
@@ -613,7 +644,7 @@ static int dsdiff_close(scarletbook_output_format_t *ft)
     return 0;
 }
 
-static size_t dsdiff_write_frame(scarletbook_output_format_t *ft, const uint8_t *buf, size_t len)
+static int dsdiff_write_frame(scarletbook_output_format_t *ft, const uint8_t *buf, size_t len)
 {
     dsdiff_handle_t *handle = (dsdiff_handle_t *) ft->priv;
 
@@ -623,8 +654,13 @@ static size_t dsdiff_write_frame(scarletbook_output_format_t *ft, const uint8_t 
     {
         size_t nrw;
         nrw = fwrite(buf, 1, len, ft->fd);
+		if(nrw != len)
+		{ 		        
+			LOG(lm_main, LOG_ERROR, ("dsdiff_write_frame(): error writing in file %s", ft->filename));
+			return -1;               				
+		}
         handle->audio_data_size += nrw;
-        return nrw;
+        return (int)nrw;
     }
     else
     {
@@ -647,18 +683,46 @@ static size_t dsdiff_write_frame(scarletbook_output_format_t *ft, const uint8_t 
 #elif defined(__lv2ppu__) || defined(__APPLE__)
             handle->frame_indexes[handle->frame_count - 1].offset = ftello(ft->fd) + DST_FRAME_DATA_CHUNK_SIZE;
 #else
+            
+            // off64_t ftello64 (FILE *stream) : If the sources are compiled with _FILE_OFFSET_BITS == 64 on a 32 bits machine this function is available under the name ftello and so transparently replaces the old interface.
+            //
+    #ifdef _FILE_OFFSET_BITS         
+            handle->frame_indexes[handle->frame_count - 1].offset = ftello(ft->fd) + DST_FRAME_DATA_CHUNK_SIZE;
+    #else
             handle->frame_indexes[handle->frame_count - 1].offset = ftello64(ft->fd) + DST_FRAME_DATA_CHUNK_SIZE;
+    #endif
 #endif
 
             nrw = fwrite(&dst_frame_data_chunk, 1, DST_FRAME_DATA_CHUNK_SIZE, ft->fd);
-            nrw += fwrite(buf, 1, len, ft->fd);
+			
+			if(nrw !=DST_FRAME_DATA_CHUNK_SIZE)
+			{ 		        
+				LOG(lm_main, LOG_ERROR, ("dsdiff_write_frame(0: error writing in file %s", ft->filename));
+				return -1;               				
+			}
+			
+			size_t nrw1;
+			nrw1=fwrite(buf, 1, len, ft->fd);
+			if(nrw1 != len)
+			{ 		        
+				LOG(lm_main, LOG_ERROR, ("dsdiff_write_frame(0: error writing in file %s", ft->filename));
+				return -1;               				
+			}
+			
+            nrw += nrw1;
             if (len % 2)
             {
                 uint8_t dummy = 0;
-                nrw += fwrite(&dummy, 1, 1, ft->fd);
+				nrw1=fwrite(&dummy, 1, 1, ft->fd);
+				if(nrw1 != 1)
+				{ 		        
+					LOG(lm_main, LOG_ERROR, ("dsdiff_write_frame(0: error writing in file %s", ft->filename));
+					return -1;               				
+				}				
+                nrw += nrw1;
             }
             handle->audio_data_size += nrw;
-            return nrw;
+            return (int)nrw;
         }
     }
 }
