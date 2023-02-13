@@ -122,20 +122,16 @@ And to compile libiconv on windows you can do the following:
 3. run: "nmake -f Makefile.msvc NO_NLS=1"
 4. now you can compile using the MSVC project file
 
-On Linux the program currently builds only in root's home directory.
-You do not need to manually build the libiconv program.  There is no
-installation step available yet, so you will need to copy the program
+On Linux you do not need to manually build the libiconv program.  There
+is no installation step available, so you will need to copy the program
 to a directory in your PATH, such as /usr/local/bin on most Linux
 installations. To compile on Linux use a sequence like this::
 
-    sudo su -
-    [Enter password if needed]
-    cd /root
     git clone https://github.com/sacd-ripper/sacd-ripper.git
     cd sacd-ripper/tools/sacd_extract/
     cmake .
     make
-    cp sacd_extract /usr/local/bin/
+    sudo cp sacd_extract /usr/local/bin/
 
 SACD Ripper/Extract Usage Instructions
 ======================================
